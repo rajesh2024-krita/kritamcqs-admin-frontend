@@ -37,6 +37,46 @@ function tokenText(type) {
   return false;
 }
 
+function simplifyFabricObject(obj, pageLeft = 0, pageTop = 0) {
+  const raw = obj.toObject?.(["isPage", "id", "invoiceTable", "objects"]) || {};
+  const left = Number(obj.left || raw.left || 0);
+  const top = Number(obj.top || raw.top || 0);
+  const width = Number(obj.width || raw.width || 0);
+  const height = Number(obj.height || raw.height || 0);
+  const scaleX = Number(obj.scaleX ?? raw.scaleX ?? 1);
+  const scaleY = Number(obj.scaleY ?? raw.scaleY ?? 1);
+  return {
+    ...raw,
+    renderVersion: 2,
+    pageWidth: PAGE_WIDTH,
+    pageHeight: PAGE_HEIGHT,
+    pageX: left - pageLeft,
+    pageY: top - pageTop,
+    scaledWidth: Number(obj.getScaledWidth?.() || width * scaleX || 0),
+    scaledHeight: Number(obj.getScaledHeight?.() || height * scaleY || 0),
+    type: obj.type,
+    text: obj.text || raw.text || "",
+    fill: obj.fill || raw.fill || "#111827",
+    stroke: obj.stroke || raw.stroke || "",
+    strokeWidth: Number(obj.strokeWidth || raw.strokeWidth || 0),
+    fontFamily: obj.fontFamily || raw.fontFamily || "Inter",
+    fontSize: Number(obj.fontSize || raw.fontSize || 10),
+    fontWeight: obj.fontWeight || raw.fontWeight || "normal",
+    angle: Number(obj.angle || raw.angle || 0),
+    opacity: Number(obj.opacity ?? raw.opacity ?? 1),
+    scaleX,
+    scaleY,
+    left,
+    top,
+    width,
+    height,
+    radius: Number(obj.radius || raw.radius || 0),
+    src: obj.getSrc?.() || raw.src || "",
+    invoiceTable: obj.invoiceTable || raw.invoiceTable || null,
+    objects: Array.isArray(raw.objects) ? raw.objects : [],
+  };
+}
+
 function canvasToInvoiceFields(canvas) {
   const page = canvas.getObjects().find((obj) => obj.isPage);
   const pageLeft = Number(page?.left || 0);
@@ -50,25 +90,32 @@ function canvasToInvoiceFields(canvas) {
     .map((obj, index) => {
       const isText = tokenText(obj.type);
       const text = isText ? obj.text || "" : obj.type || "Element";
+      const raw = simplifyFabricObject(obj, pageLeft, pageTop);
+      const pageX = Number(raw.pageX || 0);
+      const pageY = Number(raw.pageY || 0);
       return {
         id: obj.id || `canvas-${index}-${Date.now()}`,
-        type: isText ? "text" : obj.type === "image" ? "image" : "text",
+        type: isText ? "text" : obj.type === "image" ? "image" : obj.type || "element",
         label: text,
         content: text,
         src: obj.getSrc?.() || "",
-        x: Math.max(0, Math.round((Number(obj.left || 0) - pageLeft) * scaleX)),
-        y: Math.max(0, Math.round((Number(obj.top || 0) - pageTop) * scaleY)),
-        width: Math.max(10, Math.round(Number(obj.getScaledWidth?.() || obj.width || 120) * scaleX)),
-        height: Math.max(10, Math.round(Number(obj.getScaledHeight?.() || obj.height || 80) * scaleY)),
-        size: Math.max(6, Math.round(Number(obj.fontSize || 10) * scaleY)),
+        x: Math.max(0, Number((pageX * scaleX).toFixed(3))),
+        y: Math.max(0, Number((pageY * scaleY).toFixed(3))),
+        width: Math.max(1, Number((Number(raw.scaledWidth || 120) * scaleX).toFixed(3))),
+        height: Math.max(1, Number((Number(raw.scaledHeight || 80) * scaleY).toFixed(3))),
+        size: Math.max(1, Number((Number(obj.fontSize || 10) * scaleY).toFixed(3))),
         rotation: Number(obj.angle || 0),
         opacity: Number(obj.opacity ?? 1),
         zIndex: index + 1,
         enabled: obj.visible !== false,
+        raw,
         style: {
           fontFamily: obj.fontFamily || "Inter",
           fontWeight: obj.fontWeight || "normal",
           color: obj.fill || "#111827",
+          fill: obj.fill || "#111827",
+          stroke: obj.stroke || "",
+          strokeWidth: Number(obj.strokeWidth || 0),
         },
       };
     });
@@ -84,6 +131,13 @@ export function InvoiceSystemPage() {
   const [subscriptionId, setSubscriptionId] = useState("");
   const [invoiceForm, setInvoiceForm] = useState(emptyInvoiceForm);
   const [templateName, setTemplateName] = useState("Default Invoice Template");
+  const [testEmail, setTestEmail] = useState("");
+  const [historyFilters, setHistoryFilters] = useState({ q: "", status: "", emailStatus: "", dateFrom: "", dateTo: "" });
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [viewTemplate, setViewTemplate] = useState(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editorTemplate, setEditorTemplate] = useState(null);
+  const [editorFullscreen, setEditorFullscreen] = useState(false);
 
   const invoiceStats = useMemo(() => {
     const total = invoices.length;
@@ -160,15 +214,20 @@ export function InvoiceSystemPage() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function load() {
+  function pdfUrl(item) {
+    return item?.id ? `${apiBase}/api/admin/invoices/${item.id}/pdf` : item?.pdfPath ? `${apiBase}${item.pdfPath}` : "#";
+  }
+
+  async function load(filters = historyFilters) {
     setLoading(true);
     try {
       const [settingsResponse, invoiceResponse] = await Promise.all([
         subscriptionService.getInvoiceSettings(),
-        subscriptionService.listInvoices({ limit: 50 }),
+        subscriptionService.listInvoices({ limit: 50, ...Object.fromEntries(Object.entries(filters).filter(([, value]) => value)) }),
       ]);
       const nextSettings = settingsResponse.data || {};
       setSettings(nextSettings);
+      setTestEmail((current) => current || nextSettings.companyEmail || nextSettings.smtp?.fromEmail || "");
       setInvoices(invoiceResponse.data || []);
     } catch (error) {
       toast.error(error.message);
@@ -181,15 +240,30 @@ export function InvoiceSystemPage() {
     load();
   }, []);
 
-  useEffect(() => {
-    if (!canvas || !activeTemplate?.fabricJson) return;
-    canvas.loadFromJSON(activeTemplate.fabricJson, () => {
-      canvas.renderAll();
-    });
-    setTemplateName(activeTemplate.name || "Default Invoice Template");
-  }, [canvas, activeTemplate?.id, settings?.id]);
+  function resetEditorCanvas() {
+    if (!canvas) return;
+    canvas.getObjects().filter((obj) => !obj.isPage).forEach((obj) => canvas.remove(obj));
+    canvas.discardActiveObject();
+    canvas.renderAll();
+  }
 
-  async function saveTemplate() {
+  useEffect(() => {
+    if (!canvas || !editorOpen) return;
+    if (editorTemplate?.fabricJson) {
+      canvas.loadFromJSON(editorTemplate.fabricJson, () => canvas.renderAll());
+    } else {
+      resetEditorCanvas();
+    }
+  }, [canvas, editorOpen, editorTemplate?.id]);
+
+  function openTemplateEditor(template = null) {
+    setEditorTemplate(template);
+    setTemplateName(template?.name || "New Invoice Template");
+    setEditorFullscreen(false);
+    setEditorOpen(true);
+  }
+
+  async function saveTemplate({ setActive = true, saveAsNew = false } = {}) {
     if (!canvas || !settings) {
       toast.error("Invoice editor is not ready yet");
       return;
@@ -198,24 +272,29 @@ export function InvoiceSystemPage() {
     try {
       const fabricJson = canvas.toJSON(["isPage", "id", "invoiceTable"]);
       const fields = canvasToInvoiceFields(canvas);
-      const currentId = activeTemplate?.id && activeTemplate.id !== "default-template" ? activeTemplate.id : `template-${Date.now()}`;
+      const currentId = !saveAsNew && editorTemplate?.id && editorTemplate.id !== "default-template" ? editorTemplate.id : `template-${Date.now()}`;
+      const name = templateName?.trim() || "Invoice Template";
       const otherBlocks = (settings.reusableBlocks || []).filter((item) => item.type !== "fabric-template" || (item.id && item.id !== currentId));
       const templateBlocks = templates
         .filter((item) => item.id !== "default-template" && item.id !== currentId)
-        .map((item) => ({ ...item, active: false }));
+        .map((item) => ({ ...item, active: setActive ? false : Boolean(item.active) }));
+      const savedTemplate = { id: currentId, type: "fabric-template", name, active: setActive, savedAt: new Date().toISOString(), fabricJson, fields };
       const payload = {
         ...settings,
-        fields,
+        fields: setActive ? fields : settings.fields,
         reusableBlocks: [
           ...otherBlocks.filter((item) => item.type !== "fabric-template"),
           ...templateBlocks,
-          { id: currentId, type: "fabric-template", name: templateName || "Invoice Template", active: true, savedAt: new Date().toISOString(), fabricJson },
+          savedTemplate,
         ],
+        activeTemplateId: setActive ? currentId : settings.activeTemplateId,
+        activeTemplateName: setActive ? name : settings.activeTemplateName,
         page: { size: "A4", orientation: "portrait", margin: 32, editor: "invoice-template" },
       };
       const response = await subscriptionService.saveInvoiceSettings(payload);
       setSettings(response.data);
-      toast.success("Invoice template saved for future purchases");
+      setEditorTemplate(savedTemplate);
+      toast.success(setActive ? "Template saved and set active for invoices" : "Template saved");
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -223,11 +302,21 @@ export function InvoiceSystemPage() {
     }
   }
 
+  async function saveAsNewTemplate() {
+    await saveTemplate({ setActive: true, saveAsNew: true });
+  }
+
   async function activateTemplate(template) {
     if (!settings) return;
     const nextBlocks = templates.map((item) => ({ ...item, active: item.id === template.id }));
     try {
-      const response = await subscriptionService.saveInvoiceSettings({ ...settings, reusableBlocks: nextBlocks });
+      const response = await subscriptionService.saveInvoiceSettings({
+        ...settings,
+        fields: Array.isArray(template.fields) && template.fields.length ? template.fields : settings.fields,
+        activeTemplateId: template.id,
+        activeTemplateName: template.name || "Invoice Template",
+        reusableBlocks: nextBlocks,
+      });
       setSettings(response.data);
       if (canvas && template.fabricJson) {
         canvas.loadFromJSON(template.fabricJson, () => canvas.renderAll());
@@ -256,6 +345,41 @@ export function InvoiceSystemPage() {
     }
   }
 
+  async function deleteTemplate(template) {
+    if (!settings || template.id === "default-template") {
+      toast.error("The default starter template cannot be deleted");
+      return;
+    }
+    if (!window.confirm(`Delete template "${template.name || "Invoice Template"}"?`)) return;
+    const remaining = templates.filter((item) => item.id !== "default-template" && item.id !== template.id);
+    const nextBlocks = remaining.length && template.active
+      ? remaining.map((item, index) => ({ ...item, active: index === 0 }))
+      : remaining;
+    try {
+      const nextActive = nextBlocks.find((item) => item.active) || nextBlocks[0];
+      const response = await subscriptionService.saveInvoiceSettings({
+        ...settings,
+        fields: nextActive?.fields || settings.fields,
+        activeTemplateId: nextActive?.id || "",
+        activeTemplateName: nextActive?.name || "",
+        reusableBlocks: nextBlocks,
+      });
+      setSettings(response.data);
+      toast.success("Template deleted");
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  async function viewInvoiceDetails(id) {
+    try {
+      const response = await subscriptionService.getInvoice(id);
+      setSelectedInvoice(response.data);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
   async function generateInvoice() {
     const id = subscriptionId.trim();
     if (!id) {
@@ -278,6 +402,8 @@ export function InvoiceSystemPage() {
       status,
       userName: invoiceForm.customerCompany.name,
       userEmail: invoiceForm.customerCompany.email,
+      templateId: activeTemplate?.id && activeTemplate.id !== "default-template" ? activeTemplate.id : settings?.activeTemplateId,
+      templateName: activeTemplate?.name || settings?.activeTemplateName,
       amount: totals.grandTotal,
       subtotal: totals.subtotal,
       taxTotal: totals.taxTotal,
@@ -316,6 +442,20 @@ export function InvoiceSystemPage() {
     }
   }
 
+  async function sendTestInvoice() {
+    const to = testEmail.trim();
+    if (!to) {
+      toast.error("Enter an email address for the test invoice");
+      return;
+    }
+    try {
+      await subscriptionService.sendTestInvoice({ to });
+      toast.success("Test invoice email processed");
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
   async function deleteInvoice(id) {
     if (!window.confirm("Delete this invoice?")) return;
     try {
@@ -339,8 +479,8 @@ export function InvoiceSystemPage() {
             <p className={ui.muted}>Customize the invoice template used after student subscription purchases. Successful purchases already call the backend invoice generation and email flow.</p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={load}><RefreshIcon size={16} />Refresh</button>
-            <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={saveTemplate} disabled={saving}>{saving ? "Saving..." : "Save Invoice Template"}</button>
+            <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => load()}><RefreshIcon size={16} />Refresh</button>
+            <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={() => openTemplateEditor(activeTemplate)}>Open Invoice Pro Editor</button>
           </div>
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-4">
@@ -389,7 +529,7 @@ export function InvoiceSystemPage() {
           <label className={ui.field}>
             <span>Status</span>
             <select className={ui.input} value={invoiceForm.status} onChange={(event) => patchInvoice("status", event.target.value)}>
-              {["draft", "sent", "paid", "pending", "cancelled"].map((status) => <option key={status}>{status}</option>)}
+              {["draft", "pending", "paid", "overdue", "sent", "cancelled"].map((status) => <option key={status}>{status}</option>)}
             </select>
           </label>
           <label className={ui.field}>
@@ -459,6 +599,13 @@ export function InvoiceSystemPage() {
           </label>
           <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={generateInvoice}>Generate & Send</button>
         </div>
+        <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+          <label className={ui.field}>
+            Send test invoice
+            <input className={ui.input} type="email" value={testEmail} onChange={(event) => setTestEmail(event.target.value)} placeholder="customer@example.com" />
+          </label>
+          <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={sendTestInvoice}>Send Test Invoice</button>
+        </div>
       </section>
 
       <section className={ui.panel}>
@@ -471,6 +618,10 @@ export function InvoiceSystemPage() {
             Current template name
             <input className={ui.input} value={templateName} onChange={(event) => setTemplateName(event.target.value)} />
           </label>
+        </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={() => openTemplateEditor(null)}>Create New Template</button>
+          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openTemplateEditor(activeTemplate)}>Edit Active Template</button>
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {templates.map((template) => (
@@ -486,20 +637,33 @@ export function InvoiceSystemPage() {
                 </label>
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
+                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => setViewTemplate(template)}>View</button>
+                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openTemplateEditor(template)}>Edit</button>
                 <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => activateTemplate(template)}>Use</button>
                 <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => duplicateTemplate(template)}>Duplicate</button>
+                <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => deleteTemplate(template)}>Delete</button>
               </div>
             </div>
           ))}
         </div>
       </section>
 
-      <Editor />
-
       <section className={ui.tableWrap}>
-        <div className="flex items-center justify-between border-b border-slate-200 p-4">
-          <h3 className="text-lg font-bold text-slate-900">Invoice History</h3>
-          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={load}><RefreshIcon size={16} />Refresh</button>
+        <div className="flex flex-col gap-4 border-b border-slate-200 p-4">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="text-lg font-bold text-slate-900">Invoice History</h3>
+            <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => load()}><RefreshIcon size={16} />Refresh</button>
+          </div>
+          <div className="grid gap-3 md:grid-cols-5">
+            <input className={ui.input} placeholder="Search invoice, customer, transaction" value={historyFilters.q} onChange={(event) => setHistoryFilters((current) => ({ ...current, q: event.target.value }))} />
+            <select className={ui.input} value={historyFilters.status} onChange={(event) => setHistoryFilters((current) => ({ ...current, status: event.target.value }))}>
+              <option value="">All statuses</option>
+              {["draft", "pending", "paid", "overdue"].map((status) => <option key={status} value={status}>{status}</option>)}
+            </select>
+            <input className={ui.input} type="date" value={historyFilters.dateFrom} onChange={(event) => setHistoryFilters((current) => ({ ...current, dateFrom: event.target.value }))} />
+            <input className={ui.input} type="date" value={historyFilters.dateTo} onChange={(event) => setHistoryFilters((current) => ({ ...current, dateTo: event.target.value }))} />
+            <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={() => load(historyFilters)}>Search / Filter</button>
+          </div>
         </div>
         <div className={ui.tableScroll}>
           <table className={ui.table}>
@@ -508,8 +672,10 @@ export function InvoiceSystemPage() {
                 <th className={ui.tableHead}>Invoice</th>
                 <th className={ui.tableHead}>Student</th>
                 <th className={ui.tableHead}>Amount</th>
+                <th className={ui.tableHead}>Status</th>
                 <th className={ui.tableHead}>Email</th>
-                <th className={ui.tableHead}>Issued</th>
+                <th className={ui.tableHead}>Created</th>
+                <th className={ui.tableHead}>Payment</th>
                 <th className={ui.tableHead}>PDF</th>
                 <th className={ui.tableHead}>Actions</th>
               </tr>
@@ -520,26 +686,97 @@ export function InvoiceSystemPage() {
                   <td className={ui.tableCell}>{item.invoiceNumber}</td>
                   <td className={ui.tableCell}>{item.userName}<div className="text-xs text-slate-500">{item.userEmail || "-"}</div></td>
                   <td className={ui.tableCell}>Rs. {Number(item.amount || 0).toFixed(2)}</td>
+                  <td className={ui.tableCell}><span className={ui.pill}>{item.status || "draft"}</span></td>
                   <td className={ui.tableCell}><span className={ui.pill}>{item.emailStatus || "-"}</span>{item.emailError ? <div className="mt-1 text-xs text-rose-600">{item.emailError}</div> : null}</td>
-                  <td className={ui.tableCell}>{formatDate(item.issuedAt || item.createdAt)}</td>
-                  <td className={ui.tableCell}>{item.pdfPath ? <a className="font-bold text-sky-700" href={`${apiBase}${item.pdfPath}`} target="_blank" rel="noreferrer">Open</a> : "-"}</td>
+                  <td className={ui.tableCell}>{formatDate(item.createdAt || item.issuedAt)}</td>
+                  <td className={ui.tableCell}>{item.paymentHistory?.length ? `${item.paymentHistory.length} record(s)` : "-"}</td>
+                  <td className={ui.tableCell}><a className="font-bold text-sky-700" href={pdfUrl(item)} target="_blank" rel="noreferrer">Download</a></td>
                   <td className={ui.tableCell}>
                     <div className="flex flex-wrap gap-2">
+                      <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => viewInvoiceDetails(item.id)}>View</button>
                       <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => editInvoice(item)}>Edit</button>
                       <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => duplicateInvoice(item.id)}>Duplicate</button>
-                      <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => sendInvoice(item.id)}>Send</button>
+                      <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => sendInvoice(item.id)}>Resend</button>
                       <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => deleteInvoice(item.id)}>Delete</button>
                     </div>
                   </td>
                 </tr>
               ))}
               {!invoices.length ? (
-                <tr><td className={ui.tableCell} colSpan={7}>No invoices generated yet.</td></tr>
+                <tr><td className={ui.tableCell} colSpan={9}>No invoices generated yet.</td></tr>
               ) : null}
             </tbody>
           </table>
         </div>
       </section>
+      {editorOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-2 sm:p-4">
+          <div className={`flex flex-col overflow-hidden bg-white shadow-2xl ${editorFullscreen ? "fixed inset-0 max-h-none w-screen max-w-none rounded-none" : "max-h-[96vh] w-full max-w-[1500px] rounded-xl"}`}>
+            <div className="flex flex-col gap-3 border-b border-slate-200 p-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <div className={ui.eyebrow}>Invoice Pro Template Editor</div>
+                <h3 className="text-2xl font-black tracking-tight text-slate-900">{editorTemplate ? "Edit Template" : "Create Template"}</h3>
+                <p className={ui.muted}>Use Mapping to place invoice fields, then double-click text on the canvas or use Text Content to edit letters, words, and tokens.</p>
+              </div>
+              <div className="grid gap-2 sm:grid-cols-[260px_auto_auto_auto_auto_auto] sm:items-center">
+                <input className={ui.input} value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Template name" />
+                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => saveTemplate({ setActive: false })} disabled={saving}>{saving ? "Saving..." : "Save"}</button>
+                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={saveAsNewTemplate} disabled={saving}>Save as New</button>
+                <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={() => saveTemplate({ setActive: true })} disabled={saving}>{saving ? "Saving..." : "Save & Set Active"}</button>
+                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => setEditorFullscreen((current) => !current)}>{editorFullscreen ? "Exit Full Screen" : "Full Screen"}</button>
+                <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => setEditorOpen(false)}>Close</button>
+              </div>
+            </div>
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <Editor />
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {selectedInvoice ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-auto rounded-xl bg-white p-5 shadow-2xl">
+            <div className={ui.sectionHead}>
+              <div><h3 className="text-xl font-black text-slate-900">Invoice Details</h3><p className={ui.muted}>{selectedInvoice.invoiceNumber} | {selectedInvoice.templateName || "Active template"}</p></div>
+              <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => setSelectedInvoice(null)}>Close</button>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-4">
+              <div className={ui.tile}><div className={ui.metricLabel}>Status</div><div className="mt-2 font-black capitalize">{selectedInvoice.status}</div></div>
+              <div className={ui.tile}><div className={ui.metricLabel}>Amount</div><div className="mt-2 font-black">{selectedInvoice.currency} {Number(selectedInvoice.amount || 0).toFixed(2)}</div></div>
+              <div className={ui.tile}><div className={ui.metricLabel}>Created</div><div className="mt-2 font-black">{formatDate(selectedInvoice.createdAt)}</div></div>
+              <div className={ui.tile}><div className={ui.metricLabel}>Email</div><div className="mt-2 font-black capitalize">{selectedInvoice.emailStatus || "-"}</div></div>
+            </div>
+            <div className="mt-5 grid gap-4 md:grid-cols-2">
+              <div className={ui.panel}><h4 className="font-black text-slate-900">Customer</h4><p className="mt-2 text-sm text-slate-600">{selectedInvoice.userName || "-"}</p><p className="text-sm text-slate-600">{selectedInvoice.userEmail || "-"}</p></div>
+              <div className={ui.panel}><h4 className="font-black text-slate-900">Payment History</h4>{selectedInvoice.paymentHistory?.length ? selectedInvoice.paymentHistory.map((payment, index) => <p className="mt-2 text-sm text-slate-600" key={index}>{formatDate(payment.paidAt)} | {payment.status} | {selectedInvoice.currency} {Number(payment.amount || 0).toFixed(2)} | {payment.transactionId || "-"}</p>) : <p className="mt-2 text-sm text-slate-500">No payment history recorded.</p>}</div>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <a className={cn(ui.buttonBase, ui.buttonPrimary)} href={pdfUrl(selectedInvoice)} target="_blank" rel="noreferrer">Download PDF</a>
+              <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => sendInvoice(selectedInvoice.id)}>Resend to Customer</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+      {viewTemplate ? (
+        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 p-4">
+          <div className="w-full max-w-2xl rounded-xl bg-white p-5 shadow-2xl">
+            <div className={ui.sectionHead}>
+              <div><h3 className="text-xl font-black text-slate-900">View Template</h3><p className={ui.muted}>{viewTemplate.name || "Invoice Template"}</p></div>
+              <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => setViewTemplate(null)}>Close</button>
+            </div>
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              <div className={ui.tile}><div className={ui.metricLabel}>Status</div><div className="mt-2 font-black">{viewTemplate.active ? "Active" : "Inactive"}</div></div>
+              <div className={ui.tile}><div className={ui.metricLabel}>Saved</div><div className="mt-2 font-black">{viewTemplate.savedAt ? formatDate(viewTemplate.savedAt) : "Starter"}</div></div>
+              <div className={ui.tile}><div className={ui.metricLabel}>Fields</div><div className="mt-2 font-black">{viewTemplate.fields?.length || 0}</div></div>
+              <div className={ui.tile}><div className={ui.metricLabel}>Auto Apply</div><div className="mt-2 font-black">{viewTemplate.active ? "Enabled" : "Set active to apply"}</div></div>
+            </div>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={() => { activateTemplate(viewTemplate); setViewTemplate(null); }}>Set Active Template</button>
+              <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => duplicateTemplate(viewTemplate)}>Save as New Template</button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

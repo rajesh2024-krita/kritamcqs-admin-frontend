@@ -117,21 +117,33 @@ export function SidebarLeft() {
     
     reader.onload = (f) => {
       const data = f.target?.result as string;
-      fabric.Image.fromURL(data, (img) => {
-        // Scale down if too large
-        if (img.width! > 400) {
-          img.scaleToWidth(400);
-        }
-        
-        img.set({
-          left: 100,
-          top: 100,
+      const source = new Image();
+      source.onload = () => {
+        const imageCanvas = document.createElement('canvas');
+        imageCanvas.width = source.naturalWidth || source.width;
+        imageCanvas.height = source.naturalHeight || source.height;
+        const context = imageCanvas.getContext('2d');
+        if (!context) return;
+        context.fillStyle = '#ffffff';
+        context.fillRect(0, 0, imageCanvas.width, imageCanvas.height);
+        context.drawImage(source, 0, 0);
+        const jpgData = imageCanvas.toDataURL('image/jpeg', 0.92);
+        fabric.Image.fromURL(jpgData, (img) => {
+          if (img.width! > 400) {
+            img.scaleToWidth(400);
+          }
+
+          img.set({
+            left: 100,
+            top: 100,
+          });
+
+          canvas.add(img);
+          canvas.setActiveObject(img);
+          canvas.renderAll();
         });
-        
-        canvas.add(img);
-        canvas.setActiveObject(img);
-        canvas.renderAll();
-      });
+      };
+      source.src = data;
     };
     
     reader.readAsDataURL(file);

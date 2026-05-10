@@ -49,6 +49,10 @@ export const subscriptionService = {
     const response = await http.get("/admin/invoices", { params });
     return response.data;
   },
+  async getInvoice(id) {
+    const response = await http.get(`/admin/invoices/${id}`);
+    return response.data;
+  },
   async createInvoice(payload) {
     const response = await http.post("/admin/invoices", payload);
     return response.data;
@@ -75,6 +79,10 @@ export const subscriptionService = {
   },
   async testInvoiceEmail(payload) {
     const response = await http.post("/admin/invoice-settings/test-email", payload);
+    return response.data;
+  },
+  async sendTestInvoice(payload) {
+    const response = await http.post("/admin/invoice-settings/test-invoice", payload);
     return response.data;
   },
   async getNotificationSettings() {

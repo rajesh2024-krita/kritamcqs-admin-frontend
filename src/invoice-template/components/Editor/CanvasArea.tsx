@@ -52,14 +52,19 @@ export function CanvasArea() {
 
     // Event listeners
     const handleSelection = () => {
-      setSelectedObjects(canvas.getActiveObjects());
+      setSelectedObjects([...canvas.getActiveObjects()]);
     };
 
     canvas.on('selection:created', handleSelection);
     canvas.on('selection:updated', handleSelection);
     canvas.on('selection:cleared', () => setSelectedObjects([]));
+    canvas.on('object:moving', handleSelection);
+    canvas.on('object:scaling', handleSelection);
+    canvas.on('object:rotating', handleSelection);
+    canvas.on('object:skewing', handleSelection);
     
     canvas.on('object:modified', () => {
+      handleSelection();
       pushHistory();
     });
 
@@ -225,7 +230,7 @@ export function CanvasArea() {
         </div>
       
         {/* Zoom Controls Overlay */}
-        <div className="fixed bottom-6 right-80 flex items-center bg-white rounded-full shadow-lg border border-slate-200 px-3 py-1 gap-3 z-30">
+        <div className="absolute bottom-6 right-6 flex items-center bg-white rounded-full shadow-lg border border-slate-200 px-3 py-1 gap-3 z-30">
            <button 
              onClick={() => {
                const canvas = fabricCanvasRef.current;

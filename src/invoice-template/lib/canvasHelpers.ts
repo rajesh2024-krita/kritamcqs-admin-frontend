@@ -6,6 +6,12 @@
 import { fabric } from 'fabric';
 
 const defaultHeaders = ['Description', 'Qty', 'Price', 'Tax', 'Total'];
+const defaultCells = [
+  ['Premium Subscription', '1', '{{baseAmount}}', '{{taxAmount}}', '{{totalAmount}}'],
+  ['Discount', '', '', '', '{{discountAmount}}'],
+  ['Transaction', '', '', '', '{{transactionId}}'],
+  ['Status', '', '', '', '{{paymentStatus}}'],
+];
 
 function getPage(canvas: fabric.Canvas) {
   return canvas.getObjects().find(obj => (obj as any).isPage) as fabric.Rect | undefined;
@@ -40,6 +46,9 @@ function rebuildInvoiceTable(group: fabric.Group, canvas: fabric.Canvas) {
   const cols = Math.max(1, Number(meta.cols || defaultHeaders.length));
   const rows = Math.max(1, Number(meta.rows || 4));
   const headers = Array.from({ length: cols }).map((_, index) => meta.headers?.[index] || `Column ${index + 1}`);
+  const cells = Array.from({ length: Math.max(0, rows - 1) }).map((_, row) =>
+    Array.from({ length: cols }).map((__, col) => meta.cells?.[row]?.[col] ?? defaultCells[row]?.[col] ?? ''),
+  );
   const tableWidth = 650;
   const colWidth = tableWidth / cols;
   const objects: fabric.Object[] = [];
@@ -50,15 +59,20 @@ function rebuildInvoiceTable(group: fabric.Group, canvas: fabric.Canvas) {
 
   for (let row = 1; row < rows; row += 1) {
     for (let col = 0; col < cols; col += 1) {
-      const value = col === 0 ? 'Item / Service' : col === cols - 1 ? '{{totalAmount}}' : '0';
+      const value = cells[row - 1]?.[col] ?? '';
       objects.push(...makeCell(value, col * colWidth, row * 34, colWidth, false));
     }
   }
 
-  group._objects = objects;
-  group.width = tableWidth;
-  group.height = rows * 34;
-  group.dirty = true;
+  (group as any).invoiceTable = { ...meta, rows, cols, headers, cells };
+  group.remove(...group.getObjects());
+  objects.forEach((object) => group.addWithUpdate(object));
+  group.set({
+    width: tableWidth,
+    height: rows * 34,
+    dirty: true,
+  });
+  group.setCoords();
   canvas.requestRenderAll();
 }
 
@@ -71,12 +85,16 @@ export const createInvoiceTable = (canvas: fabric.Canvas) => {
     top: startY,
     subTargetCheck: true,
     objectCaching: false,
+    selectable: true,
+    hasControls: true,
+    lockScalingFlip: true,
   }) as fabric.Group & { invoiceTable?: any };
 
   tableGroup.invoiceTable = {
     rows: 5,
     cols: defaultHeaders.length,
     headers: defaultHeaders,
+    cells: defaultCells,
   };
   rebuildInvoiceTable(tableGroup, canvas);
   tableGroup.set({
@@ -93,7 +111,12 @@ export const createInvoiceTable = (canvas: fabric.Canvas) => {
 export const addInvoiceTableRow = (canvas: fabric.Canvas) => {
   const active = canvas.getActiveObject() as fabric.Group & { invoiceTable?: any };
   if (!active?.invoiceTable) return false;
-  active.invoiceTable = { ...active.invoiceTable, rows: Number(active.invoiceTable.rows || 1) + 1 };
+  const cols = Number(active.invoiceTable.cols || defaultHeaders.length);
+  active.invoiceTable = {
+    ...active.invoiceTable,
+    rows: Number(active.invoiceTable.rows || 1) + 1,
+    cells: [...(active.invoiceTable.cells || []), Array.from({ length: cols }).map(() => '')],
+  };
   rebuildInvoiceTable(active, canvas);
   return true;
 };
@@ -106,7 +129,35 @@ export const addInvoiceTableColumn = (canvas: fabric.Canvas) => {
     ...active.invoiceTable,
     cols: nextCol,
     headers: [...(active.invoiceTable.headers || defaultHeaders), `Column ${nextCol}`],
+    cells: (active.invoiceTable.cells || []).map((row: string[]) => [...row, '']),
   };
   rebuildInvoiceTable(active, canvas);
+  return true;
+};
+
+export const updateInvoiceTable = (canvas: fabric.Canvas, patch: Record<string, any>) => {
+  const active = canvas.getActiveObject() as fabric.Group & { invoiceTable?: any };
+  if (!active?.invoiceTable) return false;
+  const current = active.invoiceTable;
+  const cols = Math.max(1, Number(patch.cols ?? current.cols ?? defaultHeaders.length));
+  const rows = Math.max(1, Number(patch.rows ?? current.rows ?? 5));
+  const headers = Array.from({ length: cols }).map((_, index) => patch.headers?.[index] ?? current.headers?.[index] ?? `Column ${index + 1}`);
+  const sourceCells = patch.cells || current.cells || [];
+  const cells = Array.from({ length: Math.max(0, rows - 1) }).map((_, row) =>
+    Array.from({ length: cols }).map((__, col) => sourceCells?.[row]?.[col] ?? ''),
+  );
+
+  active.invoiceTable = {
+    ...current,
+    ...patch,
+    rows,
+    cols,
+    headers,
+    cells,
+  };
+  rebuildInvoiceTable(active, canvas);
+  canvas.setActiveObject(active);
+  canvas.fire('object:modified', { target: active });
+  canvas.requestRenderAll();
   return true;
 };

@@ -9,7 +9,7 @@ import {
   Clipboard, Scissors, Copy, Type, Bold, Italic, Underline, AlignLeft, 
   AlignCenter, AlignRight, AlignJustify, Image as ImageIcon, Shapes, 
   Layout, Palette, Eye, FileText, Download, Printer, Save, 
-  Settings, Undo2, Redo2, Plus, Table, Hash, Minus, Grid3X3, Layers
+  Settings, Undo2, Redo2, Plus, Table, Hash, Minus, Grid3X3, Layers, Circle, Triangle
 } from 'lucide-react';
 import { useEditorStore, TabType } from '../../store/useEditorStore';
 import { motion, AnimatePresence } from 'motion/react';
@@ -96,21 +96,41 @@ function RibbonButton({ icon: Icon, label, primary, onClick }: { icon: any; labe
 }
 
 function HomeRibbon() {
+  const { canvas, pushHistory } = useEditorStore();
+  const active = canvas?.getActiveObject() as any;
+  const isText = active?.type === 'i-text' || active?.type === 'text';
+
+  const updateActive = (patch: Record<string, any>) => {
+    if (!canvas || !active) return;
+    active.set(patch);
+    active.setCoords();
+    canvas.fire('object:modified', { target: active });
+    canvas.requestRenderAll();
+    pushHistory();
+  };
+
   return (
     <>
       <RibbonGroup title="Font">
         <div className="flex flex-col gap-2">
-           <select className="text-xs border border-slate-200 rounded px-1 py-0.5 bg-white w-32 focus:ring-1 focus:ring-blue-500 outline-none">
+           <select
+             value={active?.get?.('fontFamily') || 'Inter'}
+             onChange={(event) => updateActive({ fontFamily: event.target.value })}
+             className="text-xs border border-slate-200 rounded px-1 py-0.5 bg-white w-32 focus:ring-1 focus:ring-blue-500 outline-none"
+             disabled={!isText}
+           >
              <option>Inter</option>
              <option>Georgia</option>
              <option>Courier New</option>
+             <option>Arial</option>
+             <option>Playfair Display</option>
            </select>
            <div className="flex gap-1">
-             <button className="p-1 hover:bg-slate-100 border border-slate-200 rounded"><Bold size={14} /></button>
-             <button className="p-1 hover:bg-slate-100 border border-slate-200 rounded"><Italic size={14} /></button>
-             <button className="p-1 hover:bg-slate-100 border border-slate-200 rounded"><Underline size={14} /></button>
+             <button onClick={() => updateActive({ fontWeight: active?.get('fontWeight') === 'bold' ? 'normal' : 'bold' })} disabled={!isText} className="p-1 hover:bg-slate-100 border border-slate-200 rounded disabled:opacity-30"><Bold size={14} /></button>
+             <button onClick={() => updateActive({ fontStyle: active?.get('fontStyle') === 'italic' ? 'normal' : 'italic' })} disabled={!isText} className="p-1 hover:bg-slate-100 border border-slate-200 rounded disabled:opacity-30"><Italic size={14} /></button>
+             <button onClick={() => updateActive({ underline: !active?.get('underline') })} disabled={!isText} className="p-1 hover:bg-slate-100 border border-slate-200 rounded disabled:opacity-30"><Underline size={14} /></button>
              <div className="relative w-8 h-6 rounded border border-slate-200 overflow-hidden ml-2 ring-1 ring-white">
-                <input type="color" className="absolute top-[-5px] left-[-5px] w-12 h-12 cursor-pointer" />
+                <input type="color" title="Text/fill color" value={typeof active?.get?.('fill') === 'string' ? active.get('fill') : '#111827'} onChange={(event) => updateActive({ fill: event.target.value })} className="absolute top-[-5px] left-[-5px] w-12 h-12 cursor-pointer" />
              </div>
            </div>
         </div>
@@ -118,10 +138,10 @@ function HomeRibbon() {
 
       <RibbonGroup title="Paragraph">
         <div className="grid grid-cols-4 gap-1">
-           <button className="p-1.5 hover:bg-slate-100 rounded border border-slate-200"><AlignLeft size={16} /></button>
-           <button className="p-1.5 hover:bg-slate-100 rounded border border-slate-200"><AlignCenter size={16} /></button>
-           <button className="p-1.5 hover:bg-slate-100 rounded border border-slate-200"><AlignRight size={16} /></button>
-           <button className="p-1.5 hover:bg-slate-100 rounded border border-slate-200"><AlignJustify size={16} /></button>
+           <button onClick={() => updateActive({ textAlign: 'left' })} disabled={!isText} className="p-1.5 hover:bg-slate-100 rounded border border-slate-200 disabled:opacity-30"><AlignLeft size={16} /></button>
+           <button onClick={() => updateActive({ textAlign: 'center' })} disabled={!isText} className="p-1.5 hover:bg-slate-100 rounded border border-slate-200 disabled:opacity-30"><AlignCenter size={16} /></button>
+           <button onClick={() => updateActive({ textAlign: 'right' })} disabled={!isText} className="p-1.5 hover:bg-slate-100 rounded border border-slate-200 disabled:opacity-30"><AlignRight size={16} /></button>
+           <button onClick={() => updateActive({ textAlign: 'justify' })} disabled={!isText} className="p-1.5 hover:bg-slate-100 rounded border border-slate-200 disabled:opacity-30"><AlignJustify size={16} /></button>
         </div>
       </RibbonGroup>
 
@@ -150,6 +170,22 @@ function InsertRibbon() {
     canvas.renderAll();
   };
 
+  const addCircle = () => {
+    if (!canvas) return;
+    const circle = new fabric.Circle({ left: 130, top: 130, radius: 48, fill: '#14B8A6', stroke: '#0F766E', strokeWidth: 1 });
+    canvas.add(circle);
+    canvas.setActiveObject(circle);
+    canvas.renderAll();
+  };
+
+  const addTriangle = () => {
+    if (!canvas) return;
+    const triangle = new fabric.Triangle({ left: 150, top: 150, width: 110, height: 100, fill: '#F97316', stroke: '#C2410C', strokeWidth: 1 });
+    canvas.add(triangle);
+    canvas.setActiveObject(triangle);
+    canvas.renderAll();
+  };
+
   const addText = () => {
     if (!canvas) return;
     const text = new fabric.IText('New Text', {
@@ -166,6 +202,8 @@ function InsertRibbon() {
     <>
       <RibbonGroup title="Illustrations">
         <RibbonButton icon={Shapes} label="Square" onClick={addRect} />
+        <RibbonButton icon={Circle} label="Circle" onClick={addCircle} />
+        <RibbonButton icon={Triangle} label="Triangle" onClick={addTriangle} />
         <RibbonButton icon={ImageIcon} label="Upload Image" onClick={() => document.getElementById('image-upload')?.click()} />
         <RibbonButton icon={Table} label="Invoice Table" primary onClick={() => canvas && createInvoiceTable(canvas)} />
       </RibbonGroup>
