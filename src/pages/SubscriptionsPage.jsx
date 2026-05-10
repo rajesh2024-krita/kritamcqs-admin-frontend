@@ -195,15 +195,11 @@ export function SubscriptionsPage() {
             <div className="mb-2 text-[11px] font-black uppercase tracking-[0.28em] text-blue-700">Revenue Operations</div>
             <h1 className="mb-1 text-3xl font-black tracking-tight text-slate-900">Subscriptions</h1>
             <p className="text-slate-500">
-              Manage the live premium plan from the database, review subscription history, and activate manual subscriptions with coupons.
+              Manage the live premium plan from the database and review Razorpay-verified subscription history.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <div className="inline-flex items-center rounded-sm bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-blue-700">{meta?.total ?? items.length} records</div>
-            <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={openCreate} disabled={!plan}>
-              <PlusIcon size={16} />
-              Manual Subscription
-            </button>
           </div>
         </div>
       </div>
@@ -234,7 +230,7 @@ export function SubscriptionsPage() {
       </div>
 
       {loading ? <LoadingSpinner label="Loading subscriptions..." /> : null}
-      {!loading && !items.length ? <EmptyState title="No subscriptions found" description="Use manual subscription to activate a premium plan for a learner." /> : null}
+      {!loading && !items.length ? <EmptyState title="No subscriptions found" description="Successful Razorpay purchases will appear here." /> : null}
       {!loading && items.length ? (
         <>
           <div className="overflow-hidden rounded-sm border border-white/60 bg-white/85 shadow-xl shadow-slate-200/60 backdrop-blur-xl">

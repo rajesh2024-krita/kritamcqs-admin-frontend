@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { userService } from "../../api/userService";
+import { learningLevelService } from "../../api/learningLevelService";
 import { ConfirmDeleteModal } from "../../components/common/ConfirmDeleteModal";
 import { EmptyState } from "../../components/common/EmptyState";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
@@ -53,6 +54,8 @@ export function UsersPage() {
   const [migrationPreviewReady, setMigrationPreviewReady] = useState(false);
   const [migrationLoading, setMigrationLoading] = useState(false);
   const [migrationLogs, setMigrationLogs] = useState([]);
+  const [learningLevels, setLearningLevels] = useState([]);
+  const learningLevelOptions = learningLevels.map((level) => ({ label: level.label, value: level.key }));
   const revisionTotalCount = overview?.revisionSummary?.totalCount ?? overview?.revisionSummary?.revisionPendingCount ?? 0;
   const revisionWrongCount = overview?.revisionSummary?.wrongQuestionCount ?? 0;
   const revisionOldCorrectCount = overview?.revisionSummary?.oldCorrectQuestionCount ?? 0;
@@ -103,6 +106,7 @@ export function UsersPage() {
 
   useEffect(() => {
     loadUsers(query);
+    loadLearningLevels();
     loadMigrationLogs();
   }, [query.page]);
 
@@ -130,6 +134,15 @@ export function UsersPage() {
       setMigrationLogs(response.data || []);
     } catch {
       setMigrationLogs([]);
+    }
+  }
+
+  async function loadLearningLevels() {
+    try {
+      const response = await learningLevelService.list({ limit: 100, active: true, sortBy: "sortOrder", sortOrder: "asc" });
+      setLearningLevels(response.data || []);
+    } catch {
+      setLearningLevels([]);
     }
   }
 
@@ -768,7 +781,7 @@ export function UsersPage() {
               <SelectDropdown value={formState.examMode} onChange={(value) => setFormState((current) => ({ ...current, examMode: value }))} options={[{ label: "NEET", value: "NEET" }, { label: "JEE", value: "JEE" }, { label: "BOTH", value: "BOTH" }]} />
             </Field>
             <Field label="Level">
-              <SelectDropdown value={formState.level} onChange={(value) => setFormState((current) => ({ ...current, level: value }))} options={[{ label: "Beginner", value: "Beginner" }, { label: "Average", value: "Average" }, { label: "Topper", value: "Topper" }]} />
+              <SelectDropdown value={formState.level} onChange={(value) => setFormState((current) => ({ ...current, level: value }))} options={learningLevelOptions} />
             </Field>
             <Field label="Premium Expiry"><input className={ui.input} type="datetime-local" value={formState.premiumExpiresAt} onChange={(event) => setFormState((current) => ({ ...current, premiumExpiresAt: event.target.value }))} /></Field>
             <Field label="Onboarding Complete"><input className={ui.checkbox} type="checkbox" checked={formState.onboardingComplete} onChange={(event) => setFormState((current) => ({ ...current, onboardingComplete: event.target.checked }))} /></Field>

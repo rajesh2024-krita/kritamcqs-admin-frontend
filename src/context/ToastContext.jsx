@@ -1,4 +1,5 @@
 import { createContext, useContext, useMemo, useState } from "react";
+import { showSweetAlert } from "../components/common/SweetAlertViewport";
 
 const ToastContext = createContext(null);
 
@@ -8,6 +9,11 @@ export function ToastProvider({ children }) {
   function pushToast(type, message) {
     const id = crypto.randomUUID();
     setToasts((current) => [...current, { id, type, message }]);
+    showSweetAlert({
+      type,
+      title: type === "success" ? "Success" : type === "error" ? "Error" : "Notice",
+      text: message,
+    });
     setTimeout(() => {
       setToasts((current) => current.filter((toast) => toast.id !== id));
     }, 3200);

@@ -23,6 +23,7 @@ const navItems = [
   { label: "Dashboard", to: "/", section: "Overview", icon: DashboardIcon },
   { label: "Catalog Overview", to: "/catalog-overview", section: "Overview", icon: OverviewIcon },
   { label: "Modes", to: "/modes", section: "Catalog", icon: LayersIcon },
+  { label: "Learning Levels", to: "/learning-levels", section: "Catalog", icon: UsersIcon },
   { label: "Difficulties", to: "/difficulties", section: "Catalog", icon: TagIcon },
   { label: "Exam Types", to: "/exam-types", section: "Catalog", icon: ShieldIcon },
   { label: "Subjects", to: "/subjects", section: "Catalog", icon: BookIcon },
@@ -39,7 +40,11 @@ const navItems = [
   { label: "Users", to: "/users", section: "Operations", icon: UsersIcon },
   { label: "Subscriptions", to: "/subscriptions", section: "Operations", icon: SubscriptionIcon },
   { label: "Plan Config", to: "/subscription-plans", section: "Operations", icon: SubscriptionIcon },
+  { label: "Payment Gateway", to: "/payment-gateway", section: "Operations", icon: ShieldIcon },
+  { label: "Invoice System", to: "/invoice-system", section: "Operations", icon: FileStackIcon },
+  { label: "SMTP Settings", to: "/smtp-settings", section: "Operations", icon: ShieldIcon },
   { label: "Coupons", to: "/coupons", section: "Operations", icon: TagIcon },
+  { label: "Session", to: "/sessions", section: "Operations", icon: DashboardIcon },
   { label: "Settings", to: "/settings", section: "System", icon: SettingsIcon },
 ];
 
