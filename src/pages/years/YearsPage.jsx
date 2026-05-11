@@ -12,7 +12,7 @@ export function YearsPage() {
         { key: "examTypes", load: () => examTypeService.list({ limit: 50 }) },
       ]}
       fields={[
-        { name: "name", label: "Name", required: true },
+        { name: "name", label: "Year", required: true },
         {
           name: "examType",
           label: "Exam Type",
@@ -21,7 +21,7 @@ export function YearsPage() {
         },
       ]}
       columns={[
-        { key: "name", label: "Name" },
+        { key: "name", label: "Year" },
         { key: "examType", label: "Exam Type" },
       ]}
     />

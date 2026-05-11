@@ -301,7 +301,6 @@ export function UsersPage() {
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <div className="mb-2 text-[11px] font-black uppercase tracking-[0.28em] text-blue-700">User Intelligence</div>
-            <h1 className="mb-1 text-3xl font-black tracking-tight text-slate-900">Users</h1>
             <p className="text-slate-500">
               View full learner performance, attendance, reports, subscriptions, mistakes, weak areas, and submission trails in one place.
             </p>

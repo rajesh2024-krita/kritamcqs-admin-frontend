@@ -23,12 +23,31 @@ export function QuestionTypesPage() {
       lookupLoaders={[
         { key: "examTypes", load: () => examTypeService.list({ limit: 50 }) },
       ]}
+      filters={[
+        {
+          name: "examType",
+          label: "Exam Type",
+          placeholder: "All Exam Types",
+          options: (lookups) => (lookups.examTypes || []).map((item) => ({ label: item.name || item.label || item.key, value: item.name || item.key || item.label })),
+        },
+        {
+          name: "responseType",
+          label: "Response",
+          placeholder: "All Response Types",
+          options: [
+            { label: "Single Correct", value: "single" },
+            { label: "Multiple Correct", value: "multiple" },
+            { label: "Numeric", value: "numeric" },
+          ],
+        },
+      ]}
       fields={[
         { name: "name", label: "Name", required: true },
         {
           name: "examType",
           label: "Exam Type",
           type: "select",
+          required: true,
           options: (_form, lookups) => (lookups.examTypes || []).map((item) => ({ label: item.name || item.label || item.key, value: item.name || item.key || item.label })),
         },
         {

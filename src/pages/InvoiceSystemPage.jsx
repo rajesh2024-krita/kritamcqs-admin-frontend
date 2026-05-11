@@ -29,6 +29,9 @@ const emptyInvoiceForm = {
   signatureUrl: "",
   logoUrl: "",
   qrCode: "",
+  defaultTaxPercent: 0,
+  defaultConvenienceChargePercent: 0,
+  defaultConvenienceChargeGstPercent: 0,
   items: [{ product: "Premium Subscription", description: "", quantity: 1, price: 0, tax: 0, discount: 0, total: 0 }],
 };
 
@@ -542,6 +545,39 @@ export function InvoiceSystemPage() {
             <span>Tax Type</span>
             <input className={ui.input} value={invoiceForm.taxDetails.gstType || ""} onChange={(event) => patchInvoice("taxDetails.gstType", event.target.value)} />
           </label>
+          <label className={ui.field}>
+            <span>Default Tax %</span>
+            <input
+              className={ui.input}
+              type="number"
+              min="0"
+              max="100"
+              value={settings?.defaultTaxPercent ?? 0}
+              onChange={(event) => setSettings((current) => ({ ...(current || {}), defaultTaxPercent: Number(event.target.value || 0) }))}
+            />
+          </label>
+          <label className={ui.field}>
+            <span>Convenience Charge %</span>
+            <input
+              className={ui.input}
+              type="number"
+              min="0"
+              max="100"
+              value={settings?.defaultConvenienceChargePercent ?? 0}
+              onChange={(event) => setSettings((current) => ({ ...(current || {}), defaultConvenienceChargePercent: Number(event.target.value || 0) }))}
+            />
+          </label>
+          <label className={ui.field}>
+            <span>GST on Charge %</span>
+            <input
+              className={ui.input}
+              type="number"
+              min="0"
+              max="100"
+              value={settings?.defaultConvenienceChargeGstPercent ?? 0}
+              onChange={(event) => setSettings((current) => ({ ...(current || {}), defaultConvenienceChargeGstPercent: Number(event.target.value || 0) }))}
+            />
+          </label>
           <label className={cn(ui.field, "lg:col-span-3")}>
             <span>Billing Address</span>
             <textarea className={ui.textarea} value={invoiceForm.billingCompany.address || ""} onChange={(event) => patchInvoice("billingCompany.address", event.target.value)} />
@@ -671,7 +707,12 @@ export function InvoiceSystemPage() {
               <tr>
                 <th className={ui.tableHead}>Invoice</th>
                 <th className={ui.tableHead}>Student</th>
-                <th className={ui.tableHead}>Amount</th>
+                <th className={ui.tableHead}>Subtotal</th>
+                <th className={ui.tableHead}>Discount</th>
+                <th className={ui.tableHead}>Tax</th>
+                <th className={ui.tableHead}>Charges</th>
+                <th className={ui.tableHead}>GST on Charges</th>
+                <th className={ui.tableHead}>Total</th>
                 <th className={ui.tableHead}>Status</th>
                 <th className={ui.tableHead}>Email</th>
                 <th className={ui.tableHead}>Created</th>
@@ -685,7 +726,12 @@ export function InvoiceSystemPage() {
                 <tr key={item.id}>
                   <td className={ui.tableCell}>{item.invoiceNumber}</td>
                   <td className={ui.tableCell}>{item.userName}<div className="text-xs text-slate-500">{item.userEmail || "-"}</div></td>
-                  <td className={ui.tableCell}>Rs. {Number(item.amount || 0).toFixed(2)}</td>
+                  <td className={ui.tableCell}>{item.currency || "INR"} {Number(item.subtotal || 0).toFixed(2)}</td>
+                  <td className={ui.tableCell}>{item.currency || "INR"} {Number(item.discountTotal || 0).toFixed(2)}</td>
+                  <td className={ui.tableCell}>{item.currency || "INR"} {Number(item.taxTotal || 0).toFixed(2)}</td>
+                  <td className={ui.tableCell}>{item.currency || "INR"} {Number(item.convenienceCharge || 0).toFixed(2)}</td>
+                  <td className={ui.tableCell}>{item.currency || "INR"} {Number(item.convenienceChargeGst || 0).toFixed(2)}</td>
+                  <td className={ui.tableCell}>{item.currency || "INR"} {Number(item.grandTotal || item.amount || 0).toFixed(2)}</td>
                   <td className={ui.tableCell}><span className={ui.pill}>{item.status || "draft"}</span></td>
                   <td className={ui.tableCell}><span className={ui.pill}>{item.emailStatus || "-"}</span>{item.emailError ? <div className="mt-1 text-xs text-rose-600">{item.emailError}</div> : null}</td>
                   <td className={ui.tableCell}>{formatDate(item.createdAt || item.issuedAt)}</td>
@@ -703,7 +749,7 @@ export function InvoiceSystemPage() {
                 </tr>
               ))}
               {!invoices.length ? (
-                <tr><td className={ui.tableCell} colSpan={9}>No invoices generated yet.</td></tr>
+                <tr><td className={ui.tableCell} colSpan={14}>No invoices generated yet.</td></tr>
               ) : null}
             </tbody>
           </table>
@@ -742,7 +788,11 @@ export function InvoiceSystemPage() {
             </div>
             <div className="mt-5 grid gap-3 md:grid-cols-4">
               <div className={ui.tile}><div className={ui.metricLabel}>Status</div><div className="mt-2 font-black capitalize">{selectedInvoice.status}</div></div>
-              <div className={ui.tile}><div className={ui.metricLabel}>Amount</div><div className="mt-2 font-black">{selectedInvoice.currency} {Number(selectedInvoice.amount || 0).toFixed(2)}</div></div>
+              <div className={ui.tile}><div className={ui.metricLabel}>Discount</div><div className="mt-2 font-black">{selectedInvoice.currency} {Number(selectedInvoice.discountTotal || 0).toFixed(2)}</div></div>
+              <div className={ui.tile}><div className={ui.metricLabel}>Tax</div><div className="mt-2 font-black">{selectedInvoice.currency} {Number(selectedInvoice.taxTotal || 0).toFixed(2)}</div></div>
+              <div className={ui.tile}><div className={ui.metricLabel}>Charges</div><div className="mt-2 font-black">{selectedInvoice.currency} {Number(selectedInvoice.convenienceCharge || 0).toFixed(2)}</div></div>
+              <div className={ui.tile}><div className={ui.metricLabel}>GST on Charges</div><div className="mt-2 font-black">{selectedInvoice.currency} {Number(selectedInvoice.convenienceChargeGst || 0).toFixed(2)}</div></div>
+              <div className={ui.tile}><div className={ui.metricLabel}>Total</div><div className="mt-2 font-black">{selectedInvoice.currency} {Number(selectedInvoice.grandTotal || selectedInvoice.amount || 0).toFixed(2)}</div></div>
               <div className={ui.tile}><div className={ui.metricLabel}>Created</div><div className="mt-2 font-black">{formatDate(selectedInvoice.createdAt)}</div></div>
               <div className={ui.tile}><div className={ui.metricLabel}>Email</div><div className="mt-2 font-black capitalize">{selectedInvoice.emailStatus || "-"}</div></div>
             </div>

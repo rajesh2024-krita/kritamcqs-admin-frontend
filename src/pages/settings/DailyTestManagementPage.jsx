@@ -28,16 +28,12 @@ export function DailyTestManagementPage() {
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [settings, setSettings] = useState(defaultSettings);
-  const [analytics, setAnalytics] = useState(null);
   const [resetInput, setResetInput] = useState({ user_id: "", date: "", reset_all: false });
 
   async function loadData() {
     setLoading(true);
     try {
-      const [settingsResponse, analyticsResponse] = await Promise.all([
-        dailyTestManagementService.getSettings(),
-        dailyTestManagementService.getAnalytics(),
-      ]);
+      const settingsResponse = await dailyTestManagementService.getSettings();
 
       setSettings({
         total_questions: settingsResponse.data?.total_questions ?? 20,
@@ -56,7 +52,6 @@ export function DailyTestManagementPage() {
         high_performance_ratio: settingsResponse.data?.highPerformanceRatio ?? settingsResponse.data?.high_performance_ratio ?? { easy: 15, moderate: 45, hard: 40 },
         mixed_mode_ratio: settingsResponse.data?.mixedModeRatio ?? settingsResponse.data?.mixed_mode_ratio ?? { easy: 34, moderate: 33, hard: 33 },
       });
-      setAnalytics(analyticsResponse.data || null);
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -169,8 +164,6 @@ export function DailyTestManagementPage() {
       };
       const response = await dailyTestManagementService.resetDailyTests(payload);
       toast.success(`Reset completed. Deleted ${response.data?.deleted_count ?? 0} test records.`);
-      const analyticsResponse = await dailyTestManagementService.getAnalytics();
-      setAnalytics(analyticsResponse.data || null);
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -186,7 +179,6 @@ export function DailyTestManagementPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className={ui.eyebrow}>Daily Test Control</div>
-            <h1 className="mb-1 text-3xl font-black tracking-tight text-slate-900">Daily Test Settings</h1>
             <p className={ui.muted}>Configure daily test generation, question composition, and difficulty distribution from admin.</p>
           </div>
           <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={loadData} type="button">
@@ -408,53 +400,6 @@ export function DailyTestManagementPage() {
           </div>
         </div>
       </form>
-
-      <section className={ui.compactPanel}>
-        <div className={ui.sectionHead}>
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">Analytics Dashboard</h3>
-            <p className={ui.muted}>Daily test usage summary, score quality, completion trend, and top users.</p>
-          </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-          <div className={ui.tile}><span className={ui.metricLabel}>Total Daily Tests Taken</span><strong className="mt-3 block text-3xl font-black text-slate-900">{analytics?.total_attempts ?? 0}</strong></div>
-          <div className={ui.tile}><span className={ui.metricLabel}>Average Score</span><strong className="mt-3 block text-3xl font-black text-slate-900">{analytics?.average_score ?? 0}</strong></div>
-          <div className={ui.tile}><span className={ui.metricLabel}>Completion Rate</span><strong className="mt-3 block text-3xl font-black text-slate-900">{analytics?.completion_rate ?? 0}%</strong></div>
-        </div>
-
-        <div className="mt-5 rounded-sm border border-slate-200 bg-white p-4">
-          <h4 className="text-lg font-bold text-slate-900">Top Performing Users</h4>
-          <div className="mt-3 overflow-x-auto">
-            <table className="min-w-full text-sm">
-              <thead>
-                <tr className="text-left text-slate-500">
-                  <th className="py-2 pr-3">User</th>
-                  <th className="py-2 pr-3">Attempts</th>
-                  <th className="py-2 pr-3">Avg Score</th>
-                  <th className="py-2 pr-3">Avg Accuracy</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(analytics?.top_performing_users || []).map((item) => (
-                  <tr key={item.userId} className="border-t border-slate-100 text-slate-700">
-                    <td className="py-2 pr-3">
-                      <div className="font-semibold">{item.name || "Unknown User"}</div>
-                      {item.email ? <div className="text-xs text-slate-500">{item.email}</div> : null}
-                    </td>
-                    <td className="py-2 pr-3">{item.attempts ?? 0}</td>
-                    <td className="py-2 pr-3">{item.avgScore ?? 0}</td>
-                    <td className="py-2 pr-3">{item.avgAccuracy ?? 0}%</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {!(analytics?.top_performing_users || []).length ? (
-              <div className="py-4 text-sm text-slate-500">No top-performing users yet.</div>
-            ) : null}
-          </div>
-        </div>
-      </section>
 
       <section className={ui.panel}>
         <div className={ui.sectionHead}>

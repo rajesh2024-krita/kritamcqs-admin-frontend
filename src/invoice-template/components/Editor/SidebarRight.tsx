@@ -8,10 +8,18 @@ import { useEditorStore } from '../../store/useEditorStore';
 import { 
   Type, Bold, Italic, Underline, AlignLeft, AlignCenter, 
   AlignRight, AlignJustify, Trash2, Layers, Move, Maximize2, RotateCcw,
-  Palette, Lock, Unlock, EyeOff, Copy
+  Palette, Lock, Unlock, Copy, BringToFront, SendToBack
 } from 'lucide-react';
 import { FONTS } from '../../constants/editor';
-import { updateInvoiceTable } from '../../lib/canvasHelpers';
+import {
+  addInvoiceTableColumnAt,
+  addInvoiceTableRowAt,
+  deleteInvoiceTableColumnAt,
+  deleteInvoiceTableRowAt,
+  duplicateInvoiceTableColumnAt,
+  duplicateInvoiceTableRowAt,
+  updateInvoiceTable,
+} from '../../lib/canvasHelpers';
 
 export function SidebarRight() {
   const { selectedObjects, canvas, pushHistory } = useEditorStore();
@@ -151,6 +159,22 @@ export function SidebarRight() {
     updateTable({ cells });
   };
 
+  const updateTableStyle = (patch: Record<string, any>) => {
+    updateTable({ style: { ...(props.invoiceTable?.style || {}), ...patch } });
+  };
+
+  const updateColumnWidth = (index: number, value: number) => {
+    const colWidths = [...(props.invoiceTable?.colWidths || [])];
+    colWidths[index] = Math.max(24, Number(value || 24));
+    updateTable({ colWidths });
+  };
+
+  const updateRowHeight = (index: number, value: number) => {
+    const rowHeights = [...(props.invoiceTable?.rowHeights || [])];
+    rowHeights[index] = Math.max(18, Number(value || 18));
+    updateTable({ rowHeights });
+  };
+
   const duplicateObject = async () => {
     if (!activeObject || !canvas) return;
     activeObject.clone((clone: any) => {
@@ -167,6 +191,38 @@ export function SidebarRight() {
     canvas.remove(...selectedObjects);
     canvas.discardActiveObject();
     canvas.renderAll();
+    pushHistory();
+  };
+
+  const toggleLock = () => {
+    if (!activeObject || !canvas) return;
+    const nextLocked = Boolean(activeObject.get('lockMovementX'));
+    activeObject.set({
+      lockMovementX: !nextLocked,
+      lockMovementY: !nextLocked,
+      lockScalingX: !nextLocked,
+      lockScalingY: !nextLocked,
+      lockRotation: !nextLocked,
+      selectable: true,
+      evented: true,
+    });
+    canvas.requestRenderAll();
+    pushHistory();
+  };
+
+  const bringForward = () => {
+    if (!activeObject || !canvas) return;
+    canvas.bringForward(activeObject);
+    canvas.requestRenderAll();
+    pushHistory();
+  };
+
+  const sendBackward = () => {
+    if (!activeObject || !canvas) return;
+    canvas.sendBackwards(activeObject);
+    const page = canvas.getObjects().find((obj: any) => obj.isPage);
+    if (page) canvas.sendToBack(page);
+    canvas.requestRenderAll();
     pushHistory();
   };
 
@@ -200,6 +256,9 @@ export function SidebarRight() {
           <span className="text-xs font-bold uppercase tracking-wider">{activeObject.type}</span>
         </div>
         <div className="flex items-center gap-1">
+          <button onClick={bringForward} className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600" title="Bring forward"><BringToFront size={14} /></button>
+          <button onClick={sendBackward} className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600" title="Send backward"><SendToBack size={14} /></button>
+          <button onClick={toggleLock} className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600" title="Lock or unlock">{activeObject.get('lockMovementX') ? <Lock size={14} /> : <Unlock size={14} />}</button>
           <button onClick={duplicateObject} className="p-1.5 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600"><Copy size={14} /></button>
           <button onClick={deleteObject} className="p-1.5 hover:bg-red-50 rounded text-slate-400 hover:text-red-500"><Trash2 size={14} /></button>
         </div>
@@ -296,18 +355,63 @@ export function SidebarRight() {
             <PropGroup label="Rows" value={props.invoiceTable?.rows || 1} onChange={(v: number) => updateTable({ rows: Math.max(1, Math.round(v)) })} />
             <PropGroup label="Columns" value={props.invoiceTable?.cols || 1} onChange={(v: number) => updateTable({ cols: Math.max(1, Math.round(v)) })} />
           </div>
+          <div className="rounded-lg border border-slate-100 bg-white p-3">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Rows</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button className="rounded border border-slate-200 px-2 py-1 text-[10px] font-bold hover:bg-slate-50" onClick={() => canvas && addInvoiceTableRowAt(canvas, 0) && pushHistory()}>Add Row Above</button>
+              <button className="rounded border border-slate-200 px-2 py-1 text-[10px] font-bold hover:bg-slate-50" onClick={() => canvas && addInvoiceTableRowAt(canvas, Number(props.invoiceTable?.cells?.length || 0)) && pushHistory()}>Add Row Below</button>
+              <button className="rounded border border-slate-200 px-2 py-1 text-[10px] font-bold hover:bg-slate-50" onClick={() => canvas && duplicateInvoiceTableRowAt(canvas, Math.max(0, Number(props.invoiceTable?.cells?.length || 1) - 1)) && pushHistory()}>Duplicate Last Row</button>
+              <button className="rounded border border-rose-200 px-2 py-1 text-[10px] font-bold text-rose-600 hover:bg-rose-50" onClick={() => canvas && deleteInvoiceTableRowAt(canvas, Math.max(0, Number(props.invoiceTable?.cells?.length || 1) - 1)) && pushHistory()}>Delete Last Row</button>
+            </div>
+          </div>
+          <div className="rounded-lg border border-slate-100 bg-white p-3">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Columns</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button className="rounded border border-slate-200 px-2 py-1 text-[10px] font-bold hover:bg-slate-50" onClick={() => canvas && addInvoiceTableColumnAt(canvas, 0) && pushHistory()}>Add Column Left</button>
+              <button className="rounded border border-slate-200 px-2 py-1 text-[10px] font-bold hover:bg-slate-50" onClick={() => canvas && addInvoiceTableColumnAt(canvas, Number(props.invoiceTable?.cols || 0)) && pushHistory()}>Add Column Right</button>
+              <button className="rounded border border-slate-200 px-2 py-1 text-[10px] font-bold hover:bg-slate-50" onClick={() => canvas && duplicateInvoiceTableColumnAt(canvas, Math.max(0, Number(props.invoiceTable?.cols || 1) - 1)) && pushHistory()}>Duplicate Last Column</button>
+              <button className="rounded border border-rose-200 px-2 py-1 text-[10px] font-bold text-rose-600 hover:bg-rose-50" onClick={() => canvas && deleteInvoiceTableColumnAt(canvas, Math.max(0, Number(props.invoiceTable?.cols || 1) - 1)) && pushHistory()}>Delete Last Column</button>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-100 bg-slate-50/60 p-3">
+            <PropGroup label="Border Width" value={props.invoiceTable?.style?.borderWidth ?? 1} onChange={(v: number) => updateTableStyle({ borderWidth: Math.max(0, v) })} />
+            <PropGroup label="Cell Padding" value={props.invoiceTable?.style?.padding ?? 10} onChange={(v: number) => updateTableStyle({ padding: Math.max(0, v) })} />
+            <ColorPicker label="Border Color" value={props.invoiceTable?.style?.borderColor || '#cbd5e1'} onChange={(value: string) => updateTableStyle({ borderColor: value })} />
+            <ColorPicker label="Header Background" value={props.invoiceTable?.style?.headerBackground || '#0f172a'} onChange={(value: string) => updateTableStyle({ headerBackground: value })} />
+            <ColorPicker label="Header Text" value={props.invoiceTable?.style?.headerTextColor || '#ffffff'} onChange={(value: string) => updateTableStyle({ headerTextColor: value })} />
+            <ColorPicker label="Body Background" value={props.invoiceTable?.style?.bodyBackground || '#ffffff'} onChange={(value: string) => updateTableStyle({ bodyBackground: value })} />
+            <label className="col-span-2 flex flex-col gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Border Style
+              <select className="rounded border border-slate-200 bg-white p-1.5 text-xs normal-case tracking-normal" value={props.invoiceTable?.style?.borderStyle || 'solid'} onChange={(event) => updateTableStyle({ borderStyle: event.target.value })}>
+                <option value="solid">Solid</option>
+                <option value="dashed">Dashed</option>
+                <option value="dotted">Dotted</option>
+              </select>
+            </label>
+            <label className="col-span-2 flex items-center gap-2 text-xs font-bold text-slate-600">
+              <input type="checkbox" checked={Boolean(props.invoiceTable?.style?.useAlternateRows)} onChange={(event) => updateTableStyle({ useAlternateRows: event.target.checked })} />
+              Alternate row colors
+            </label>
+          </div>
           <div className="space-y-3">
             <div>
               <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">Headers</p>
               <div className="grid gap-2">
                 {Array.from({ length: Number(props.invoiceTable?.cols || 0) }).map((_, index) => (
-                  <input
-                    key={`header-${index}`}
-                    value={props.invoiceTable?.headers?.[index] || ''}
-                    onChange={(event) => updateTableHeader(index, event.target.value)}
-                    className="w-full rounded border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500"
-                    placeholder={`Column ${index + 1}`}
-                  />
+                  <div key={`header-${index}`} className="grid grid-cols-[1fr_68px] gap-2">
+                    <input
+                      value={props.invoiceTable?.headers?.[index] || ''}
+                      onChange={(event) => updateTableHeader(index, event.target.value)}
+                      className="w-full rounded border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                      placeholder={`Column ${index + 1}`}
+                    />
+                    <input
+                      type="number"
+                      value={Math.round(props.invoiceTable?.colWidths?.[index] || 100)}
+                      onChange={(event) => updateColumnWidth(index, Number(event.target.value || 0))}
+                      className="w-full rounded border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                  </div>
                 ))}
               </div>
             </div>
@@ -316,7 +420,15 @@ export function SidebarRight() {
               <div className="max-h-64 space-y-3 overflow-y-auto pr-1">
                 {Array.from({ length: Math.max(0, Number(props.invoiceTable?.rows || 1) - 1) }).map((_, rowIndex) => (
                   <div key={`row-${rowIndex}`} className="rounded-lg border border-slate-100 bg-white p-2">
-                    <p className="mb-2 text-[10px] font-bold uppercase text-slate-400">Row {rowIndex + 1}</p>
+                    <div className="mb-2 grid grid-cols-[1fr_68px] items-center gap-2">
+                      <p className="text-[10px] font-bold uppercase text-slate-400">Row {rowIndex + 1}</p>
+                      <input
+                        type="number"
+                        value={Math.round(props.invoiceTable?.rowHeights?.[rowIndex + 1] || 34)}
+                        onChange={(event) => updateRowHeight(rowIndex + 1, Number(event.target.value || 0))}
+                        className="w-full rounded border border-slate-200 bg-slate-50/50 px-2 py-1.5 text-xs outline-none focus:ring-1 focus:ring-blue-500"
+                      />
+                    </div>
                     <div className="grid gap-2">
                       {Array.from({ length: Number(props.invoiceTable?.cols || 0) }).map((__, colIndex) => (
                         <input

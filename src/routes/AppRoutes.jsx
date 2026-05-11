@@ -23,7 +23,6 @@ import { DifficultiesPage } from "../pages/DifficultiesPage";
 import { CouponsPage } from "../pages/CouponsPage";
 import { DailyPlansPage } from "../pages/DailyPlansPage";
 import { SessionsPage } from "../pages/SessionsPage";
-import { DailyTestAnalyticsPage } from "../pages/DailyTestAnalyticsPage";
 import { SettingsPage } from "../pages/settings/SettingsPage";
 import { MockTestsPage } from "../pages/mockTests/MockTestsPage";
 import { RevisionManagementPage } from "../pages/settings/RevisionManagementPage";
@@ -63,7 +62,6 @@ export function AppRoutes() {
         <Route path="coupons" element={<CouponsPage />} />
         <Route path="sessions" element={<SessionsPage />} />
         <Route path="daily-plans" element={<DailyPlansPage />} />
-        <Route path="daily-test-analytics" element={<DailyTestAnalyticsPage />} />
         <Route path="daily-test-management" element={<DailyTestManagementPage />} />
         <Route path="revision-management" element={<RevisionManagementPage />} />
         <Route path="settings" element={<SettingsPage />} />

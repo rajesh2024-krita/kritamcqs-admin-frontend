@@ -4,7 +4,7 @@ import { dashboardService } from "../../api/dashboardService";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { useToast } from "../../context/ToastContext";
 import { ui } from "../../ui";
-import { formatDate } from "../../utils/format";
+import { formatCompactNumber, formatDate } from "../../utils/format";
 
 export function DashboardPage() {
   const toast = useToast();
@@ -34,12 +34,12 @@ export function DashboardPage() {
   if (!data) return null;
 
   const stats = [
-    ["Total Users", data.totalUsers, "Learner accounts across the platform"],
-    ["Premium Users", data.premiumUsers, "Active paid learners"],
-    ["Total Questions", data.totalQuestions, "Question bank coverage"],
-    ["Total Subjects", data.totalSubjects, "Catalog subjects configured"],
-    ["Total Chapters", data.totalChapters, "Chapters available for practice"],
-    ["Total Sessions", data.totalSessions, "Tracked learning sessions"],
+    ["Total Users", data.totalUsers, "Learner accounts across the platform", "/users"],
+    ["Premium Users", data.premiumUsers, "Active paid learners", "/users"],
+    ["Total Questions", data.totalQuestions, "Question bank coverage", "/questions"],
+    ["Total Subjects", data.totalSubjects, "Catalog subjects configured", "/subjects"],
+    ["Total Chapters", data.totalChapters, "Chapters available for practice", "/chapters"],
+    ["Total Sessions", data.totalSessions, "Tracked learning sessions", "/sessions"],
   ];
 
   return (
@@ -55,26 +55,26 @@ export function DashboardPage() {
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-sm bg-white/10 p-4">
               <span className="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300">Questions</span>
-              <strong className="mt-2 block text-3xl font-bold">{data.totalQuestions ?? 0}</strong>
+              <strong className="mt-2 block text-3xl font-bold">{formatCompactNumber(data.totalQuestions)}</strong>
             </div>
             <div className="rounded-sm bg-white/10 p-4">
               <span className="block text-[11px] font-bold uppercase tracking-[0.22em] text-slate-300">Premium</span>
-              <strong className="mt-2 block text-3xl font-bold">{data.premiumUsers ?? 0}</strong>
+              <strong className="mt-2 block text-3xl font-bold">{formatCompactNumber(data.premiumUsers)}</strong>
             </div>
           </div>
         </div>
       </section>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
-        {stats.map(([label, value, hint]) => (
-          <div key={label} className={ui.metricCard}>
+        {stats.map(([label, value, hint, route]) => (
+          <Link key={label} to={route} className={ui.metricCard} title={String(value ?? 0)}>
             <div className={ui.metricTop}>
               <span className={ui.metricLabel}>{label}</span>
               <span className={ui.metricDot} />
             </div>
-            <h2 className={ui.metricValue}>{value}</h2>
+            <h2 className={ui.metricValue}>{formatCompactNumber(value)}</h2>
             <div className={ui.muted}>{hint}</div>
-          </div>
+          </Link>
         ))}
       </div>
 
@@ -88,12 +88,10 @@ export function DashboardPage() {
             <div className={ui.badge}>Structure</div>
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            <div className={ui.tile}><span className={ui.metricLabel}>Modes</span><strong className="mt-3 block text-3xl font-bold text-slate-900">{catalog?.modes ?? 0}</strong><small className="mt-2 block text-sm text-slate-500">Preparation paths</small></div>
-            <div className={ui.tile}><span className={ui.metricLabel}>Exam Types</span><strong className="mt-3 block text-3xl font-bold text-slate-900">{catalog?.examTypes ?? 0}</strong><small className="mt-2 block text-sm text-slate-500">Core exam taxonomy</small></div>
-            <div className={ui.tile}><span className={ui.metricLabel}>Subjects</span><strong className="mt-3 block text-3xl font-bold text-slate-900">{catalog?.subjects ?? 0}</strong><small className="mt-2 block text-sm text-slate-500">Mapped by exam type</small></div>
-            <div className={ui.tile}><span className={ui.metricLabel}>Chapters</span><strong className="mt-3 block text-3xl font-bold text-slate-900">{catalog?.chapters ?? 0}</strong><small className="mt-2 block text-sm text-slate-500">Learning buckets</small></div>
-            <div className={ui.tile}><span className={ui.metricLabel}>Years</span><strong className="mt-3 block text-3xl font-bold text-slate-900">{catalog?.years ?? 0}</strong><small className="mt-2 block text-sm text-slate-500">Past paper archive</small></div>
-            <div className={ui.tile}><span className={ui.metricLabel}>Question Types</span><strong className="mt-3 block text-3xl font-bold text-slate-900">{catalog?.questionTypes ?? 0}</strong><small className="mt-2 block text-sm text-slate-500">Assessment patterns</small></div>
+            <Link to="/modes" className={ui.tile} title={String(catalog?.modes ?? 0)}><span className={ui.metricLabel}>Modes</span><strong className="mt-3 block text-3xl font-bold text-slate-900">{formatCompactNumber(catalog?.modes)}</strong><small className="mt-2 block text-sm text-slate-500">Preparation paths</small></Link>
+            <Link to="/exam-types" className={ui.tile} title={String(catalog?.examTypes ?? 0)}><span className={ui.metricLabel}>Exam Types</span><strong className="mt-3 block text-3xl font-bold text-slate-900">{formatCompactNumber(catalog?.examTypes)}</strong><small className="mt-2 block text-sm text-slate-500">Core exam taxonomy</small></Link>
+            <Link to="/years" className={ui.tile} title={String(catalog?.years ?? 0)}><span className={ui.metricLabel}>Years</span><strong className="mt-3 block text-3xl font-bold text-slate-900">{formatCompactNumber(catalog?.years)}</strong><small className="mt-2 block text-sm text-slate-500">Past paper archive</small></Link>
+            <Link to="/question-types" className={ui.tile} title={String(catalog?.questionTypes ?? 0)}><span className={ui.metricLabel}>Question Types</span><strong className="mt-3 block text-3xl font-bold text-slate-900">{formatCompactNumber(catalog?.questionTypes)}</strong><small className="mt-2 block text-sm text-slate-500">Assessment patterns</small></Link>
           </div>
         </div>
 
@@ -123,23 +121,6 @@ export function DashboardPage() {
       <div className={ui.panel}>
         <div className={ui.sectionHead}>
           <div>
-            <h3 className="text-xl font-bold text-slate-900">User Data Command View</h3>
-            <p className={ui.muted}>Global totals across reports, submissions, subscriptions, mistakes, and weak areas.</p>
-          </div>
-          <div className={ui.badge}>Signals</div>
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          <div className={ui.tile}><span className={ui.metricLabel}>Reports</span><strong className="mt-3 block text-3xl font-bold text-slate-900">{data.userDataSummary?.totalReports ?? 0}</strong><small className="mt-2 block text-sm text-slate-500">Completed result sheets</small></div>
-          <div className={ui.tile}><span className={ui.metricLabel}>Submissions</span><strong className="mt-3 block text-3xl font-bold text-slate-900">{data.userDataSummary?.totalSubmissions ?? 0}</strong><small className="mt-2 block text-sm text-slate-500">Question attempts captured</small></div>
-          <div className={ui.tile}><span className={ui.metricLabel}>Subscriptions</span><strong className="mt-3 block text-3xl font-bold text-slate-900">{data.userDataSummary?.totalSubscriptions ?? 0}</strong><small className="mt-2 block text-sm text-slate-500">Revenue-linked records</small></div>
-          <div className={ui.tile}><span className={ui.metricLabel}>Mistakes</span><strong className="mt-3 block text-3xl font-bold text-slate-900">{data.userDataSummary?.totalMistakes ?? 0}</strong><small className="mt-2 block text-sm text-slate-500">Tracked recovery pool</small></div>
-          <div className={ui.tile}><span className={ui.metricLabel}>Weak Areas</span><strong className="mt-3 block text-3xl font-bold text-slate-900">{data.userDataSummary?.totalWeakAreas ?? 0}</strong><small className="mt-2 block text-sm text-slate-500">Low-confidence chapters</small></div>
-        </div>
-      </div>
-
-      <div className={ui.panel}>
-        <div className={ui.sectionHead}>
-          <div>
             <h3 className="text-xl font-bold text-slate-900">Quick Admin Flow</h3>
             <p className={ui.muted}>Use the app-plan flow as a simple admin operating path.</p>
           </div>
@@ -148,19 +129,19 @@ export function DashboardPage() {
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           <Link to="/catalog-overview" className={ui.moduleCard}>
             <div className={ui.metricTop}><span className={ui.metricLabel}>Catalog Setup</span><span className={ui.metricDot} /></div>
-            <h2 className={ui.metricValue}>{catalog?.subjects ?? 0}</h2>
+            <h2 className={ui.metricValue}>{formatCompactNumber(catalog?.subjects)}</h2>
             <p className={ui.muted}>Start with modes, subjects, chapters, years, and question types.</p>
             <span className="mt-4 inline-flex text-sm font-bold text-blue-700">Open Catalog</span>
           </Link>
           <Link to="/questions" className={ui.moduleCard}>
             <div className={ui.metricTop}><span className={ui.metricLabel}>Question Bank</span><span className={ui.metricDot} /></div>
-            <h2 className={ui.metricValue}>{data.totalQuestions ?? 0}</h2>
+            <h2 className={ui.metricValue}>{formatCompactNumber(data.totalQuestions)}</h2>
             <p className={ui.muted}>Manage questions, difficulty, response type, and concept tags.</p>
             <span className="mt-4 inline-flex text-sm font-bold text-blue-700">Open Questions</span>
           </Link>
           <Link to="/users" className={ui.moduleCard}>
             <div className={ui.metricTop}><span className={ui.metricLabel}>User Intelligence</span><span className={ui.metricDot} /></div>
-            <h2 className={ui.metricValue}>{data.totalUsers ?? 0}</h2>
+            <h2 className={ui.metricValue}>{formatCompactNumber(data.totalUsers)}</h2>
             <p className={ui.muted}>Review reports, attendance, subscriptions, mistakes, and weak areas.</p>
             <span className="mt-4 inline-flex text-sm font-bold text-blue-700">Open Users</span>
           </Link>

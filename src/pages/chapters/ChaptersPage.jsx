@@ -24,18 +24,23 @@ function parseChapterIds(value) {
 function BulkFreeAccessPanel() {
   const toast = useToast();
   const [subjects, setSubjects] = useState([]);
+  const [chapters, setChapters] = useState([]);
   const [subjectId, setSubjectId] = useState("");
-  const [chapterIdsRaw, setChapterIdsRaw] = useState("");
+  const [selectedChapterIds, setSelectedChapterIds] = useState([]);
   const [loading, setLoading] = useState(false);
-  const parsedIds = useMemo(() => parseChapterIds(chapterIdsRaw), [chapterIdsRaw]);
+  const parsedIds = useMemo(() => parseChapterIds(selectedChapterIds.join(",")), [selectedChapterIds]);
+  const filteredChapters = useMemo(
+    () => chapters.filter((chapter) => !subjectId || String(chapter.subjectId?.id || chapter.subjectId) === String(subjectId)),
+    [chapters, subjectId],
+  );
 
   useEffect(() => {
     let active = true;
-    subjectService
-      .list({ limit: 500 })
-      .then((response) => {
+    Promise.all([subjectService.list({ limit: 500 }), chapterService.list({ limit: 500 })])
+      .then(([subjectResponse, chapterResponse]) => {
         if (!active) return;
-        setSubjects(response?.data || []);
+        setSubjects(subjectResponse?.data || []);
+        setChapters(chapterResponse?.data || []);
       })
       .catch((error) => toast.error(error.message));
     return () => {
@@ -82,9 +87,11 @@ function BulkFreeAccessPanel() {
           <label className="mb-2 block text-xs font-black uppercase tracking-[0.18em] text-slate-500">Subject</label>
           <select
             value={subjectId}
-            onChange={(event) => setSubjectId(event.target.value)}
+            onChange={(event) => {
+              setSubjectId(event.target.value);
+              setSelectedChapterIds([]);
+            }}
             className={ui.input}
-            disabled={parsedIds.length > 0}
           >
             <option value="">Choose subject</option>
             {subjects.map((subject) => (
@@ -93,21 +100,21 @@ function BulkFreeAccessPanel() {
               </option>
             ))}
           </select>
-          {parsedIds.length > 0 ? (
-            <p className="mt-1 text-xs text-slate-500">Subject selection is ignored when chapter IDs are provided.</p>
-          ) : null}
         </div>
 
         <div>
-          <label className="mb-2 block text-xs font-black uppercase tracking-[0.18em] text-slate-500">Chapter IDs (Optional)</label>
-          <textarea
-            value={chapterIdsRaw}
-            onChange={(event) => setChapterIdsRaw(event.target.value)}
-            rows={4}
-            placeholder="Paste chapter IDs separated by comma/new line"
-            className={ui.textarea}
-          />
-          <p className="mt-1 text-xs text-slate-500">{parsedIds.length} chapter id(s) parsed</p>
+          <label className="mb-2 block text-xs font-black uppercase tracking-[0.18em] text-slate-500">Chapters</label>
+          <select
+            multiple
+            value={selectedChapterIds}
+            onChange={(event) => setSelectedChapterIds(Array.from(event.target.selectedOptions).map((option) => option.value))}
+            className={cn(ui.input, "min-h-32")}
+          >
+            {filteredChapters.map((chapter) => (
+              <option key={chapter.id} value={chapter.id}>{chapter.name}</option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-slate-500">{parsedIds.length} selected. Leave empty to apply to all chapters in the selected subject.</p>
         </div>
       </div>
 
@@ -180,6 +187,14 @@ export function ChaptersPage() {
         description="Manage chapters under each subject."
         service={chapterService}
         lookupLoaders={[{ key: "subjects", load: () => subjectService.list({ limit: 500 }) }]}
+        filters={[
+          {
+            name: "subjectId",
+            label: "Subject",
+            placeholder: "All Subjects",
+            options: (lookups) => (lookups.subjects || []).map((subject) => ({ label: formatSubjectLabel(subject), value: subject.id })),
+          },
+        ]}
         fields={[
           { name: "subjectId", label: "Subject", required: true, type: "select", options: (_form, lookups) => (lookups.subjects || []).map((subject) => ({ label: formatSubjectLabel(subject), value: subject.id })) },
           { name: "name", label: "Chapter Name", required: true },

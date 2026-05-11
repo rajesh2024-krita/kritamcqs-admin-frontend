@@ -8,7 +8,7 @@ import { useEditorStore } from '../../store/useEditorStore';
 import { 
   Layers, Eye, EyeOff, Lock, Unlock, 
   ChevronDown, ChevronRight, Hash, Type, 
-  Square, Circle, Image as ImageIcon
+  Square, Circle, Image as ImageIcon, Copy, ArrowUp, ArrowDown
 } from 'lucide-react';
 import { fabric } from 'fabric';
 
@@ -66,6 +66,32 @@ export function LayersPanel() {
     setObjects([...objects]);
   };
 
+  const duplicateLayer = (obj: fabric.Object, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!canvas) return;
+    obj.clone((clone: any) => {
+      clone.set({ left: Number(obj.left || 0) + 18, top: Number(obj.top || 0) + 18 });
+      canvas.add(clone);
+      canvas.setActiveObject(clone);
+      canvas.requestRenderAll();
+      pushHistory();
+    }, ['isPage', 'id', 'invoiceTable']);
+  };
+
+  const moveLayer = (obj: fabric.Object, direction: 'up' | 'down', e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!canvas) return;
+    if (direction === 'up') canvas.bringForward(obj);
+    if (direction === 'down') {
+      canvas.sendBackwards(obj);
+      const page = canvas.getObjects().find((item: any) => item.isPage);
+      if (page) canvas.sendToBack(page);
+    }
+    canvas.requestRenderAll();
+    pushHistory();
+    setObjects([...canvas.getObjects()].reverse());
+  };
+
   const getIcon = (type: string) => {
     switch (type) {
       case 'i-text':
@@ -119,6 +145,27 @@ export function LayersPanel() {
                     <span className="text-[8px] text-slate-400 uppercase tracking-tighter">Layer {objects.length - i}</span>
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={(e) => moveLayer(obj, 'up', e)}
+                      className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-600"
+                      title="Bring forward"
+                    >
+                      <ArrowUp size={12} />
+                    </button>
+                    <button 
+                      onClick={(e) => moveLayer(obj, 'down', e)}
+                      className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-600"
+                      title="Send backward"
+                    >
+                      <ArrowDown size={12} />
+                    </button>
+                    <button 
+                      onClick={(e) => duplicateLayer(obj, e)}
+                      className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-600"
+                      title="Duplicate layer"
+                    >
+                      <Copy size={12} />
+                    </button>
                     <button 
                       onClick={(e) => toggleVisibility(obj, e)}
                       className="p-1 hover:bg-slate-200 rounded text-slate-400 hover:text-slate-600"

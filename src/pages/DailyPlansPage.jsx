@@ -237,7 +237,6 @@ export function DailyPlansPage() {
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <div className={ui.eyebrow}>Daily Plan Control</div>
-            <h1 className="mb-1 text-3xl font-black tracking-tight text-slate-900">Daily Plans</h1>
             <p className={ui.muted}>Configure NEET/JEE daily question count and choose random or manual question allocation.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">

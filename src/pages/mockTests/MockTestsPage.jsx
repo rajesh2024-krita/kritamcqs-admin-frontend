@@ -506,6 +506,10 @@ export function MockTestsPage() {
   async function handleSubmit(event) {
     event.preventDefault();
     try {
+      if ((formState.questionIds || []).length < 2) {
+        toast.error("Select at least two questions for a manual mock test");
+        return;
+      }
       const parsedDays = parseDaysOfMonth(dayInput);
       const payload = {
         ...formState,
@@ -549,11 +553,10 @@ export function MockTestsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className={ui.panel}>
+      {/* <div className={ui.panel}>
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <div className={ui.eyebrow}>Assessment Control</div>
-            <h1 className="mb-1 text-3xl font-black tracking-tight text-slate-900">Mock Tests</h1>
             <p className={ui.muted}>Create NEET and JEE mock tests with real score prediction, fixed papers, and schedule-based availability.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -564,7 +567,7 @@ export function MockTestsPage() {
             </button>
           </div>
         </div>
-      </div>
+      </div> */}
 
       <div className={ui.compactPanel}>
         <div className="mb-4 border-b border-slate-200 pb-4">

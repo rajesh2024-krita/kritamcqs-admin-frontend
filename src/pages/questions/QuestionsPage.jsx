@@ -145,6 +145,30 @@ export function QuestionsPage() {
         { key: "years", load: () => listAllRecords(yearService, {}, 200) },
         { key: "questionTypes", load: () => listAllRecords(questionTypeService, {}, 200) },
       ]}
+      filters={[
+        {
+          name: "subjectId",
+          label: "Subject",
+          placeholder: "All Subjects",
+          options: (lookups) => (lookups.subjects || []).map((item) => ({ label: formatSubjectLabel(item), value: item.id })),
+        },
+        {
+          name: "chapterId",
+          label: "Chapter",
+          placeholder: "All Chapters",
+          options: (lookups, filters) => (lookups.chapters || [])
+            .filter((item) => !filters.subjectId || String(item.subjectId?.id || item.subjectId) === String(filters.subjectId))
+            .map((item) => ({ label: item.name, value: item.id })),
+        },
+        {
+          name: "topicId",
+          label: "Topic",
+          placeholder: "All Topics",
+          options: (lookups, filters) => (lookups.topics || [])
+            .filter((item) => !filters.chapterId || String(item.chapterId?.id || item.chapterId) === String(filters.chapterId))
+            .map((item) => ({ label: item.name, value: item.id })),
+        },
+      ]}
       fields={[
         {
           name: "examType",

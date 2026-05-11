@@ -6,13 +6,15 @@
 import React, { useState } from 'react';
 import { 
   Square, Circle, Triangle, Type, Image as ImageIcon, 
-  Table, LayoutTemplate, Palette, Upload, Search, Star, 
-  QrCode, Barcode, Grid2X2, CaseUpper, Database
+  Table, Upload, Search, Star,
+  QrCode, Barcode, Grid2X2, CaseUpper, Database,
+  Download, FileText,
 } from 'lucide-react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { fabric } from 'fabric';
 
 import { addInvoiceTableColumn, addInvoiceTableRow, createInvoiceTable } from '../../lib/canvasHelpers';
+import { exportToDocx, exportToImage, exportToPDF } from '../../lib/export';
 
 const sections = [
   { id: 'elements', icon: ShapesIcon, label: 'Elements' },
@@ -20,6 +22,7 @@ const sections = [
   { id: 'tables', icon: Table, label: 'Tables' },
   { id: 'uploads', icon: Upload, label: 'Uploads' },
   { id: 'mapping', icon: Database, label: 'Mapping' },
+  { id: 'export', icon: Download, label: 'Export' },
 ];
 
 const mappingGroups = [
@@ -39,10 +42,15 @@ const mappingGroups = [
       ['Plan / Product', '{{planName}}'],
       ['Product Description', '{{productDescription}}'],
       ['Quantity', '{{quantity}}'],
+      ['Plan Amount', '{{planAmount}}'],
       ['Base Amount', '{{baseAmount}}'],
-      ['Discount', '{{discountAmount}}'],
-      ['Tax', '{{taxAmount}}'],
-      ['Total Amount', '{{totalAmount}}'],
+      ['Discount Amount', '{{discountAmount}}'],
+      ['Tax Amount', '{{taxAmount}}'],
+      ['Convenience Charge', '{{convenienceCharge}}'],
+      ['GST on Convenience Fee', '{{convenienceChargeGst}}'],
+      ['Total Charges', '{{totalCharges}}'],
+      ['Final Amount', '{{finalAmount}}'],
+      ['Total Paid', '{{totalAmount}}'],
     ],
   },
   {
@@ -152,7 +160,7 @@ export function SidebarLeft() {
   };
 
   return (
-    <div className="w-72 border-r border-slate-200 bg-white flex overflow-hidden">
+    <div className="sticky left-0 top-0 z-20 w-72 shrink-0 border-r border-slate-200 bg-white flex overflow-hidden">
       <input 
         type="file" 
         id="image-upload" 
@@ -306,6 +314,24 @@ export function SidebarLeft() {
                 className="rounded-lg border border-slate-200 bg-slate-900 px-3 py-3 text-left text-xs font-bold text-white hover:bg-slate-800"
               >
                 Insert Billing Block
+              </button>
+            </div>
+          )}
+
+          {activeSection === 'export' && (
+            <div className="flex flex-col gap-3">
+              <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Download</span>
+              <button onClick={() => canvas && exportToPDF(canvas)} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left text-xs font-bold hover:border-blue-300 hover:bg-blue-50">
+                <FileText size={18} className="text-blue-600" /> PDF
+              </button>
+              <button onClick={() => canvas && exportToImage(canvas, 'png')} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left text-xs font-bold hover:border-blue-300 hover:bg-blue-50">
+                <Download size={18} className="text-blue-600" /> PNG
+              </button>
+              <button onClick={() => canvas && exportToImage(canvas, 'jpeg')} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left text-xs font-bold hover:border-blue-300 hover:bg-blue-50">
+                <Download size={18} className="text-blue-600" /> JPG
+              </button>
+              <button onClick={() => canvas && exportToDocx(canvas)} className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-3 text-left text-xs font-bold hover:border-blue-300 hover:bg-blue-50">
+                <FileText size={18} className="text-blue-600" /> DOCX
               </button>
             </div>
           )}

@@ -19,6 +19,22 @@ export function TopicsPage() {
         { key: "subjects", load: () => subjectService.list({ limit: 250 }) },
         { key: "chapters", load: () => chapterService.list({ limit: 500 }) },
       ]}
+      filters={[
+        {
+          name: "subjectId",
+          label: "Subject",
+          placeholder: "All Subjects",
+          options: (lookups) => (lookups.subjects || []).map((subject) => ({ label: formatSubjectLabel(subject), value: subject.id })),
+        },
+        {
+          name: "chapterId",
+          label: "Chapter",
+          placeholder: "All Chapters",
+          options: (lookups, filters) => (lookups.chapters || [])
+            .filter((chapter) => !filters.subjectId || String(chapter.subjectId?.id || chapter.subjectId) === String(filters.subjectId))
+            .map((chapter) => ({ label: chapter.name, value: chapter.id })),
+        },
+      ]}
       fields={[
         {
           name: "subjectId",

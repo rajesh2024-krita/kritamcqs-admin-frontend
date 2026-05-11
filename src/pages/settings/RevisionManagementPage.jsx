@@ -107,7 +107,6 @@ export function RevisionManagementPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className={ui.eyebrow}>Revision Control</div>
-            <h1 className="mb-1 text-3xl font-black tracking-tight text-slate-900">Revision Settings</h1>
             <p className={ui.muted}>Control app revision generation limits, spaced repetition cadence, and module activation.</p>
           </div>
           <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={loadData} type="button">
@@ -272,4 +271,3 @@ export function RevisionManagementPage() {
     </div>
   );
 }
-

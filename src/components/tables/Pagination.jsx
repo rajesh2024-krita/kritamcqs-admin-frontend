@@ -9,8 +9,8 @@ export function Pagination({ meta, onChange }) {
         Page {meta.page} of {meta.totalPages} | {meta.total} records
       </span>
       <div className="flex flex-wrap items-center gap-3">
-        <button className={cn(ui.buttonBase, ui.buttonGhost)} disabled={meta.page <= 1} onClick={() => onChange(meta.page - 1)}>Previous</button>
-        <button className={cn(ui.buttonBase, ui.buttonGhost)} disabled={meta.page >= meta.totalPages} onClick={() => onChange(meta.page + 1)}>Next</button>
+        <button type="button" className={cn(ui.buttonBase, ui.buttonGhost)} disabled={meta.page <= 1} onClick={() => onChange(meta.page - 1)}>Previous</button>
+        <button type="button" className={cn(ui.buttonBase, ui.buttonGhost)} disabled={meta.page >= meta.totalPages} onClick={() => onChange(meta.page + 1)}>Next</button>
       </div>
     </div>
   );

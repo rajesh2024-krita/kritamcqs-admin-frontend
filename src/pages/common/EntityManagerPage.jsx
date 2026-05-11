@@ -24,13 +24,14 @@ function normalizeInitialValues(fields) {
   }, {});
 }
 
-export function EntityManagerPage({ title, description, service, fields, columns, defaultQuery = {}, lookupLoaders = [], mapItemToForm, headerActions = null }) {
+export function EntityManagerPage({ title, description, service, fields, columns, defaultQuery = {}, lookupLoaders = [], mapItemToForm, headerActions = null, filters = [] }) {
   const toast = useToast();
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState({ page: 1, limit: 10, ...defaultQuery });
+  const [filterValues, setFilterValues] = useState(() => filters.reduce((acc, filter) => ({ ...acc, [filter.name]: filter.defaultValue || "" }), {}));
   const [formState, setFormState] = useState(normalizeInitialValues(fields));
   const [editingItem, setEditingItem] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -51,7 +52,10 @@ export function EntityManagerPage({ title, description, service, fields, columns
   async function loadItems(nextQuery = query) {
     setLoading(true);
     try {
-      const response = await service.list({ ...nextQuery, search });
+      const activeFilters = Object.fromEntries(
+        Object.entries(filterValues).filter(([, value]) => value !== "" && value !== undefined && value !== null),
+      );
+      const response = await service.list({ ...nextQuery, ...activeFilters, search });
       setItems(response.data || []);
       setMeta(response.meta);
       setSelectedIds([]);
@@ -76,7 +80,7 @@ export function EntityManagerPage({ title, description, service, fields, columns
 
   useEffect(() => {
     loadItems(query);
-  }, [query.page]);
+  }, [query.page, filterValues]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -185,16 +189,31 @@ export function EntityManagerPage({ title, description, service, fields, columns
     return Object.keys(nextErrors).length === 0;
   }
 
+  function buildPayload() {
+    const payload = {};
+    fields.forEach((field) => {
+      const rawValue = formState[field.name];
+      if (typeof rawValue === "string") {
+        const trimmed = rawValue.trim();
+        payload[field.name] = field.type === "datetime-local" && trimmed ? new Date(trimmed).toISOString() : trimmed;
+      } else {
+        payload[field.name] = rawValue;
+      }
+    });
+    return payload;
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
     if (!validateForm()) return;
 
     try {
+      const payload = buildPayload();
       if (editingItem) {
-        await service.update(editingItem.id, formState);
+        await service.update(editingItem.id, payload);
         toast.success(`${title} updated`);
       } else {
-        await service.create(formState);
+        await service.create(payload);
         toast.success(`${title} created`);
       }
 
@@ -453,6 +472,7 @@ export function EntityManagerPage({ title, description, service, fields, columns
       <input
         className={ui.input}
         type={field.type || "text"}
+        disabled={field.disabled}
         value={value ?? ""}
         placeholder={field.placeholder}
         onChange={(event) => setFormState((current) => ({ ...current, [field.name]: event.target.value }))}
@@ -466,7 +486,6 @@ export function EntityManagerPage({ title, description, service, fields, columns
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <div className="mb-2 text-[11px] font-black uppercase tracking-[0.28em] text-blue-700">Entity Management</div>
-            <h1 className="mb-1 text-3xl font-black tracking-tight text-slate-900">{title}</h1>
             <p className="text-slate-500">{description}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -486,6 +505,26 @@ export function EntityManagerPage({ title, description, service, fields, columns
           <SearchBar value={search} onChange={setSearch} placeholder={`Search ${title.toLowerCase()}...`} />
         </div>
         <div className="flex flex-wrap items-center gap-3">
+          {filters.map((filter) => (
+            <label key={filter.name} className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+              {filter.label}
+              <select
+                className={ui.input}
+                value={filterValues[filter.name] || ""}
+                onChange={(event) => {
+                  const nextValue = event.target.value;
+                  setFilterValues((current) => ({ ...current, [filter.name]: nextValue }));
+                  setSelectedIds([]);
+                  setQuery((current) => ({ ...current, page: 1 }));
+                }}
+              >
+                <option value="">{filter.placeholder || "All"}</option>
+                {(typeof filter.options === "function" ? filter.options(lookups, filterValues) : filter.options || []).map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+          ))}
           {selectedIds.length > 0 ? (
             <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setBulkDeleteOpen(true)}>
               <TrashIcon size={16} />

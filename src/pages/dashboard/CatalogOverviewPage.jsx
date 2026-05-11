@@ -4,6 +4,7 @@ import { dashboardService } from "../../api/dashboardService";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { useToast } from "../../context/ToastContext";
 import { ui } from "../../ui";
+import { formatCompactNumber } from "../../utils/format";
 
 const modules = [
   { key: "modes", label: "Modes", route: "/modes", description: "Manage NEET, JEE, and BOTH mode setup." },
@@ -42,12 +43,11 @@ export function CatalogOverviewPage() {
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <div className="mb-2 text-[11px] font-black uppercase tracking-[0.28em] text-blue-700">Catalog Command Center</div>
-            <h1 className="mb-1 text-3xl font-black tracking-tight text-slate-900">Catalog Overview</h1>
             <p className="text-slate-500">
               The complete admin entry point for syllabus structure, question bank configuration, and academic flow setup.
             </p>
           </div>
-          <div className="inline-flex items-center rounded-sm bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-blue-700">Questions: {data.questions ?? 0}</div>
+          <div className="inline-flex items-center rounded-sm bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-blue-700" title={String(data.questions ?? 0)}>Questions: {formatCompactNumber(data.questions)}</div>
         </div>
       </div>
 
@@ -58,7 +58,7 @@ export function CatalogOverviewPage() {
               <span className={ui.metricLabel}>{module.label}</span>
               <span className={ui.metricDot} />
             </div>
-            <h2 className={ui.metricValue}>{data[module.key] ?? 0}</h2>
+            <h2 className={ui.metricValue} title={String(data[module.key] ?? 0)}>{formatCompactNumber(data[module.key])}</h2>
             <p className="mt-3 text-slate-500">{module.description}</p>
             <span className="mt-4 inline-flex text-sm font-bold text-blue-700">Open Module</span>
           </Link>

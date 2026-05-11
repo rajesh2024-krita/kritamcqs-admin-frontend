@@ -24,7 +24,7 @@ export function CouponsPage() {
         { name: "validFrom", label: "Valid From", type: "datetime-local" },
         { name: "validUntil", label: "Valid Until", type: "datetime-local" },
         { name: "usageLimit", label: "Usage Limit", type: "number" },
-        { name: "usedCount", label: "Used Count", type: "number" },
+        { name: "usedCount", label: "Used Count", type: "number", disabled: true },
         { name: "description", label: "Description", type: "textarea", full: true },
       ]}
       columns={[
