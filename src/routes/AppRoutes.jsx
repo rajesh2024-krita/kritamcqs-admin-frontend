@@ -27,6 +27,8 @@ import { SettingsPage } from "../pages/settings/SettingsPage";
 import { MockTestsPage } from "../pages/mockTests/MockTestsPage";
 import { RevisionManagementPage } from "../pages/settings/RevisionManagementPage";
 import { DailyTestManagementPage } from "../pages/settings/DailyTestManagementPage";
+import { SupportTicketsPage } from "../pages/SupportTicketsPage";
+import { NotificationsPage } from "../pages/NotificationsPage";
 
 export function AppRoutes() {
   return (
@@ -57,13 +59,16 @@ export function AppRoutes() {
         <Route path="subscriptions" element={<SubscriptionsPage />} />
         <Route path="subscription-plans" element={<SubscriptionPlansPage />} />
         <Route path="payment-gateway" element={<PaymentGatewaySettingsPage />} />
-        <Route path="invoice-system" element={<InvoiceSystemPage />} />
+        <Route path="invoices" element={<InvoiceSystemPage />} />
+        <Route path="invoice-system" element={<Navigate to="/invoices" replace />} />
         <Route path="smtp-settings" element={<SMTPSettingsPage />} />
         <Route path="coupons" element={<CouponsPage />} />
         <Route path="sessions" element={<SessionsPage />} />
         <Route path="daily-plans" element={<DailyPlansPage />} />
         <Route path="daily-test-management" element={<DailyTestManagementPage />} />
         <Route path="revision-management" element={<RevisionManagementPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="support-tickets" element={<SupportTicketsPage />} />
         <Route path="settings" element={<SettingsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

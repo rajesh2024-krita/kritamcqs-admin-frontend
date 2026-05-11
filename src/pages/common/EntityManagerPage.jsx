@@ -505,7 +505,7 @@ export function EntityManagerPage({ title, description, service, fields, columns
           <SearchBar value={search} onChange={setSearch} placeholder={`Search ${title.toLowerCase()}...`} />
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {filters.map((filter) => (
+          {filters.map((filter, filterIndex) => (
             <label key={filter.name} className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
               {filter.label}
               <select
@@ -513,7 +513,13 @@ export function EntityManagerPage({ title, description, service, fields, columns
                 value={filterValues[filter.name] || ""}
                 onChange={(event) => {
                   const nextValue = event.target.value;
-                  setFilterValues((current) => ({ ...current, [filter.name]: nextValue }));
+                  setFilterValues((current) => {
+                    const next = { ...current, [filter.name]: nextValue };
+                    filters.slice(filterIndex + 1).forEach((childFilter) => {
+                      next[childFilter.name] = "";
+                    });
+                    return next;
+                  });
                   setSelectedIds([]);
                   setQuery((current) => ({ ...current, page: 1 }));
                 }}

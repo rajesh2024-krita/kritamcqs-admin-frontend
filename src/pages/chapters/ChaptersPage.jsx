@@ -186,13 +186,24 @@ export function ChaptersPage() {
         title="Chapters"
         description="Manage chapters under each subject."
         service={chapterService}
-        lookupLoaders={[{ key: "subjects", load: () => subjectService.list({ limit: 500 }) }]}
+        lookupLoaders={[
+          { key: "subjects", load: () => subjectService.list({ limit: 500 }) },
+          { key: "chapters", load: () => chapterService.list({ limit: 500 }) },
+        ]}
         filters={[
           {
             name: "subjectId",
             label: "Subject",
             placeholder: "All Subjects",
             options: (lookups) => (lookups.subjects || []).map((subject) => ({ label: formatSubjectLabel(subject), value: subject.id })),
+          },
+          {
+            name: "_id",
+            label: "Chapter",
+            placeholder: "All Chapters",
+            options: (lookups, filters) => (lookups.chapters || [])
+              .filter((chapter) => !filters.subjectId || String(chapter.subjectId?.id || chapter.subjectId) === String(filters.subjectId))
+              .map((chapter) => ({ label: chapter.name, value: chapter.id })),
           },
         ]}
         fields={[

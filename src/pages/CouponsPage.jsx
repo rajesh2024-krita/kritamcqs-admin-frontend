@@ -14,6 +14,7 @@ export function CouponsPage() {
           label: "Discount Type",
           required: true,
           type: "select",
+          defaultValue: "amount",
           options: [
             { label: "Fixed Amount", value: "amount" },
             { label: "Percentage", value: "percent" },

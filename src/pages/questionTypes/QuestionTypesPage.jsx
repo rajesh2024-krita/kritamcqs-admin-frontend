@@ -40,6 +40,20 @@ export function QuestionTypesPage() {
             { label: "Numeric", value: "numeric" },
           ],
         },
+        {
+          name: "displayVariant",
+          label: "Display",
+          placeholder: "All Displays",
+          options: [
+            { label: "Single Choice", value: "single_choice" },
+            { label: "Multiple Choice", value: "multiple_choice" },
+            { label: "Numeric", value: "numeric" },
+            { label: "Assertion-Reasoning", value: "assertion_reasoning" },
+            { label: "Statement Set", value: "statement_set" },
+            { label: "Matching", value: "matching" },
+            { label: "Diagram", value: "diagram" },
+          ],
+        },
       ]}
       fields={[
         { name: "name", label: "Name", required: true },

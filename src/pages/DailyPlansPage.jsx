@@ -111,8 +111,7 @@ export function DailyPlansPage() {
         subjectId: questionSubjectId,
         chapterId: questionChapterId,
       });
-      const merged = [...response.data, ...selectedQuestions.filter((item) => !response.data.some((row) => row.id === item.id))];
-      setQuestionResults(merged);
+      setQuestionResults(response.data || []);
       setQuestionMeta(response.meta);
     } catch (error) {
       toast.error(error.message);
@@ -171,6 +170,13 @@ export function DailyPlansPage() {
   }
 
   function toggleQuestion(questionId) {
+    const selectedRow = questionResults.find((item) => item.id === questionId);
+    const isAlreadySelected = formState.manualQuestionIds.includes(questionId);
+    if (!isAlreadySelected && selectedRow) {
+      setKnownSelectedQuestions((known) => (
+        known.some((item) => item.id === selectedRow.id) ? known : [...known, selectedRow]
+      ));
+    }
     setFormState((current) => {
       const exists = current.manualQuestionIds.includes(questionId);
       return {

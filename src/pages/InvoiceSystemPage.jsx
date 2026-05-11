@@ -478,7 +478,7 @@ export function InvoiceSystemPage() {
         <div className={ui.sectionHead}>
           <div>
             <div className={ui.eyebrow}>Student Purchase Invoices</div>
-            <h2 className="text-3xl font-black tracking-tight text-slate-900">Invoice System</h2>
+            <h2 className="text-3xl font-black tracking-tight text-slate-900">Invoices</h2>
             <p className={ui.muted}>Customize the invoice template used after student subscription purchases. Successful purchases already call the backend invoice generation and email flow.</p>
           </div>
           <div className="flex flex-wrap gap-3">

@@ -70,6 +70,7 @@ const WEEKDAY_OPTIONS = [
 ];
 
 const defaultMarkingSettings = {
+  predictionMinimumMockTests: 5,
   neet: {
     version: "v1",
     mcq: { correct: 4, wrong: -1, unanswered: 0 },
@@ -219,6 +220,7 @@ export function MockTestsPage() {
   const [questionMeta, setQuestionMeta] = useState(null);
   const [questionPage, setQuestionPage] = useState(1);
   const [questionLoading, setQuestionLoading] = useState(false);
+  const [knownSelectedQuestions, setKnownSelectedQuestions] = useState([]);
   const [dayInput, setDayInput] = useState("");
   const [autoForm, setAutoForm] = useState(defaultAutoGenerateForm);
   const [autoGenerating, setAutoGenerating] = useState(false);
@@ -230,9 +232,12 @@ export function MockTestsPage() {
   const selectedQuestionIds = formState.questionIds || [];
 
   const selectedQuestions = useMemo(() => {
-    const known = new Map(questionResults.map((item) => [item.id, item]));
+    const known = new Map([
+      ...questionResults.map((item) => [item.id, item]),
+      ...knownSelectedQuestions.map((item) => [item.id, item]),
+    ]);
     return selectedQuestionIds.map((id) => known.get(id) || { id, question: "Selected question", subjectName: "-", chapterName: "-", difficulty: "-" });
-  }, [questionResults, selectedQuestionIds]);
+  }, [questionResults, knownSelectedQuestions, selectedQuestionIds]);
 
   const filteredChapters = useMemo(
     () => chapters.filter((item) => !questionSubjectId || String(item.subjectId?.id || item.subjectId) === String(questionSubjectId)),
@@ -266,6 +271,7 @@ export function MockTestsPage() {
       setSubjects(subjectsResponse.data || []);
       setChapters(chaptersResponse.data || []);
       const nextMarkingSettings = {
+        predictionMinimumMockTests: markingSettingsResponse.data?.predictionMinimumMockTests || defaultMarkingSettings.predictionMinimumMockTests,
         neet: markingSettingsResponse.data?.neet || defaultMarkingSettings.neet,
         jeeMain: markingSettingsResponse.data?.jeeMain || defaultMarkingSettings.jeeMain,
         jeeAdvanced: markingSettingsResponse.data?.jeeAdvanced || defaultMarkingSettings.jeeAdvanced,
@@ -295,8 +301,7 @@ export function MockTestsPage() {
         subjectId: questionSubjectId,
         chapterId: questionChapterId,
       });
-      const merged = [...response.data, ...selectedQuestions.filter((item) => !response.data.some((row) => row.id === item.id))];
-      setQuestionResults(merged);
+      setQuestionResults(response.data || []);
       setQuestionMeta(response.meta);
     } catch (error) {
       toast.error(error.message);
@@ -363,6 +368,7 @@ export function MockTestsPage() {
     setQuestionSearch("");
     setQuestionSubjectId("");
     setQuestionChapterId("");
+    setKnownSelectedQuestions([]);
     setQuestionPage(1);
     setDayInput("");
     setShowForm(true);
@@ -375,12 +381,20 @@ export function MockTestsPage() {
     setQuestionSearch("");
     setQuestionSubjectId("");
     setQuestionChapterId("");
+    setKnownSelectedQuestions(Array.isArray(item.manualQuestions) ? item.manualQuestions : Array.isArray(item.questions) ? item.questions : []);
     setQuestionPage(1);
     setDayInput((nextForm.availableDaysOfMonth || []).join(", "));
     setShowForm(true);
   }
 
   function toggleQuestion(questionId) {
+    const selectedRow = questionResults.find((item) => item.id === questionId);
+    const isAlreadySelected = selectedQuestionIds.includes(questionId);
+    if (!isAlreadySelected && selectedRow) {
+      setKnownSelectedQuestions((known) => (
+        known.some((item) => item.id === selectedRow.id) ? known : [...known, selectedRow]
+      ));
+    }
     setFormState((current) => {
       const exists = current.questionIds.includes(questionId);
       return {
@@ -470,12 +484,14 @@ export function MockTestsPage() {
     setSavingMarkingSettings(true);
     try {
       const payload = {
+        predictionMinimumMockTests: Number(markingSettings.predictionMinimumMockTests || 5),
         neet: markingSettings.neet,
         jeeMain: markingSettings.jeeMain,
         jeeAdvanced: markingSettings.jeeAdvanced,
       };
       const response = await mockTestService.saveMarkingSettings(payload);
       setMarkingSettings({
+        predictionMinimumMockTests: response.data?.predictionMinimumMockTests || payload.predictionMinimumMockTests,
         neet: response.data?.neet || payload.neet,
         jeeMain: response.data?.jeeMain || payload.jeeMain,
         jeeAdvanced: response.data?.jeeAdvanced || payload.jeeAdvanced,
@@ -627,6 +643,22 @@ export function MockTestsPage() {
                 {savingMarkingSettings ? "Saving..." : "Save Marking Rules"}
               </button>
             </div>
+            <label className={cn(ui.field, "mb-4 max-w-xs")}>
+              <span>Minimum mock tests for prediction</span>
+              <input
+                className={ui.input}
+                type="number"
+                min="1"
+                max="50"
+                value={markingSettings.predictionMinimumMockTests || 5}
+                onChange={(event) =>
+                  setMarkingSettings((current) => ({
+                    ...current,
+                    predictionMinimumMockTests: Number(event.target.value),
+                  }))
+                }
+              />
+            </label>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {[
                 { key: "neet", label: "NEET" },

@@ -117,36 +117,6 @@ export function DashboardPage() {
           </div>
         </div>
       </div>
-
-      <div className={ui.panel}>
-        <div className={ui.sectionHead}>
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">Quick Admin Flow</h3>
-            <p className={ui.muted}>Use the app-plan flow as a simple admin operating path.</p>
-          </div>
-          <div className={ui.badge}>Actions</div>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          <Link to="/catalog-overview" className={ui.moduleCard}>
-            <div className={ui.metricTop}><span className={ui.metricLabel}>Catalog Setup</span><span className={ui.metricDot} /></div>
-            <h2 className={ui.metricValue}>{formatCompactNumber(catalog?.subjects)}</h2>
-            <p className={ui.muted}>Start with modes, subjects, chapters, years, and question types.</p>
-            <span className="mt-4 inline-flex text-sm font-bold text-blue-700">Open Catalog</span>
-          </Link>
-          <Link to="/questions" className={ui.moduleCard}>
-            <div className={ui.metricTop}><span className={ui.metricLabel}>Question Bank</span><span className={ui.metricDot} /></div>
-            <h2 className={ui.metricValue}>{formatCompactNumber(data.totalQuestions)}</h2>
-            <p className={ui.muted}>Manage questions, difficulty, response type, and concept tags.</p>
-            <span className="mt-4 inline-flex text-sm font-bold text-blue-700">Open Questions</span>
-          </Link>
-          <Link to="/users" className={ui.moduleCard}>
-            <div className={ui.metricTop}><span className={ui.metricLabel}>User Intelligence</span><span className={ui.metricDot} /></div>
-            <h2 className={ui.metricValue}>{formatCompactNumber(data.totalUsers)}</h2>
-            <p className={ui.muted}>Review reports, attendance, subscriptions, mistakes, and weak areas.</p>
-            <span className="mt-4 inline-flex text-sm font-bold text-blue-700">Open Users</span>
-          </Link>
-        </div>
-      </div>
     </div>
   );
 }
