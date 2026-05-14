@@ -18,17 +18,19 @@ import { SubscriptionsPage } from "../pages/SubscriptionsPage";
 import { SubscriptionPlansPage } from "../pages/SubscriptionPlansPage";
 import { PaymentGatewaySettingsPage } from "../pages/PaymentGatewaySettingsPage";
 import { InvoiceSystemPage } from "../pages/InvoiceSystemPage";
-import { SMTPSettingsPage } from "../pages/SMTPSettingsPage";
 import { DifficultiesPage } from "../pages/DifficultiesPage";
 import { CouponsPage } from "../pages/CouponsPage";
 import { DailyPlansPage } from "../pages/DailyPlansPage";
 import { SessionsPage } from "../pages/SessionsPage";
 import { SettingsPage } from "../pages/settings/SettingsPage";
+import { AuthSettingsPage } from "../pages/settings/AuthSettingsPage";
 import { MockTestsPage } from "../pages/mockTests/MockTestsPage";
 import { RevisionManagementPage } from "../pages/settings/RevisionManagementPage";
 import { DailyTestManagementPage } from "../pages/settings/DailyTestManagementPage";
 import { SupportTicketsPage } from "../pages/SupportTicketsPage";
 import { NotificationsPage } from "../pages/NotificationsPage";
+import { EmailTemplatesPage } from "../pages/EmailTemplatesPage";
+import { EmailTemplateCatalogPage } from "../pages/EmailTemplateCatalogPage";
 
 export function AppRoutes() {
   return (
@@ -61,7 +63,7 @@ export function AppRoutes() {
         <Route path="payment-gateway" element={<PaymentGatewaySettingsPage />} />
         <Route path="invoices" element={<InvoiceSystemPage />} />
         <Route path="invoice-system" element={<Navigate to="/invoices" replace />} />
-        <Route path="smtp-settings" element={<SMTPSettingsPage />} />
+        <Route path="smtp-settings" element={<Navigate to="/auth-settings" replace />} />
         <Route path="coupons" element={<CouponsPage />} />
         <Route path="sessions" element={<SessionsPage />} />
         <Route path="daily-plans" element={<DailyPlansPage />} />
@@ -70,6 +72,9 @@ export function AppRoutes() {
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="support-tickets" element={<SupportTicketsPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="auth-settings" element={<AuthSettingsPage />} />
+        <Route path="email-templates" element={<EmailTemplatesPage />} />
+        <Route path="email-template-keys" element={<EmailTemplateCatalogPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

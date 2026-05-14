@@ -9,6 +9,7 @@ import {
   HelpIcon,
   LayersIcon,
   LogoutIcon,
+  MailIcon,
   MenuIcon,
   OverviewIcon,
   SettingsIcon,
@@ -41,12 +42,14 @@ const navItems = [
   { label: "Plan Config", to: "/subscription-plans", section: "Operations", icon: SubscriptionIcon },
   { label: "Payment Gateway", to: "/payment-gateway", section: "Operations", icon: ShieldIcon },
   { label: "Invoices", to: "/invoices", section: "Operations", icon: FileStackIcon },
-  { label: "SMTP Settings", to: "/smtp-settings", section: "Operations", icon: ShieldIcon },
   { label: "Notifications", to: "/notifications", section: "Operations", icon: HelpIcon },
   { label: "Help Desk", to: "/support-tickets", section: "Operations", icon: HelpIcon },
   { label: "Coupons", to: "/coupons", section: "Operations", icon: TagIcon },
   { label: "Session", to: "/sessions", section: "Operations", icon: DashboardIcon },
   { label: "Settings", to: "/settings", section: "System", icon: SettingsIcon },
+  { label: "Auth Settings", to: "/auth-settings", section: "System", icon: ShieldIcon },
+  { label: "Email Templates", to: "/email-templates", section: "System", icon: MailIcon },
+  { label: "Email Template Keys", to: "/email-template-keys", section: "System", icon: MailIcon },
 ];
 
 export function AdminLayout() {

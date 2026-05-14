@@ -4,6 +4,7 @@ import jsPDF from "jspdf";
 import { subscriptionService } from "../api/subscriptionService";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { RefreshIcon } from "../components/common/AdminIcons";
+import { ToggleSwitch } from "../components/forms/ToggleSwitch";
 import { useToast } from "../context/ToastContext";
 import { cn, ui } from "../ui";
 import { formatDate } from "../utils/format";
@@ -894,7 +895,7 @@ export function InvoiceAutomationPage() {
               <Field label="Margin"><input className={ui.input} type="number" value={form.page?.margin || 32} onChange={(e) => setForm({ ...form, page: { ...(form.page || {}), margin: Number(e.target.value) } })} /></Field>
               <Field label="Grid"><input className={ui.input} type="number" value={form.page?.gridSize || 10} onChange={(e) => setForm({ ...form, page: { ...(form.page || {}), gridSize: Number(e.target.value) } })} /></Field>
             </div>
-            <label className="flex items-center gap-2 text-sm"><input className={ui.checkbox} type="checkbox" checked={form.page?.snapToGrid !== false} onChange={(e) => setForm({ ...form, page: { ...(form.page || {}), snapToGrid: e.target.checked } })} />Snap to grid</label>
+            <ToggleSwitch checked={form.page?.snapToGrid !== false} onChange={(value) => setForm({ ...form, page: { ...(form.page || {}), snapToGrid: value } })} label="Snap to grid" />
             {selected ? (
               <>
                 <div className="rounded-lg border border-slate-200 p-3">
@@ -1092,7 +1093,7 @@ export function InvoiceAutomationPage() {
               <div className="grid grid-cols-1 gap-4 rounded-lg border border-slate-200 p-4 md:grid-cols-[120px_1fr_170px]" key={`${reminder.daysBefore}-${index}`}>
                 <Field label="Days"><input className={ui.input} type="number" value={reminder.daysBefore} onChange={(event) => setNotifications((current) => ({ ...current, reminders: current.reminders.map((item, itemIndex) => itemIndex === index ? { ...item, daysBefore: Number(event.target.value) } : item) }))} /></Field>
                 <Field label="Title"><input className={ui.input} value={reminder.title || ""} onChange={(event) => setNotifications((current) => ({ ...current, reminders: current.reminders.map((item, itemIndex) => itemIndex === index ? { ...item, title: event.target.value } : item) }))} /></Field>
-                <Field label="Active / Deactivate"><div className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3"><input className={ui.checkbox} type="checkbox" checked={reminder.enabled !== false} onChange={(event) => setNotifications((current) => ({ ...current, reminders: current.reminders.map((item, itemIndex) => itemIndex === index ? { ...item, enabled: event.target.checked } : item) }))} /><span>{reminder.enabled !== false ? "Active" : "Inactive"}</span></div></Field>
+                <Field label="Active / Deactivate"><div className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3"><ToggleSwitch checked={reminder.enabled !== false} onChange={(value) => setNotifications((current) => ({ ...current, reminders: current.reminders.map((item, itemIndex) => itemIndex === index ? { ...item, enabled: value } : item) }))} label={reminder.enabled !== false ? "Active" : "Inactive"} /></div></Field>
                 <Field label="Email / In-app Body"><textarea className={ui.textarea} value={reminder.body || ""} onChange={(event) => setNotifications((current) => ({ ...current, reminders: current.reminders.map((item, itemIndex) => itemIndex === index ? { ...item, body: event.target.value, emailBody: event.target.value } : item) }))} /></Field>
               </div>
             ))}

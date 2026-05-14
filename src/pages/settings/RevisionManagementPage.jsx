@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { revisionService } from "../../api/revisionService";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
+import { ToggleSwitch } from "../../components/forms/ToggleSwitch";
 import { useToast } from "../../context/ToastContext";
 import { cn, ui } from "../../ui";
 
@@ -152,13 +153,7 @@ export function RevisionManagementPage() {
           <label className={ui.field}>
             <span>Enable Revision Module</span>
             <div className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white px-4 py-3">
-              <input
-                className={ui.checkbox}
-                type="checkbox"
-                checked={Boolean(settings.revision_enabled)}
-                onChange={(event) => setSettings((current) => ({ ...current, revision_enabled: event.target.checked }))}
-              />
-              <span className="text-sm text-slate-700">Revision module is active for app users</span>
+              <ToggleSwitch checked={Boolean(settings.revision_enabled)} onChange={(value) => setSettings((current) => ({ ...current, revision_enabled: value }))} label="Revision module is active for app users" />
             </div>
           </label>
         </div>

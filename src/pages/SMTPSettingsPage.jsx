@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { subscriptionService } from "../api/subscriptionService";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
+import { ToggleSwitch } from "../components/forms/ToggleSwitch";
 import { useToast } from "../context/ToastContext";
 import { cn, ui } from "../ui";
 
@@ -106,13 +107,7 @@ export function SMTPSettingsPage() {
           <label className={ui.field}>
             <span>Secure TLS</span>
             <div className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 px-3 py-3">
-              <input
-                className={ui.checkbox}
-                type="checkbox"
-                checked={Boolean(smtp?.secure)}
-                onChange={(event) => setSmtp((current) => ({ ...current, secure: event.target.checked }))}
-              />
-              <span className="text-sm text-slate-600">Use direct TLS, usually port 465</span>
+              <ToggleSwitch checked={Boolean(smtp?.secure)} onChange={(value) => setSmtp((current) => ({ ...current, secure: value }))} label="Use direct TLS, usually port 465" />
             </div>
           </label>
           <label className={ui.field}>

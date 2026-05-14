@@ -2,7 +2,7 @@ import { cn, ui } from "../../ui";
 
 export function EntityFormWrapper({ title, subtitle, children, onCancel, onSubmit, submitLabel }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm lg:left-[300px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
       <div className="admin-modal max-h-[90vh] w-full max-w-5xl overflow-auto rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xl shadow-slate-950/20">
         <div className="flex flex-col gap-6">
           <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">

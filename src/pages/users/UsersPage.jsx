@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { userService } from "../../api/userService";
+import { modeService } from "../../api/modeService";
 import { learningLevelService } from "../../api/learningLevelService";
 import { ConfirmDeleteModal } from "../../components/common/ConfirmDeleteModal";
 import { EmptyState } from "../../components/common/EmptyState";
@@ -7,6 +8,7 @@ import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { EntityFormWrapper } from "../../components/forms/EntityFormWrapper";
 import { Field } from "../../components/forms/Field";
 import { SelectDropdown } from "../../components/forms/SelectDropdown";
+import { ToggleSwitch } from "../../components/forms/ToggleSwitch";
 import { DataTable } from "../../components/tables/DataTable";
 import { Pagination } from "../../components/tables/Pagination";
 import { SearchBar } from "../../components/tables/SearchBar";
@@ -26,6 +28,8 @@ const defaultForm = {
   onboardingComplete: false,
   isPremium: false,
   isAdmin: false,
+  isActive: true,
+  isBlocked: false,
 };
 
 function toDateTimeLocal(value) {
@@ -54,8 +58,50 @@ export function UsersPage() {
   const [migrationPreviewReady, setMigrationPreviewReady] = useState(false);
   const [migrationLoading, setMigrationLoading] = useState(false);
   const [migrationLogs, setMigrationLogs] = useState([]);
+  const [modes, setModes] = useState([]);
   const [learningLevels, setLearningLevels] = useState([]);
-  const learningLevelOptions = learningLevels.map((level) => ({ label: level.label, value: level.key }));
+  const normalizeOptionValue = (item) => String(item?.key ?? item?.id ?? item?._id ?? "").trim();
+  const normalizeOptionLabel = (item) => String(item?.label ?? item?.name ?? "").trim();
+  const modeOptions = modes
+    .map((mode) => ({ label: normalizeOptionLabel(mode), value: normalizeOptionValue(mode) }))
+    .filter((option) => option.value && option.label);
+  const learningLevelOptions = learningLevels
+    .map((level) => ({ label: normalizeOptionLabel(level), value: normalizeOptionValue(level) }))
+    .filter((option) => option.value && option.label);
+  const modeLabelMap = useMemo(() => {
+    const map = new Map();
+    modes.forEach((mode) => {
+      const label = normalizeOptionLabel(mode);
+      if (!label) return;
+      [mode?.key, mode?.id, mode?._id].forEach((value) => {
+        if (value) map.set(String(value), label);
+      });
+    });
+    return map;
+  }, [modes]);
+  const levelLabelMap = useMemo(() => {
+    const map = new Map();
+    learningLevels.forEach((level) => {
+      const label = normalizeOptionLabel(level);
+      if (!label) return;
+      [level?.key, level?.id, level?._id].forEach((value) => {
+        if (value) map.set(String(value), label);
+      });
+    });
+    return map;
+  }, [learningLevels]);
+  const resolveModeValue = (value) => {
+    if (!value) return "";
+    const raw = String(value);
+    const match = modes.find((mode) => String(mode?.key || "") === raw || String(mode?.id || "") === raw || String(mode?._id || "") === raw);
+    return normalizeOptionValue(match) || raw;
+  };
+  const resolveLevelValue = (value) => {
+    if (!value) return "";
+    const raw = String(value);
+    const match = learningLevels.find((level) => String(level?.key || "") === raw || String(level?.id || "") === raw || String(level?._id || "") === raw);
+    return normalizeOptionValue(match) || raw;
+  };
   const revisionTotalCount = overview?.revisionSummary?.totalCount ?? overview?.revisionSummary?.revisionPendingCount ?? 0;
   const revisionWrongCount = overview?.revisionSummary?.wrongQuestionCount ?? 0;
   const revisionOldCorrectCount = overview?.revisionSummary?.oldCorrectQuestionCount ?? 0;
@@ -106,7 +152,7 @@ export function UsersPage() {
 
   useEffect(() => {
     loadUsers(query);
-    loadLearningLevels();
+    loadCatalogOptions();
     loadMigrationLogs();
   }, [query.page]);
 
@@ -137,11 +183,16 @@ export function UsersPage() {
     }
   }
 
-  async function loadLearningLevels() {
+  async function loadCatalogOptions() {
     try {
-      const response = await learningLevelService.list({ limit: 100, active: true, sortBy: "sortOrder", sortOrder: "asc" });
-      setLearningLevels(response.data || []);
+      const [modesResponse, levelsResponse] = await Promise.all([
+        modeService.list({ limit: 100, sortBy: "label", sortOrder: "asc" }),
+        learningLevelService.list({ limit: 100, active: true, sortBy: "sortOrder", sortOrder: "asc" }),
+      ]);
+      setModes(modesResponse.data || []);
+      setLearningLevels(levelsResponse.data || []);
     } catch {
+      setModes([]);
       setLearningLevels([]);
     }
   }
@@ -191,12 +242,14 @@ export function UsersPage() {
       email: user.email || "",
       name: user.name || "",
       password: "",
-      examMode: user.examMode || "",
-      level: user.level || "",
+      examMode: resolveModeValue(user.examMode),
+      level: resolveLevelValue(user.level),
       premiumExpiresAt: toDateTimeLocal(user.premiumExpiresAt),
       onboardingComplete: Boolean(user.onboardingComplete),
       isPremium: Boolean(user.isPremium),
       isAdmin: Boolean(user.isAdmin),
+      isActive: user.isActive !== false,
+      isBlocked: Boolean(user.isBlocked),
     });
     setShowForm(true);
   }
@@ -477,8 +530,23 @@ export function UsersPage() {
                     </button>
                   ),
                 },
-                { key: "examMode", label: "Exam Mode" },
-                { key: "level", label: "Level" },
+                {
+                  key: "authTypes",
+                  label: "Auth Type",
+                  render: (row) => {
+                    const types = Array.isArray(row.authTypes) && row.authTypes.length
+                      ? row.authTypes.filter((type) => type !== "mobile")
+                      : [row.googleId ? "google" : "email"];
+                    const labels = { email: "Email/Password", google: "Google Login" };
+                    return (
+                      <div className="flex flex-wrap gap-2">
+                        {types.map((type) => <span key={type} className={ui.pill}>{labels[type] || type}</span>)}
+                      </div>
+                    );
+                  },
+                },
+                { key: "examMode", label: "Exam Mode", render: (row) => modeLabelMap.get(String(row.examMode || "")) || "Not selected" },
+                { key: "level", label: "Level", render: (row) => levelLabelMap.get(String(row.level || "")) || "Not selected" },
                 {
                   key: "flags",
                   label: "Flags",
@@ -491,6 +559,7 @@ export function UsersPage() {
                   ),
                 },
                 { key: "createdAt", label: "Created", render: (row) => formatDate(row.createdAt) },
+                { key: "lastLoginAt", label: "Last Login", render: (row) => row.lastLoginAt ? formatDate(row.lastLoginAt) : "-" },
               ]}
               rows={users}
               selectable
@@ -520,7 +589,7 @@ export function UsersPage() {
       </div>
 
       {detailsOpen && selectedUser ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm lg:left-[300px]" onClick={() => setDetailsOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm" onClick={() => setDetailsOpen(false)}>
           <div className="admin-modal max-h-[90vh] w-full max-w-6xl overflow-auto rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xl shadow-slate-950/20" onClick={(event) => event.stopPropagation()}>
             <div className="flex flex-col gap-6">
               <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
@@ -529,7 +598,7 @@ export function UsersPage() {
                   <p className="mt-2 text-slate-500">{selectedUser.email || selectedUser.mobile}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                  <div className="inline-flex items-center rounded-sm bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-blue-700">{selectedUser.examMode || "No mode"}</div>
+                  <div className="inline-flex items-center rounded-sm bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-blue-700">{modeLabelMap.get(String(selectedUser.examMode || "")) || "No mode"}</div>
                   <button type="button" className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => setDetailsOpen(false)}>
                     <XIcon size={16} />
                     Close
@@ -538,7 +607,7 @@ export function UsersPage() {
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-sm border border-slate-200/80 bg-slate-50/80 p-4"><span className="text-slate-500">Level</span><strong className="mt-2 block text-lg font-bold text-slate-900">{selectedUser.level || "-"}</strong></div>
+                <div className="rounded-sm border border-slate-200/80 bg-slate-50/80 p-4"><span className="text-slate-500">Level</span><strong className="mt-2 block text-lg font-bold text-slate-900">{levelLabelMap.get(String(selectedUser.level || "")) || "-"}</strong></div>
                 <div className="rounded-sm border border-slate-200/80 bg-slate-50/80 p-4"><span className="text-slate-500">Premium</span><strong className="mt-2 block text-lg font-bold text-slate-900">{selectedUser.isPremium ? "Yes" : "No"}</strong></div>
                 <div className="rounded-sm border border-slate-200/80 bg-slate-50/80 p-4"><span className="text-slate-500">Admin</span><strong className="mt-2 block text-lg font-bold text-slate-900">{selectedUser.isAdmin ? "Yes" : "No"}</strong></div>
                 <div className="rounded-sm border border-slate-200/80 bg-slate-50/80 p-4"><span className="text-slate-500">Joined</span><strong className="mt-2 block text-lg font-bold text-slate-900">{formatDate(selectedUser.createdAt)}</strong></div>
@@ -777,15 +846,17 @@ export function UsersPage() {
             <Field label="Name"><input className={ui.input} value={formState.name} onChange={(event) => setFormState((current) => ({ ...current, name: event.target.value }))} /></Field>
             <Field label="Password"><input className={ui.input} type="password" value={formState.password} onChange={(event) => setFormState((current) => ({ ...current, password: event.target.value }))} /></Field>
             <Field label="Exam Mode">
-              <SelectDropdown value={formState.examMode} onChange={(value) => setFormState((current) => ({ ...current, examMode: value }))} options={[{ label: "NEET", value: "NEET" }, { label: "JEE", value: "JEE" }, { label: "BOTH", value: "BOTH" }]} />
+              <SelectDropdown value={formState.examMode} onChange={(value) => setFormState((current) => ({ ...current, examMode: value }))} options={modeOptions} placeholder="Select exam mode" />
             </Field>
             <Field label="Level">
-              <SelectDropdown value={formState.level} onChange={(value) => setFormState((current) => ({ ...current, level: value }))} options={learningLevelOptions} />
+              <SelectDropdown value={formState.level} onChange={(value) => setFormState((current) => ({ ...current, level: value }))} options={learningLevelOptions} placeholder="Select learning level" />
             </Field>
             <Field label="Premium Expiry"><input className={ui.input} type="datetime-local" value={formState.premiumExpiresAt} onChange={(event) => setFormState((current) => ({ ...current, premiumExpiresAt: event.target.value }))} /></Field>
-            <Field label="Onboarding Complete"><input className={ui.checkbox} type="checkbox" checked={formState.onboardingComplete} onChange={(event) => setFormState((current) => ({ ...current, onboardingComplete: event.target.checked }))} /></Field>
-            <Field label="Premium User"><input className={ui.checkbox} type="checkbox" checked={formState.isPremium} onChange={(event) => setFormState((current) => ({ ...current, isPremium: event.target.checked }))} /></Field>
-            <Field label="Admin User"><input className={ui.checkbox} type="checkbox" checked={formState.isAdmin} onChange={(event) => setFormState((current) => ({ ...current, isAdmin: event.target.checked }))} /></Field>
+            <Field label="Onboarding Complete"><ToggleSwitch checked={formState.onboardingComplete} onChange={(value) => setFormState((current) => ({ ...current, onboardingComplete: value }))} /></Field>
+            <Field label="Premium User"><ToggleSwitch checked={formState.isPremium} onChange={(value) => setFormState((current) => ({ ...current, isPremium: value }))} /></Field>
+            <Field label="Admin User"><ToggleSwitch checked={formState.isAdmin} onChange={(value) => setFormState((current) => ({ ...current, isAdmin: value }))} /></Field>
+            <Field label="Active Account"><ToggleSwitch checked={formState.isActive} onChange={(value) => setFormState((current) => ({ ...current, isActive: value }))} /></Field>
+            <Field label="Blocked"><ToggleSwitch checked={formState.isBlocked} onChange={(value) => setFormState((current) => ({ ...current, isBlocked: value }))} /></Field>
           </div>
         </EntityFormWrapper>
       ) : null}

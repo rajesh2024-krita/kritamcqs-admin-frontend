@@ -89,6 +89,14 @@ export const subscriptionService = {
     const response = await http.get("/admin/notification-settings");
     return response.data;
   },
+  async getAuthSettings() {
+    const response = await http.get("/admin/auth-settings");
+    return response.data;
+  },
+  async saveAuthSettings(payload) {
+    const response = await http.post("/admin/auth-settings", payload);
+    return response.data;
+  },
   async saveNotificationSettings(payload) {
     const response = await http.post("/admin/notification-settings", payload);
     return response.data;

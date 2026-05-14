@@ -4,7 +4,7 @@ export function ConfirmDeleteModal({ open, title, description, onCancel, onConfi
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm lg:left-[300px]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
       <div className="admin-modal w-full max-w-xl rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xl shadow-slate-950/20">
         <div className="flex flex-col gap-6">
           <div>

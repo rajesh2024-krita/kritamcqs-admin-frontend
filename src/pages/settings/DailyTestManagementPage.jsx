@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { dailyTestManagementService } from "../../api/dailyTestManagementService";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
+import { ToggleSwitch } from "../../components/forms/ToggleSwitch";
 import { useToast } from "../../context/ToastContext";
 import { cn, ui } from "../../ui";
 
@@ -289,13 +290,7 @@ export function DailyTestManagementPage() {
           <label className={ui.field}>
             <span>Enable/Disable Daily Test</span>
             <div className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white px-4 py-3">
-              <input
-                className={ui.checkbox}
-                type="checkbox"
-                checked={Boolean(settings.enabled)}
-                onChange={(event) => setSettings((current) => ({ ...current, enabled: event.target.checked }))}
-              />
-              <span className="text-sm text-slate-700">Daily test module is active for app users</span>
+              <ToggleSwitch checked={Boolean(settings.enabled)} onChange={(value) => setSettings((current) => ({ ...current, enabled: value }))} label="Daily test module is active for app users" />
             </div>
           </label>
         </div>
@@ -307,13 +302,7 @@ export function DailyTestManagementPage() {
             <label className={ui.field}>
               <span>Adaptive Mode</span>
               <div className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white px-4 py-3">
-                <input
-                  className={ui.checkbox}
-                  type="checkbox"
-                  checked={Boolean(settings.adaptive_mode_enabled)}
-                  onChange={(event) => setSettings((current) => ({ ...current, adaptive_mode_enabled: event.target.checked }))}
-                />
-                <span className="text-sm text-slate-700">Auto-balance by learner capacity</span>
+                <ToggleSwitch checked={Boolean(settings.adaptive_mode_enabled)} onChange={(value) => setSettings((current) => ({ ...current, adaptive_mode_enabled: value }))} label="Auto-balance by learner capacity" />
               </div>
             </label>
             <label className={ui.field}>
@@ -434,13 +423,7 @@ export function DailyTestManagementPage() {
           <label className={ui.field}>
             <span>Reset All Dates</span>
             <div className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white px-4 py-3">
-              <input
-                className={ui.checkbox}
-                type="checkbox"
-                checked={Boolean(resetInput.reset_all)}
-                onChange={(event) => setResetInput((current) => ({ ...current, reset_all: event.target.checked }))}
-              />
-              <span className="text-sm text-slate-700">Ignore date filter and remove all generated tests</span>
+              <ToggleSwitch checked={Boolean(resetInput.reset_all)} onChange={(value) => setResetInput((current) => ({ ...current, reset_all: value }))} label="Ignore date filter and remove all generated tests" />
             </div>
           </label>
         </div>

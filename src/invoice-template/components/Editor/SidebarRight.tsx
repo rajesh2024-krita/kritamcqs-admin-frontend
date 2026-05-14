@@ -388,10 +388,18 @@ export function SidebarRight() {
                 <option value="dotted">Dotted</option>
               </select>
             </label>
-            <label className="col-span-2 flex items-center gap-2 text-xs font-bold text-slate-600">
-              <input type="checkbox" checked={Boolean(props.invoiceTable?.style?.useAlternateRows)} onChange={(event) => updateTableStyle({ useAlternateRows: event.target.checked })} />
+            <div className="col-span-2 flex items-center gap-2 text-xs font-bold text-slate-600">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={Boolean(props.invoiceTable?.style?.useAlternateRows)}
+                onClick={() => updateTableStyle({ useAlternateRows: !props.invoiceTable?.style?.useAlternateRows })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full border transition-colors ${props.invoiceTable?.style?.useAlternateRows ? 'border-blue-500 bg-blue-500' : 'border-slate-300 bg-slate-200'}`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${props.invoiceTable?.style?.useAlternateRows ? 'translate-x-5' : 'translate-x-1'}`} />
+              </button>
               Alternate row colors
-            </label>
+            </div>
           </div>
           <div className="space-y-3">
             <div>

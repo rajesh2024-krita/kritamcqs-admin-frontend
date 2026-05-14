@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { subscriptionService } from "../api/subscriptionService";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
+import { ToggleSwitch } from "../components/forms/ToggleSwitch";
 import { useToast } from "../context/ToastContext";
 import { cn, ui } from "../ui";
 
@@ -140,13 +141,7 @@ export function PaymentGatewaySettingsPage() {
           <label className={ui.field}>
             <span>Enable Razorpay Payments</span>
             <div className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white px-4 py-3">
-              <input
-                className={ui.checkbox}
-                type="checkbox"
-                checked={Boolean(formState.enabled)}
-                onChange={(event) => setFormState((current) => ({ ...current, enabled: event.target.checked }))}
-              />
-              <span className="text-sm text-slate-700">Use Razorpay for app subscription checkout</span>
+              <ToggleSwitch checked={Boolean(formState.enabled)} onChange={(value) => setFormState((current) => ({ ...current, enabled: value }))} label="Use Razorpay for app subscription checkout" />
             </div>
           </label>
           <label className={ui.field}>

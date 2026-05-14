@@ -6,6 +6,7 @@ import { ConfirmDeleteModal } from "../../components/common/ConfirmDeleteModal";
 import { EmptyState } from "../../components/common/EmptyState";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { EntityFormWrapper } from "../../components/forms/EntityFormWrapper";
+import { ToggleSwitch } from "../../components/forms/ToggleSwitch";
 import { Pagination } from "../../components/tables/Pagination";
 import { SearchBar } from "../../components/tables/SearchBar";
 import { useToast } from "../../context/ToastContext";
@@ -873,15 +874,7 @@ export function MockTestsPage() {
               <span>Marking Scheme Version</span>
               <input className={ui.input} value={formState.markingSchemeVersion || "v1"} onChange={(event) => setFormState((current) => ({ ...current, markingSchemeVersion: event.target.value }))} />
             </label>
-            <label className="inline-flex items-center gap-3 pt-8 text-sm font-medium text-slate-700">
-              <input
-                className={ui.checkbox}
-                type="checkbox"
-                checked={Boolean(formState.markingOverrideEnabled)}
-                onChange={(event) => setFormState((current) => ({ ...current, markingOverrideEnabled: event.target.checked }))}
-              />
-              Manual mark override
-            </label>
+            <div className="pt-8"><ToggleSwitch checked={Boolean(formState.markingOverrideEnabled)} onChange={(value) => setFormState((current) => ({ ...current, markingOverrideEnabled: value }))} label="Manual mark override" /></div>
             <label className={ui.field}>
               <span>Prediction Title</span>
               <input className={ui.input} value={formState.predictionTitle} onChange={(event) => setFormState((current) => ({ ...current, predictionTitle: event.target.value }))} />
@@ -921,14 +914,8 @@ export function MockTestsPage() {
                 </div>
               </div>
             ) : null}
-            <label className="inline-flex items-center gap-3 pt-8 text-sm font-medium text-slate-700">
-              <input className={ui.checkbox} type="checkbox" checked={formState.isPremiumOnly} onChange={(event) => setFormState((current) => ({ ...current, isPremiumOnly: event.target.checked }))} />
-              Premium only
-            </label>
-            <label className="inline-flex items-center gap-3 pt-8 text-sm font-medium text-slate-700">
-              <input className={ui.checkbox} type="checkbox" checked={formState.isActive} onChange={(event) => setFormState((current) => ({ ...current, isActive: event.target.checked }))} />
-              Publish as active
-            </label>
+            <div className="pt-8"><ToggleSwitch checked={formState.isPremiumOnly} onChange={(value) => setFormState((current) => ({ ...current, isPremiumOnly: value }))} label="Premium only" /></div>
+            <div className="pt-8"><ToggleSwitch checked={formState.isActive} onChange={(value) => setFormState((current) => ({ ...current, isActive: value }))} label="Publish as active" /></div>
             <label className={cn(ui.field, ui.fieldFull)}>
               <span>Instructions</span>
               <textarea className={ui.textarea} value={formState.instructions} onChange={(event) => setFormState((current) => ({ ...current, instructions: event.target.value }))} />

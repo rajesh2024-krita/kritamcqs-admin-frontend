@@ -4,6 +4,7 @@ import { useEditorStore } from "../invoice-template/store/useEditorStore";
 import { subscriptionService } from "../api/subscriptionService";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { RefreshIcon } from "../components/common/AdminIcons";
+import { ToggleSwitch } from "../components/forms/ToggleSwitch";
 import { useToast } from "../context/ToastContext";
 import { cn, ui } from "../ui";
 import { formatDate } from "../utils/format";
@@ -667,10 +668,7 @@ export function InvoiceSystemPage() {
                   <div className="font-black text-slate-900">{template.name || "Invoice Template"}</div>
                   <div className="mt-1 text-xs text-slate-500">{template.savedAt ? `Saved ${formatDate(template.savedAt)}` : "Default starter template"}</div>
                 </div>
-                <label className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                  <input className={ui.checkbox} type="checkbox" checked={Boolean(template.active)} onChange={() => activateTemplate(template)} />
-                  Active
-                </label>
+                <ToggleSwitch checked={Boolean(template.active)} onChange={() => activateTemplate(template)} label="Active" />
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => setViewTemplate(template)}>View</button>

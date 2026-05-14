@@ -389,28 +389,13 @@ export function EntityManagerPage({ title, description, service, fields, columns
       );
     }
     if (field.type === "checkbox") {
-      if (field.checkboxStyle === "simple") {
-        return (
-          <label className="inline-flex items-center gap-3 pt-2 text-sm font-medium text-slate-700">
-            <input
-              className={ui.checkbox}
-              type="checkbox"
-              checked={Boolean(value)}
-              onChange={(event) => setFormState((current) => ({ ...current, [field.name]: event.target.checked }))}
-            />
-            <span>{field.toggleLabel || field.label}</span>
-          </label>
-        );
-      }
       return (
-        <div className="inline-flex items-center gap-3 pt-2 text-sm font-medium text-slate-700">
-          <input
-            className={ui.checkbox}
-            type="checkbox"
+        <div className="pt-2">
+          <ToggleSwitch
             checked={Boolean(value)}
-            onChange={(event) => setFormState((current) => ({ ...current, [field.name]: event.target.checked }))}
+            onChange={(nextValue) => setFormState((current) => ({ ...current, [field.name]: nextValue }))}
+            label={field.toggleLabel || field.label}
           />
-          <span>{field.toggleLabel || field.label}</span>
         </div>
       );
     }

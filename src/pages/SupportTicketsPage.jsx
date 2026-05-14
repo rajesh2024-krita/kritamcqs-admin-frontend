@@ -146,9 +146,9 @@ export function SupportTicketsPage() {
       ) : null}
 
       {selected ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-4">
-          <div className="max-h-[88vh] w-full max-w-3xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-start justify-between border-b border-slate-200 p-5">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+          <div className="admin-modal flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex shrink-0 items-start justify-between border-b border-slate-200 p-5">
               <div>
                 <div className={ui.eyebrow}>{selected.ticketId}</div>
                 <h3 className="text-xl font-black text-slate-900">{selected.category}</h3>
@@ -157,7 +157,7 @@ export function SupportTicketsPage() {
                 Close
               </button>
             </div>
-            <div className="max-h-[52vh] space-y-3 overflow-y-auto p-5">
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5">
               {(selected.messages || []).map((message, index) => (
                 <div key={`${message.createdAt}-${index}`} className={cn("rounded-xl p-4", message.sender === "admin" ? "ml-12 bg-slate-900 text-white" : "mr-12 bg-slate-100 text-slate-900")}>
                   <p className="text-sm font-semibold">{message.message}</p>
@@ -170,7 +170,7 @@ export function SupportTicketsPage() {
                 </div>
               ))}
             </div>
-            <div className="border-t border-slate-200 p-5">
+            <div className="shrink-0 border-t border-slate-200 p-5">
               <textarea className={cn(ui.input, "min-h-28")} value={reply} onChange={(event) => setReply(event.target.value)} placeholder="Type admin reply..." />
               <button className={cn(ui.buttonBase, ui.buttonPrimary, "mt-3")} disabled={sending || !reply.trim()} onClick={() => void sendReply()}>
                 {sending ? "Sending..." : "Send Reply"}
