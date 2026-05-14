@@ -20,7 +20,7 @@ export function AuthSettingsPage() {
     resetOtpMaxResends: 3,
     sessionTimeoutMinutes: 43200,
     resetOtpEmailSubject: "Krita password reset OTP",
-    resetOtpEmailTemplate: "Your Krita password reset OTP is {{otp}}. It expires in {{expiryMinutes}} minutes.",
+    resetOtpEmailTemplate: "",
   });
   const [smtp, setSmtp] = useState({ host: "", port: 587, secure: false, user: "", pass: "", fromName: "Krita Admin", fromEmail: "" });
   const [invoiceSettings, setInvoiceSettings] = useState(null);

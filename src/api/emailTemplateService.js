@@ -42,6 +42,14 @@ export const emailTemplateService = {
     });
     return response.data;
   },
+  async syncDefaults() {
+    const response = await http.post("/admin/email-templates/sync-defaults");
+    return response.data;
+  },
+  async audit() {
+    const response = await http.get("/admin/email-templates/audit");
+    return response.data;
+  },
   async logs(params = {}) {
     const response = await http.get("/admin/email-logs", { params });
     return response.data;

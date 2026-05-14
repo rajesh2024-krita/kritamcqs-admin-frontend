@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { emailTemplateService } from "../api/emailTemplateService";
 import { notificationService } from "../api/notificationService";
 import { EmptyState } from "../components/common/EmptyState";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
@@ -13,6 +14,7 @@ const typeOptions = [
   { value: "offer", label: "Offer" },
   { value: "announcement", label: "Announcement" },
   { value: "update", label: "Update" },
+  { value: "reminder", label: "Reminder" },
 ];
 
 const targetOptions = [
@@ -25,9 +27,11 @@ const targetOptions = [
 ];
 
 const deliveryOptions = [
-  { value: "notification", label: "Notification only" },
+  { value: "notification", label: "App Notification" },
   { value: "email", label: "Email only" },
-  { value: "both", label: "Notification + Email" },
+  { value: "push", label: "Push Notification" },
+  { value: "email_push", label: "Email + Push" },
+  { value: "both", label: "App + Email" },
 ];
 
 const defaultForm = {
@@ -36,6 +40,8 @@ const defaultForm = {
   type: "text",
   targetGroup: "all",
   deliveryMode: "notification",
+  templateKey: "",
+  variables: "{}",
   linkUrl: "",
 };
 
@@ -49,6 +55,7 @@ export function NotificationsPage() {
   const [sending, setSending] = useState(false);
   const [form, setForm] = useState(defaultForm);
   const [attachment, setAttachment] = useState(null);
+  const [emailCatalog, setEmailCatalog] = useState([]);
 
   async function loadItems(nextQuery = query) {
     setLoading(true);
@@ -68,6 +75,16 @@ export function NotificationsPage() {
   }, [query.page, query.type]);
 
   useEffect(() => {
+    emailTemplateService.catalog()
+      .then((response) => {
+        const payload = response?.data ?? response;
+        const templates = (payload?.data ?? payload)?.templates || [];
+        setEmailCatalog(templates.filter((item) => item.module === "notification"));
+      })
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
     const id = window.setTimeout(() => {
       const next = { ...query, page: 1 };
       setQuery(next);
@@ -81,6 +98,14 @@ export function NotificationsPage() {
     if (!form.title.trim() || !form.body.trim()) {
       toast.error("Title and message are required");
       return;
+    }
+    if (form.variables?.trim()) {
+      try {
+        JSON.parse(form.variables);
+      } catch {
+        toast.error("Variables must be valid JSON.");
+        return;
+      }
     }
 
     const formData = new FormData();
@@ -131,6 +156,13 @@ export function NotificationsPage() {
             </select>
           </label>
           <label className={ui.field}>
+            <span>Email Template</span>
+            <select className={ui.input} value={form.templateKey} onChange={(event) => setForm((current) => ({ ...current, templateKey: event.target.value }))}>
+              <option value="">Auto select by type</option>
+              {emailCatalog.map((item) => <option key={item.key} value={item.key}>{item.name} ({item.key})</option>)}
+            </select>
+          </label>
+          <label className={ui.field}>
             <span>Title</span>
             <input className={ui.input} value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
           </label>
@@ -150,6 +182,10 @@ export function NotificationsPage() {
           <label className={cn(ui.field, "lg:col-span-3")}>
             <span>Message</span>
             <textarea className={cn(ui.input, "min-h-28")} value={form.body} onChange={(event) => setForm((current) => ({ ...current, body: event.target.value }))} />
+          </label>
+          <label className={cn(ui.field, "lg:col-span-3")}>
+            <span>Email Variables (JSON)</span>
+            <textarea className={cn(ui.input, "min-h-24")} value={form.variables} onChange={(event) => setForm((current) => ({ ...current, variables: event.target.value }))} />
           </label>
         </div>
 
@@ -213,6 +249,7 @@ export function NotificationsPage() {
                       <div className="flex flex-col gap-1 text-xs font-semibold">
                         <span>App: {item.notificationStatus || "-"}</span>
                         <span>Email: {item.emailStatus || "-"}</span>
+                        <span>Push: {item.pushStatus || "-"}</span>
                       </div>
                     </td>
                     <td className={ui.tableCell}>{item.readAt ? "Read" : "Unread"}</td>

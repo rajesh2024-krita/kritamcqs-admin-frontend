@@ -29,6 +29,9 @@ const typeOptions = [
   { value: "payment_success", label: "Payment Success" },
   { value: "reminder", label: "Reminder" },
   { value: "broadcast", label: "Broadcast" },
+  { value: "expiry", label: "Expiry" },
+  { value: "helpdesk", label: "Helpdesk" },
+  { value: "admin_notification", label: "Admin Notification" },
 ];
 
 const formTypeOptions = typeOptions.filter((option) => option.value !== "all");
@@ -57,6 +60,7 @@ export function EmailTemplatesPage() {
   const [catalog, setCatalog] = useState(null);
   const [preview, setPreview] = useState(null);
   const [logs, setLogs] = useState([]);
+  const [audit, setAudit] = useState(null);
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
@@ -186,6 +190,9 @@ export function EmailTemplatesPage() {
       name: current.name || item.name || "",
       type: item.type || current.type,
       module: current.module.trim() || item.module || item.type || "",
+      subject: current.subject || item.subject || "",
+      htmlContent: current.htmlContent || item.htmlContent || "",
+      textContent: current.textContent || item.textContent || "",
       variables: item.variables || [],
       sampleData: JSON.stringify(item.sampleData || catalog?.sampleData || {}, null, 2),
     }));
@@ -251,6 +258,46 @@ export function EmailTemplatesPage() {
     }
   }
 
+  async function handleSyncDefaults() {
+    try {
+      const response = await emailTemplateService.syncDefaults();
+      toast.success(`System templates synced: ${response.data?.synced ?? response.synced ?? 0}`);
+      await Promise.all([loadItems({ ...query, page: 1 }), loadCatalog(), loadAudit()]);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  async function sendTestEmail(item) {
+    const to = window.prompt("Send test email to:");
+    if (!to) return;
+    try {
+      const response = await emailTemplateService.test(item.id, { to });
+      toast.success(response.message || "Test email processed.");
+      await loadLogs();
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  async function loadCatalog() {
+    const response = await emailTemplateService.catalog();
+    const payload = response?.data ?? response;
+    setCatalog((payload?.data ?? payload) || null);
+  }
+
+  async function loadLogs() {
+    const response = await emailTemplateService.logs({ limit: 5 });
+    const payload = response?.data ?? response;
+    setLogs((payload?.data ?? payload) || []);
+  }
+
+  async function loadAudit() {
+    const response = await emailTemplateService.audit();
+    const payload = response?.data ?? response;
+    setAudit((payload?.data ?? payload) || null);
+  }
+
   async function loadItems(nextQuery = query) {
     setLoading(true);
     try {
@@ -269,18 +316,13 @@ export function EmailTemplatesPage() {
   }, [query.page, query.type, moduleFilter]);
 
   useEffect(() => {
-    emailTemplateService.catalog()
-      .then((response) => {
-        const payload = response?.data ?? response;
-        setCatalog((payload?.data ?? payload) || null);
-      })
+    loadCatalog()
       .catch((error) => toast.error(error.message));
 
-    emailTemplateService.logs({ limit: 5 })
-      .then((response) => {
-        const payload = response?.data ?? response;
-        setLogs((payload?.data ?? payload) || []);
-      })
+    loadLogs()
+      .catch(() => undefined);
+
+    loadAudit()
       .catch(() => undefined);
   }, []);
 
@@ -354,6 +396,9 @@ export function EmailTemplatesPage() {
             Create Template
           </button>
           <div className="flex flex-wrap items-center gap-2">
+            <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={handleSyncDefaults}>
+              Sync System Templates
+            </button>
             <label className="flex items-center gap-2 text-sm font-semibold text-slate-600">
               <input type="checkbox" checked={updateExisting} onChange={(event) => setUpdateExisting(event.target.checked)} />
               Update existing
@@ -414,6 +459,7 @@ export function EmailTemplatesPage() {
                       <div className="flex flex-wrap items-center gap-2">
                         <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => openEdit(item)}>Edit</button>
                         <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => previewTemplate(item)}>Preview</button>
+                        <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => sendTestEmail(item)}>Send Test</button>
                         <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => openDuplicate(item)}>Duplicate</button>
                         <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteItem(item)}>Delete</button>
                       </div>
@@ -563,6 +609,52 @@ export function EmailTemplatesPage() {
             </div>
           ))}
           {!logs.length && <p className={ui.muted}>No sent email logs yet.</p>}
+        </div>
+      </section>
+
+      <section className={ui.panel}>
+        <div className={ui.sectionHead}>
+          <div>
+            <div className={ui.eyebrow}>Audit</div>
+            <h2 className="text-xl font-black text-slate-900">Email Mapping Report</h2>
+            <p className={ui.muted}>Module triggers, template keys, and current database status.</p>
+          </div>
+        </div>
+        <div className="mb-4 flex flex-wrap gap-2">
+          {["Working", "Missing", "Broken"].map((status) => (
+            <span key={status} className={cn(ui.pill, status === "Working" ? ui.pillSuccess : status === "Broken" ? ui.pillDanger : ui.pillWarning)}>
+              {status}: {audit?.summary?.[status] || 0}
+            </span>
+          ))}
+        </div>
+        <div className="max-h-96 overflow-auto">
+          <table className={ui.table}>
+            <thead>
+              <tr>
+                <th className={ui.tableHead}>Module Name</th>
+                <th className={ui.tableHead}>Functionality</th>
+                <th className={ui.tableHead}>Email Trigger Event</th>
+                <th className={ui.tableHead}>Template Key</th>
+                <th className={ui.tableHead}>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(audit?.modules || []).map((item) => (
+                <tr key={item.templateKey}>
+                  <td className={ui.tableCell}>{item.moduleName}</td>
+                  <td className={ui.tableCell}>{item.functionality}</td>
+                  <td className={ui.tableCell}>{item.emailTriggerEvent}</td>
+                  <td className={ui.tableCell}>{item.templateKey}</td>
+                  <td className={ui.tableCell}>
+                    <span className={cn(ui.pill, item.status === "Working" ? ui.pillSuccess : item.status === "Broken" ? ui.pillDanger : ui.pillWarning)}>{item.status}</span>
+                  </td>
+                </tr>
+              ))}
+              {!audit?.modules?.length ? (
+                <tr><td colSpan={5} className="py-8 text-center text-sm text-slate-500">Audit report has not loaded yet.</td></tr>
+              ) : null}
+            </tbody>
+          </table>
         </div>
       </section>
     </div>
