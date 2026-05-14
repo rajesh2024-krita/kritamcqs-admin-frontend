@@ -7,7 +7,8 @@ export function setUnauthorizedHandler(handler) {
 }
 
 export const http = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api",
+  baseURL: import.meta.env.VITE_API_BASE_URL || "http://72.61.172.160:3001/api",
+  // baseURL: import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api",
 });
 
 http.interceptors.request.use((config) => {
