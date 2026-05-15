@@ -29,6 +29,10 @@ export const questionService = {
     const response = await http.post(`/admin/questions/bulk-upload/${batchId}/create-categories`);
     return response.data;
   },
+  async getBulkUploadStatus(batchId) {
+    const response = await http.get(`/admin/questions/bulk-upload/${batchId}/status`);
+    return response.data;
+  },
   async approveBulkUpload(batchId) {
     const response = await http.post(`/admin/questions/bulk-upload/${batchId}/approve`);
     return response.data;

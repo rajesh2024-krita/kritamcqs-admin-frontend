@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { chapterService } from "../../api/chapterService";
 import { difficultyService } from "../../api/difficultyService";
 import { examTypeService } from "../../api/examTypeService";
@@ -67,7 +67,28 @@ export function QuestionsPage() {
   const [bulkPreview, setBulkPreview] = useState(null);
   const [bulkResult, setBulkResult] = useState(null);
   const [bulkBusy, setBulkBusy] = useState(false);
+  const [showMissingFields, setShowMissingFields] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const bulkCompletionRefreshRef = useRef(false);
+
+  useEffect(() => {
+    const batchId = bulkResult?.batchId || bulkPreview?.batchId;
+    const shouldPoll = batchId && (bulkResult?.status === "processing" || bulkPreview?.status === "processing");
+    if (!bulkOpen || !shouldPoll) return undefined;
+    bulkCompletionRefreshRef.current = false;
+    const timer = window.setInterval(async () => {
+      const response = await questionService.getBulkUploadStatus(batchId);
+      setBulkResult(response.data);
+      if (response.data?.status !== "processing") {
+        setBulkPreview((current) => ({ ...(current || {}), ...(response.data || {}) }));
+        if (!bulkCompletionRefreshRef.current) {
+          bulkCompletionRefreshRef.current = true;
+          setRefreshKey((current) => current + 1);
+        }
+      }
+    }, 3000);
+    return () => window.clearInterval(timer);
+  }, [bulkOpen, bulkPreview?.batchId, bulkPreview?.status, bulkResult?.batchId, bulkResult?.status]);
 
   async function validateBulkFile() {
     if (!bulkFile) return;
@@ -76,6 +97,7 @@ export function QuestionsPage() {
       const response = await questionService.validateBulkUpload(bulkFile);
       setBulkPreview(response.data);
       setBulkResult(null);
+      setShowMissingFields(false);
     } finally {
       setBulkBusy(false);
     }
@@ -87,6 +109,7 @@ export function QuestionsPage() {
     try {
       const response = await questionService.createBulkUploadCategories(bulkPreview.batchId);
       setBulkPreview(response.data);
+      setShowMissingFields(true);
     } finally {
       setBulkBusy(false);
     }
@@ -96,9 +119,12 @@ export function QuestionsPage() {
     if (!bulkPreview?.batchId) return;
     setBulkBusy(true);
     try {
+      if (bulkPreview?.missingCategoriesCount > 0) {
+        await questionService.createBulkUploadCategories(bulkPreview.batchId);
+      }
       const response = await questionService.approveBulkUpload(bulkPreview.batchId);
       setBulkResult(response.data);
-      setRefreshKey((current) => current + 1);
+      setBulkPreview(response.data);
     } finally {
       setBulkBusy(false);
     }
@@ -117,6 +143,10 @@ export function QuestionsPage() {
     link.click();
     URL.revokeObjectURL(url);
   }
+
+  const missingCounts = bulkPreview?.missingCounts || {};
+  const createdSummary = bulkResult?.createdSummary || bulkPreview?.createdSummary || {};
+  const imageSummary = bulkResult?.imageSummary || bulkPreview?.imageSummary || {};
 
   return (
     <>
@@ -268,6 +298,14 @@ export function QuestionsPage() {
         },
         { name: "correctOption", label: "Correct Option", required: true, type: "select", visible: (form) => form.responseType !== "numeric", options: [{ label: "A", value: "A" }, { label: "B", value: "B" }, { label: "C", value: "C" }, { label: "D", value: "D" }] },
         { name: "explanation", label: "Explanation", type: "textarea", full: true },
+        {
+          name: "explanationImageUrl",
+          label: "Explanation Image",
+          type: "image-upload",
+          upload: (file) => questionService.uploadAsset(file),
+          ownUrl: (url) => questionService.ownAssetUrl(url),
+          full: true,
+        },
         { name: "numericAnswer", label: "Numeric Answer", visible: (form) => form.responseType === "numeric" },
         { name: "conceptTags", label: "Concept Tags", type: "tags", full: true },
         { name: "hasDiagram", label: "Has Diagram", type: "checkbox" },
@@ -286,7 +324,7 @@ export function QuestionsPage() {
     {bulkOpen ? (
       <EntityFormWrapper
         title="Questions Bulk Upload"
-        subtitle="Validate the file, create missing fields, then approve valid questions."
+        subtitle="Upload, validate, create missing fields, approve, and process questions in batches."
         onCancel={() => setBulkOpen(false)}
         onSubmit={(event) => event.preventDefault()}
         submitLabel="Close"
@@ -294,24 +332,35 @@ export function QuestionsPage() {
         <div className="flex flex-col gap-5">
           <div className={ui.field}>
             <label>File Upload</label>
-            <input className={ui.input} type="file" accept=".xlsx,.xls,.csv" onChange={(event) => setBulkFile(event.target.files?.[0] || null)} />
+            <input className={ui.input} type="file" accept=".xlsx,.xls,.csv,.json" onChange={(event) => setBulkFile(event.target.files?.[0] || null)} />
+          </div>
+          <div className="grid gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 md:grid-cols-4">
+            <span className={bulkPreview ? "text-emerald-700" : ""}>1 Upload</span>
+            <span className={bulkPreview ? "text-emerald-700" : ""}>2 Validate</span>
+            <span className={createdSummary.relatedEntities ? "text-emerald-700" : ""}>3 Create Fields</span>
+            <span className={bulkResult ? "text-emerald-700" : ""}>4 Approve & Process</span>
           </div>
           <div className="flex flex-wrap gap-3">
             <button className={cn(ui.buttonBase, ui.buttonPrimary)} type="button" disabled={!bulkFile || bulkBusy} onClick={validateBulkFile}>
               {bulkBusy ? "Processing..." : "Validate File"}
             </button>
             {bulkPreview?.missingCategoriesCount > 0 ? (
+              <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" disabled={bulkBusy} onClick={() => setShowMissingFields((current) => !current)}>
+                View Missing Fields
+              </button>
+            ) : null}
+            {bulkPreview?.missingCategoriesCount > 0 ? (
               <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" disabled={bulkBusy} onClick={createMissingCategories}>
                 Create Missing Fields
               </button>
             ) : null}
-            {bulkPreview?.validCount > 0 && bulkPreview?.missingCategoriesCount === 0 ? (
+            {bulkPreview?.totalRows > 0 ? (
               <button className={cn(ui.buttonBase, ui.buttonPrimary)} type="button" disabled={bulkBusy} onClick={approveBulkUpload}>
-                Approve & Upload Questions
+                Approve & Upload
               </button>
             ) : null}
             <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={downloadFailedRecords}>
-              Download Failed Records
+              Download Error Report
             </button>
           </div>
 
@@ -325,10 +374,27 @@ export function QuestionsPage() {
           {bulkPreview ? (
             <div className="grid gap-4">
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <div className={ui.metricCard}><div className={ui.metricLabel}>Total Rows</div><div className="text-2xl font-black">{bulkPreview.totalRows}</div></div>
-                <div className={ui.metricCard}><div className={ui.metricLabel}>Valid</div><div className="text-2xl font-black text-emerald-700">{bulkPreview.validCount}</div></div>
-                <div className={ui.metricCard}><div className={ui.metricLabel}>Invalid</div><div className="text-2xl font-black text-rose-700">{bulkPreview.invalidCount}</div></div>
+                <div className={ui.metricCard}><div className={ui.metricLabel}>Total Questions</div><div className="text-2xl font-black">{bulkPreview.totalRows}</div></div>
+                <div className={ui.metricCard}><div className={ui.metricLabel}>Valid Questions</div><div className="text-2xl font-black text-emerald-700">{bulkPreview.validCount}</div></div>
+                <div className={ui.metricCard}><div className={ui.metricLabel}>Invalid Questions</div><div className="text-2xl font-black text-rose-700">{bulkPreview.invalidCount}</div></div>
                 <div className={ui.metricCard}><div className={ui.metricLabel}>Missing Fields</div><div className="text-2xl font-black text-amber-700">{bulkPreview.missingCategoriesCount}</div></div>
+                <div className={ui.metricCard}><div className={ui.metricLabel}>Duplicates</div><div className="text-2xl font-black text-slate-800">{bulkPreview.duplicateCount || 0}</div></div>
+                <div className={ui.metricCard}><div className={ui.metricLabel}>Images Detected</div><div className="text-2xl font-black text-blue-700">{bulkPreview.imageProcessingCount || 0}</div></div>
+                <div className={ui.metricCard}><div className={ui.metricLabel}>Batches</div><div className="text-2xl font-black">{bulkPreview.totalBatches || 0}</div></div>
+                <div className={ui.metricCard}><div className={ui.metricLabel}>Batch Size</div><div className="text-2xl font-black">{bulkPreview.batchSize || 200}</div></div>
+              </div>
+              <div className={ui.panel}>
+                <strong>Missing Fields Summary</strong>
+                <div className="mt-3 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
+                  <span>Missing Subjects: <b>{missingCounts.subjects || 0}</b></span>
+                  <span>Missing Chapters: <b>{missingCounts.chapters || 0}</b></span>
+                  <span>Missing Topics: <b>{missingCounts.topics || 0}</b></span>
+                  <span>Missing Types: <b>{missingCounts.question_types || 0}</b></span>
+                  <span>Missing Categories: <b>{missingCounts.exam_types || missingCounts.categorys || 0}</b></span>
+                  <span>Missing Years: <b>{missingCounts.years || 0}</b></span>
+                  <span>Missing Difficulty: <b>{missingCounts.difficultys || 0}</b></span>
+                  <span>Image Processing: <b>{bulkPreview.imageProcessingCount || 0}</b></span>
+                </div>
               </div>
               <div className={ui.panel}>
                 <div className="mb-2 flex items-center justify-between gap-3 text-sm font-semibold text-slate-700">
@@ -340,7 +406,7 @@ export function QuestionsPage() {
                 </div>
               </div>
 
-              {bulkPreview.missingCategories?.length ? (
+              {showMissingFields && bulkPreview.missingCategories?.length ? (
                 <div className={ui.panel}>
                   <strong>Missing Fields Detected</strong>
                   <div className={ui.tableScroll}>
@@ -362,7 +428,8 @@ export function QuestionsPage() {
               ) : null}
 
               <div className={ui.panel}>
-                <strong>Preview</strong>
+                <strong>Final Preview</strong>
+                <p className={ui.muted}>Ready: {bulkPreview.validCount || 0} | Failed records: {bulkPreview.invalidCount || 0} | Duplicates: {bulkPreview.duplicateCount || 0} | Images: {bulkPreview.imageProcessingCount || 0}</p>
                 <div className={ui.tableScroll}>
                   <table className={ui.table}>
                     <thead><tr><th className={ui.tableHead}>Row</th><th className={ui.tableHead}>Question</th><th className={ui.tableHead}>Status</th><th className={ui.tableHead}>Error</th></tr></thead>
@@ -384,8 +451,20 @@ export function QuestionsPage() {
 
           {bulkResult ? (
             <div className={ui.panel}>
-              <strong>Final Result</strong>
-              <p className={ui.muted}>Total Questions: {bulkResult.totalRows} | Successfully Uploaded: {bulkResult.successCount} | Failed: {bulkResult.failedCount}</p>
+              <strong>Upload Completion Summary</strong>
+              <p className={ui.muted}>
+                Total Questions: {bulkResult.totalRows} | Successfully Uploaded: {bulkResult.successCount} | Failed: {bulkResult.failedCount} | Skipped Duplicates: {bulkResult.skippedDuplicatesCount || 0} | Processing Time: {bulkResult.processingTimeSeconds || 0}s | Uploaded Images: {bulkResult.uploadedImageCount || 0}
+              </p>
+              <div className="mt-3 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
+                <span>Created Subjects: <b>{createdSummary.subjects || 0}</b></span>
+                <span>Created Chapters: <b>{createdSummary.chapters || 0}</b></span>
+                <span>Created Topics: <b>{createdSummary.topics || 0}</b></span>
+                <span>Created Types: <b>{createdSummary.questionTypes || 0}</b></span>
+                <span>Images Detected: <b>{imageSummary.detected || 0}</b></span>
+                <span>Images Uploaded: <b>{imageSummary.uploaded || bulkResult.uploadedImageCount || 0}</b></span>
+                <span>Batch: <b>{bulkResult.currentBatch || bulkPreview?.totalBatches || 0}/{bulkResult.totalBatches || bulkPreview?.totalBatches || 0}</b></span>
+                <span>Status: <b>{bulkResult.status || "approved"}</b></span>
+              </div>
               <div className="mt-3 space-y-2">
                 <div className="flex items-center justify-between gap-3 text-sm font-semibold text-slate-700">
                   <span>Upload Progress</span>
@@ -402,7 +481,10 @@ export function QuestionsPage() {
                   <div className="h-full bg-emerald-500" style={{ width: `${formatPercent(bulkResult.successPercent)}%` }} />
                 </div>
               </div>
-              <button className={cn(ui.buttonBase, ui.buttonPrimary)} type="button" onClick={() => setBulkOpen(false)}>Go to Questions List</button>
+              <div className="mt-4 flex flex-wrap gap-3">
+                <button className={cn(ui.buttonBase, ui.buttonPrimary)} type="button" onClick={() => setBulkOpen(false)}>View Uploaded Questions</button>
+                <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={downloadFailedRecords}>Download Upload Report</button>
+              </div>
             </div>
           ) : null}
         </div>
