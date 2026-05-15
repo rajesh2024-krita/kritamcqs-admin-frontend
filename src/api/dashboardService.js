@@ -17,8 +17,4 @@ export const dashboardService = {
     const response = await http.get("/admin/daily-test-analytics", { params });
     return response.data;
   },
-  async seed(payload = {}) {
-    const response = await http.post("/admin/seed", payload);
-    return response.data;
-  },
 };

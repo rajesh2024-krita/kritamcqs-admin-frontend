@@ -258,16 +258,6 @@ export function EmailTemplatesPage() {
     }
   }
 
-  async function handleSyncDefaults() {
-    try {
-      const response = await emailTemplateService.syncDefaults();
-      toast.success(`System templates synced: ${response.data?.synced ?? response.synced ?? 0}`);
-      await Promise.all([loadItems({ ...query, page: 1 }), loadCatalog(), loadAudit()]);
-    } catch (error) {
-      toast.error(error.message);
-    }
-  }
-
   async function sendTestEmail(item) {
     const to = window.prompt("Send test email to:");
     if (!to) return;
@@ -396,9 +386,6 @@ export function EmailTemplatesPage() {
             Create Template
           </button>
           <div className="flex flex-wrap items-center gap-2">
-            <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={handleSyncDefaults}>
-              Sync System Templates
-            </button>
             <label className="flex items-center gap-2 text-sm font-semibold text-slate-600">
               <input type="checkbox" checked={updateExisting} onChange={(event) => setUpdateExisting(event.target.checked)} />
               Update existing
