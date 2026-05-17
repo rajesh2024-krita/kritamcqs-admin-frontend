@@ -216,7 +216,18 @@ export function EmailTemplatesPage() {
       const response = await emailTemplateService.bulkUpload(file, updateExisting);
       const data = response.data || {};
       toast.success(`Import processed: ${data.created?.length || 0} created, ${data.updated?.length || 0} updated, ${data.skipped?.length || 0} skipped.`);
-      void loadItems({ ...query, page: 1 });
+      await refreshTemplateData({ ...query, page: 1 });
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  async function seedDefaultTemplates() {
+    try {
+      const response = await emailTemplateService.seedDefaults(updateExisting);
+      const data = response.data || {};
+      toast.success(response.message || `Default templates processed: ${data.created?.length || 0} created, ${data.updated?.length || 0} updated.`);
+      await refreshTemplateData({ ...query, page: 1 });
     } catch (error) {
       toast.error(error.message);
     }
@@ -238,7 +249,7 @@ export function EmailTemplatesPage() {
       resetForm();
       const nextQuery = { ...query, page: 1 };
       setQuery(nextQuery);
-      void loadItems(nextQuery);
+      await refreshTemplateData(nextQuery);
     } catch (error) {
       toast.error(error.message);
     }
@@ -252,7 +263,17 @@ export function EmailTemplatesPage() {
       setDeleteItem(null);
       const nextQuery = { ...query, page: 1 };
       setQuery(nextQuery);
-      void loadItems(nextQuery);
+      await refreshTemplateData(nextQuery);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  async function toggleTemplateActive(item) {
+    try {
+      await emailTemplateService.update(item.id, { isActive: !item.isActive });
+      toast.success(`Template ${item.isActive ? "deactivated" : "activated"} successfully.`);
+      await refreshTemplateData(query);
     } catch (error) {
       toast.error(error.message);
     }
@@ -286,6 +307,14 @@ export function EmailTemplatesPage() {
     const response = await emailTemplateService.audit();
     const payload = response?.data ?? response;
     setAudit((payload?.data ?? payload) || null);
+  }
+
+  async function refreshTemplateData(nextQuery = query) {
+    await Promise.all([
+      loadItems(nextQuery),
+      loadCatalog(),
+      loadAudit(),
+    ]);
   }
 
   async function loadItems(nextQuery = query) {
@@ -382,10 +411,13 @@ export function EmailTemplatesPage() {
               ))}
             </select>
           </div>
-          <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={openCreate}>
-            Create Template
-          </button>
           <div className="flex flex-wrap items-center gap-2">
+            <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={openCreate}>
+              Create Template
+            </button>
+            <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={seedDefaultTemplates}>
+              Create Missing Defaults
+            </button>
             <label className="flex items-center gap-2 text-sm font-semibold text-slate-600">
               <input type="checkbox" checked={updateExisting} onChange={(event) => setUpdateExisting(event.target.checked)} />
               Update existing
@@ -447,6 +479,9 @@ export function EmailTemplatesPage() {
                         <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => openEdit(item)}>Edit</button>
                         <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => previewTemplate(item)}>Preview</button>
                         <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => sendTestEmail(item)}>Send Test</button>
+                        <button className={cn(ui.buttonBase, item.isActive ? ui.buttonSecondary : ui.buttonPrimary)} onClick={() => toggleTemplateActive(item)}>
+                          {item.isActive ? "Deactivate" : "Activate"}
+                        </button>
                         <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => openDuplicate(item)}>Duplicate</button>
                         <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteItem(item)}>Delete</button>
                       </div>

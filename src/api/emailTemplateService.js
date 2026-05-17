@@ -42,6 +42,10 @@ export const emailTemplateService = {
     });
     return response.data;
   },
+  async seedDefaults(updateExisting = false) {
+    const response = await http.post("/admin/email-templates/seed-defaults", { updateExisting });
+    return response.data;
+  },
   async audit() {
     const response = await http.get("/admin/email-templates/audit");
     return response.data;

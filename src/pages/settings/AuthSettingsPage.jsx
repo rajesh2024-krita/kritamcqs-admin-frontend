@@ -112,32 +112,57 @@ export function AuthSettingsPage() {
       </section>
 
       <section className={ui.panel}>
-        <h3 className="mb-4 text-xl font-bold text-slate-900">Google OAuth</h3>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <label className={ui.field}><span>Web Google Client ID</span><input className={ui.input} value={auth.googleClientId || ""} onChange={(event) => setAuth((current) => ({ ...current, googleClientId: event.target.value }))} /></label>
-          <label className={ui.field}><span>Android Google Client ID</span><input className={ui.input} value={auth.googleAndroidClientId || ""} onChange={(event) => setAuth((current) => ({ ...current, googleAndroidClientId: event.target.value }))} /></label>
-          <label className={ui.field}><span>Android Package Name</span><input className={ui.input} value={auth.googleAndroidPackageName || ""} onChange={(event) => setAuth((current) => ({ ...current, googleAndroidPackageName: event.target.value }))} /></label>
-          <label className={ui.field}><span>Android SHA-1 Fingerprint</span><input className={ui.input} value={auth.googleAndroidSha1 || ""} onChange={(event) => setAuth((current) => ({ ...current, googleAndroidSha1: event.target.value.toUpperCase() }))} /></label>
-          <label className={ui.field}>
-            <span className="flex items-center justify-between gap-3">
-              <span>Google Client Secret</span>
-              <button type="button" className="text-sm font-medium text-slate-500 hover:text-slate-900" onClick={() => setShowGoogleSecret((current) => !current)}>{showGoogleSecret ? "Hide" : "Show"}</button>
-            </span>
-            <div className="relative">
-              <input
-                className={ui.input}
-                type={showGoogleSecret ? "text" : "password"}
-                placeholder={auth.googleClientSecretConfigured ? "Configured - enter only to replace" : ""}
-                value={auth.googleClientSecret || ""}
-                onChange={(event) => setAuth((current) => ({ ...current, googleClientSecret: event.target.value }))}
-              />
-              <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500" onClick={() => setShowGoogleSecret((current) => !current)}>
-                <EyeIcon size={18} />
-              </button>
+        <div className="mb-5">
+          <h3 className="text-xl font-bold text-slate-900">Google OAuth</h3>
+          <p className={ui.muted}>Configure separate Google OAuth clients for browser login and Android app login.</p>
+        </div>
+        <div className="grid gap-5 xl:grid-cols-2">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
+            <div className="mb-4">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-blue-700">Web Application</p>
+              <h4 className="mt-1 text-lg font-bold text-slate-950">Web Google Login</h4>
+              <p className="mt-1 text-sm text-slate-600">Used by the web app and browser-based Google sign-in.</p>
             </div>
-          </label>
-          <label className={ui.field}><span>Redirect URL</span><input className={ui.input} value={(auth.googleRedirectUrls || [])[0] || ""} onChange={(event) => setAuth((current) => ({ ...current, googleRedirectUrls: [event.target.value] }))} /></label>
-          <label className={ui.field}><span>Callback URL</span><input className={ui.input} value={auth.googleCallbackUrl || ""} onChange={(event) => setAuth((current) => ({ ...current, googleCallbackUrl: event.target.value }))} /></label>
+            <div className="grid gap-4">
+              <label className={ui.field}><span>Web Google Client ID</span><input className={ui.input} value={auth.googleClientId || ""} onChange={(event) => setAuth((current) => ({ ...current, googleClientId: event.target.value }))} /></label>
+              <label className={ui.field}>
+                <span className="flex items-center justify-between gap-3">
+                  <span>Web Google Client Secret</span>
+                  <button type="button" className="text-sm font-medium text-slate-500 hover:text-slate-900" onClick={() => setShowGoogleSecret((current) => !current)}>{showGoogleSecret ? "Hide" : "Show"}</button>
+                </span>
+                <div className="relative">
+                  <input
+                    className={ui.input}
+                    type={showGoogleSecret ? "text" : "password"}
+                    placeholder={auth.googleClientSecretConfigured ? "Configured - enter only to replace" : ""}
+                    value={auth.googleClientSecret || ""}
+                    onChange={(event) => setAuth((current) => ({ ...current, googleClientSecret: event.target.value }))}
+                  />
+                  <button type="button" className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500" onClick={() => setShowGoogleSecret((current) => !current)}>
+                    <EyeIcon size={18} />
+                  </button>
+                </div>
+              </label>
+              <label className={ui.field}><span>Web Redirect URL</span><input className={ui.input} value={(auth.googleRedirectUrls || [])[0] || ""} onChange={(event) => setAuth((current) => ({ ...current, googleRedirectUrls: [event.target.value] }))} /></label>
+              <label className={ui.field}><span>Web Callback URL</span><input className={ui.input} value={auth.googleCallbackUrl || ""} onChange={(event) => setAuth((current) => ({ ...current, googleCallbackUrl: event.target.value }))} /></label>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-5">
+            <div className="mb-4">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Android Application</p>
+              <h4 className="mt-1 text-lg font-bold text-slate-950">Android Google Login</h4>
+              <p className="mt-1 text-sm text-slate-600">Used to validate Google ID tokens generated inside the Android app.</p>
+            </div>
+            <div className="grid gap-4">
+              <label className={ui.field}><span>Android Google Client ID</span><input className={ui.input} value={auth.googleAndroidClientId || ""} onChange={(event) => setAuth((current) => ({ ...current, googleAndroidClientId: event.target.value }))} /></label>
+              <label className={ui.field}><span>Android Package Name</span><input className={ui.input} value={auth.googleAndroidPackageName || ""} onChange={(event) => setAuth((current) => ({ ...current, googleAndroidPackageName: event.target.value }))} /></label>
+              <label className={ui.field}><span>Android SHA-1 Fingerprint</span><input className={ui.input} value={auth.googleAndroidSha1 || ""} onChange={(event) => setAuth((current) => ({ ...current, googleAndroidSha1: event.target.value.toUpperCase() }))} /></label>
+              <div className="rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm text-slate-700">
+                Backend accepts Google ID tokens whose audience matches either the Web Client ID or Android Client ID.
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
