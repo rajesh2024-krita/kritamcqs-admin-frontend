@@ -1,6 +1,6 @@
 import { cn, ui } from "../../ui";
 
-export function EntityFormWrapper({ title, subtitle, children, onCancel, onSubmit, submitLabel }) {
+export function EntityFormWrapper({ title, subtitle, children, onCancel, onSubmit, submitLabel, submitDisabled = false }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm">
       <div className="admin-modal max-h-[90vh] w-full max-w-5xl overflow-auto rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xl shadow-slate-950/20">
@@ -15,7 +15,7 @@ export function EntityFormWrapper({ title, subtitle, children, onCancel, onSubmi
             {children}
             <div className="flex flex-wrap items-center gap-3">
               <button type="button" className={cn(ui.buttonBase, ui.buttonGhost)} onClick={onCancel}>Cancel</button>
-              <button type="submit" className={cn(ui.buttonBase, ui.buttonPrimary)}>{submitLabel}</button>
+              <button type="submit" className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={submitDisabled}>{submitLabel}</button>
             </div>
           </form>
         </div>

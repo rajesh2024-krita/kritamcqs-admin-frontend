@@ -32,5 +32,9 @@ export function createCrudService(resource) {
       const response = await http.post(`/admin/${resource}/bulk-delete`, { ids });
       return response.data;
     },
+    async reorder(items) {
+      const response = await http.post(`/admin/${resource}/reorder`, { items });
+      return response.data;
+    },
   };
 }

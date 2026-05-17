@@ -11,6 +11,9 @@ export function AuthSettingsPage() {
     emailPasswordEnabled: true,
     googleEnabled: false,
     googleClientId: "",
+    googleAndroidClientId: "",
+    googleAndroidPackageName: "com.kritamcqs.androidapp",
+    googleAndroidSha1: "CE:34:23:0A:77:79:E5:01:09:10:2C:3C:A9:9C:B3:BF:7B:FD:AF:C4",
     googleClientSecret: "",
     googleRedirectUrls: [],
     googleCallbackUrl: "",
@@ -111,7 +114,10 @@ export function AuthSettingsPage() {
       <section className={ui.panel}>
         <h3 className="mb-4 text-xl font-bold text-slate-900">Google OAuth</h3>
         <div className="grid gap-4 lg:grid-cols-2">
-          <label className={ui.field}><span>Google Client ID</span><input className={ui.input} value={auth.googleClientId || ""} onChange={(event) => setAuth((current) => ({ ...current, googleClientId: event.target.value }))} /></label>
+          <label className={ui.field}><span>Web Google Client ID</span><input className={ui.input} value={auth.googleClientId || ""} onChange={(event) => setAuth((current) => ({ ...current, googleClientId: event.target.value }))} /></label>
+          <label className={ui.field}><span>Android Google Client ID</span><input className={ui.input} value={auth.googleAndroidClientId || ""} onChange={(event) => setAuth((current) => ({ ...current, googleAndroidClientId: event.target.value }))} /></label>
+          <label className={ui.field}><span>Android Package Name</span><input className={ui.input} value={auth.googleAndroidPackageName || ""} onChange={(event) => setAuth((current) => ({ ...current, googleAndroidPackageName: event.target.value }))} /></label>
+          <label className={ui.field}><span>Android SHA-1 Fingerprint</span><input className={ui.input} value={auth.googleAndroidSha1 || ""} onChange={(event) => setAuth((current) => ({ ...current, googleAndroidSha1: event.target.value.toUpperCase() }))} /></label>
           <label className={ui.field}>
             <span className="flex items-center justify-between gap-3">
               <span>Google Client Secret</span>

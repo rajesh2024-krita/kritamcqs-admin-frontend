@@ -7,6 +7,8 @@ export function DifficultiesPage() {
       title="Difficulties"
       description="Manage the shared difficulty levels used in admin and the student app."
       service={difficultyService}
+      sortable
+      defaultQuery={{ sortBy: "sortOrder", sortOrder: "asc" }}
       fields={[
         { name: "key", label: "Key", required: true },
         { name: "name", label: "Name", required: true },

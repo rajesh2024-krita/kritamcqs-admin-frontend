@@ -201,6 +201,12 @@ function formatAvailability(item) {
   return "All days";
 }
 
+function getRequiredQuestionCount(formState) {
+  if (formState.patternPreset === "NEET_REAL") return 180;
+  if (formState.patternPreset === "JEE_REAL") return 75;
+  return 0;
+}
+
 export function MockTestsPage() {
   const toast = useToast();
   const [items, setItems] = useState([]);
@@ -231,6 +237,10 @@ export function MockTestsPage() {
   const [savingMarkingSettings, setSavingMarkingSettings] = useState(false);
 
   const selectedQuestionIds = formState.questionIds || [];
+  const requiredQuestionCount = getRequiredQuestionCount(formState);
+  const questionCountValidationMessage = requiredQuestionCount && selectedQuestionIds.length !== requiredQuestionCount
+    ? `The mock test requires ${requiredQuestionCount} questions based on the selected ${formState.examType} pattern, but only ${selectedQuestionIds.length} questions are currently selected.`
+    : "";
 
   const selectedQuestions = useMemo(() => {
     const known = new Map([
@@ -525,6 +535,10 @@ export function MockTestsPage() {
         toast.error("Select at least two questions for a manual mock test");
         return;
       }
+      if (questionCountValidationMessage) {
+        toast.error(questionCountValidationMessage);
+        return;
+      }
       const parsedDays = parseDaysOfMonth(dayInput);
       const payload = {
         ...formState,
@@ -812,6 +826,7 @@ export function MockTestsPage() {
           onCancel={() => setShowForm(false)}
           onSubmit={handleSubmit}
           submitLabel={editingItem ? "Save Mock Test" : "Create Mock Test"}
+          submitDisabled={Boolean(questionCountValidationMessage)}
         >
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className={ui.field}>
@@ -958,6 +973,9 @@ export function MockTestsPage() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <div className="line-clamp-2 font-semibold text-slate-900">{item.question}</div>
+                            {item.questionImageUrl ? (
+                              <img src={item.questionImageUrl} alt="Question visual" className="mt-2 max-h-20 rounded-sm border border-slate-200 object-contain" />
+                            ) : null}
                             <div className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">{item.subjectName} | {item.chapterName} | {item.difficulty}</div>
                           </div>
                           <span className={ui.pill}>{isSelected ? "Selected" : "Add"}</span>
@@ -975,6 +993,9 @@ export function MockTestsPage() {
                 <div>
                   <h3 className="text-xl font-bold text-slate-900">Selected Questions</h3>
                   <p className={ui.muted}>{selectedQuestionIds.length} questions added to this mock test.</p>
+                  {questionCountValidationMessage ? (
+                    <p className="mt-2 text-sm font-semibold text-rose-600">{questionCountValidationMessage}</p>
+                  ) : null}
                 </div>
                 <span className={ui.badge}>{selectedQuestionIds.length} total</span>
               </div>
@@ -986,6 +1007,9 @@ export function MockTestsPage() {
                       <button type="button" className="text-sm font-semibold text-rose-600" onClick={() => removeSelectedQuestion(item.id)}>Remove</button>
                     </div>
                     <div className="line-clamp-3 text-sm font-semibold text-slate-900">{item.question}</div>
+                    {item.questionImageUrl ? (
+                      <img src={item.questionImageUrl} alt="Question visual" className="mt-2 max-h-20 rounded-sm border border-slate-200 object-contain" />
+                    ) : null}
                     <div className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">{item.subjectName} | {item.chapterName} | {item.difficulty}</div>
                   </div>
                 ))}

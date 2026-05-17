@@ -24,7 +24,7 @@ function normalizeInitialValues(fields) {
   }, {});
 }
 
-export function EntityManagerPage({ title, description, service, fields, columns, defaultQuery = {}, lookupLoaders = [], mapItemToForm, headerActions = null, filters = [] }) {
+export function EntityManagerPage({ title, description, service, fields, columns, defaultQuery = {}, lookupLoaders = [], mapItemToForm, headerActions = null, filters = [], sortable = false }) {
   const toast = useToast();
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -43,6 +43,7 @@ export function EntityManagerPage({ title, description, service, fields, columns
   const [selectedFiles, setSelectedFiles] = useState({});
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [draggedId, setDraggedId] = useState(null);
 
   const visibleFields = useMemo(
     () => fields.filter((field) => (field.visible ? field.visible(formState, lookups) : true)),
@@ -281,6 +282,37 @@ export function EntityManagerPage({ title, description, service, fields, columns
       return;
     }
     setSelectedIds((current) => [...new Set([...current, ...items.map((item) => String(item.id))])]);
+  }
+
+  async function persistOrder(nextItems) {
+    if (!service?.reorder) return;
+    setItems(nextItems);
+    try {
+      await service.reorder(nextItems.map((item, index) => ({ id: item.id, sortOrder: (index + 1) * 10 })));
+      toast.success(`${title} order updated`);
+      loadItems({ ...query, sortBy: "sortOrder", sortOrder: "asc" });
+    } catch (error) {
+      toast.error(error.message);
+      loadItems(query);
+    }
+  }
+
+  function handleDropOnRow(targetId) {
+    if (!sortable || !draggedId || draggedId === targetId) {
+      setDraggedId(null);
+      return;
+    }
+    const fromIndex = items.findIndex((item) => String(item.id) === String(draggedId));
+    const toIndex = items.findIndex((item) => String(item.id) === String(targetId));
+    if (fromIndex < 0 || toIndex < 0) {
+      setDraggedId(null);
+      return;
+    }
+    const nextItems = [...items];
+    const [moved] = nextItems.splice(fromIndex, 1);
+    nextItems.splice(toIndex, 0, moved);
+    setDraggedId(null);
+    void persistOrder(nextItems);
   }
 
   function handleLimitChange(event) {
@@ -541,26 +573,71 @@ export function EntityManagerPage({ title, description, service, fields, columns
       {!loading && items.length === 0 ? <EmptyState title={`No ${title.toLowerCase()} found`} description="Adjust the search or add a new record." /> : null}
       {!loading && items.length > 0 ? (
         <>
-          <DataTable
-            columns={columns}
-            rows={items}
-            selectable={Boolean(service?.removeMany)}
-            selectedRowIds={selectedIds}
-            onToggleRow={toggleRowSelection}
-            onToggleAllRows={toggleAllSelection}
-            renderActions={(row) => (
-              <div className="flex flex-wrap items-center gap-3">
-                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openEdit(row)}>
-                  <EditIcon size={16} />
-                  Edit
-                </button>
-                <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteItem(row)}>
-                  <TrashIcon size={16} />
-                  Delete
-                </button>
-              </div>
-            )}
-          />
+          {sortable ? (
+            <div className="overflow-x-auto rounded-sm border border-slate-200 bg-white">
+              <table className="min-w-full divide-y divide-slate-100 text-sm">
+                <thead className="bg-slate-50 text-left text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+                  <tr>
+                    <th className="px-4 py-3">Sort</th>
+                    {columns.map((column) => <th key={column.key} className="px-4 py-3">{column.label}</th>)}
+                    <th className="px-4 py-3">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {items.map((row) => (
+                    <tr
+                      key={row.id}
+                      draggable
+                      onDragStart={() => setDraggedId(String(row.id))}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={() => handleDropOnRow(String(row.id))}
+                      className={cn("cursor-move bg-white", draggedId === String(row.id) && "opacity-50")}
+                    >
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-500">Drag</td>
+                      {columns.map((column) => (
+                        <td key={column.key} className="px-4 py-3 align-top text-slate-700">
+                          {column.render ? column.render(row) : row[column.key]}
+                        </td>
+                      ))}
+                      <td className="px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openEdit(row)}>
+                            <EditIcon size={16} />
+                            Edit
+                          </button>
+                          <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteItem(row)}>
+                            <TrashIcon size={16} />
+                            Delete
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <DataTable
+              columns={columns}
+              rows={items}
+              selectable={Boolean(service?.removeMany)}
+              selectedRowIds={selectedIds}
+              onToggleRow={toggleRowSelection}
+              onToggleAllRows={toggleAllSelection}
+              renderActions={(row) => (
+                <div className="flex flex-wrap items-center gap-3">
+                  <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openEdit(row)}>
+                    <EditIcon size={16} />
+                    Edit
+                  </button>
+                  <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteItem(row)}>
+                    <TrashIcon size={16} />
+                    Delete
+                  </button>
+                </div>
+              )}
+            />
+          )}
           <Pagination meta={meta} onChange={(page) => setQuery((current) => ({ ...current, page }))} />
         </>
       ) : null}

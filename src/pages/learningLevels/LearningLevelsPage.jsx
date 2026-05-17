@@ -8,6 +8,8 @@ export function LearningLevelsPage() {
       title="Learning Levels"
       description="Manage learner levels used during onboarding and profile preferences."
       service={learningLevelService}
+      sortable
+      defaultQuery={{ sortBy: "sortOrder", sortOrder: "asc" }}
       fields={[
         { name: "key", label: "Key", required: true },
         { name: "label", label: "Label", required: true },

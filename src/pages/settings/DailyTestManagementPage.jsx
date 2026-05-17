@@ -29,7 +29,7 @@ export function DailyTestManagementPage() {
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [settings, setSettings] = useState(defaultSettings);
-  const [resetInput, setResetInput] = useState({ user_id: "", date: "", reset_all: false });
+  const [resetInput, setResetInput] = useState({ email: "", date: "", reset_all: false });
 
   async function loadData() {
     setLoading(true);
@@ -159,7 +159,7 @@ export function DailyTestManagementPage() {
     setResetting(true);
     try {
       const payload = {
-        user_id: resetInput.user_id.trim() || undefined,
+        email: resetInput.email.trim() || undefined,
         date: resetInput.date || undefined,
         reset_all: Boolean(resetInput.reset_all),
       };
@@ -403,11 +403,12 @@ export function DailyTestManagementPage() {
 
         <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
           <label className={ui.field}>
-            <span>User ID (optional)</span>
+            <span>Email ID (optional)</span>
             <input
               className={ui.input}
-              value={resetInput.user_id}
-              onChange={(event) => setResetInput((current) => ({ ...current, user_id: event.target.value }))}
+              type="email"
+              value={resetInput.email}
+              onChange={(event) => setResetInput((current) => ({ ...current, email: event.target.value }))}
               placeholder="Leave empty for all users"
             />
           </label>
