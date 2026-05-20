@@ -45,6 +45,20 @@ const defaultForm = {
   linkUrl: "",
 };
 
+function normalizeText(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function defaultTemplateForType(templates, type) {
+  const normalizedType = normalizeText(type);
+  const notificationTemplates = templates.filter((item) => normalizeText(item.module) === "notifications" || normalizeText(item.module) === "notification");
+  return (
+    notificationTemplates.find((item) => normalizeText(item.type) === normalizedType)
+    || notificationTemplates.find((item) => item.key === "notification_general")
+    || null
+  );
+}
+
 export function NotificationsPage() {
   const toast = useToast();
   const [items, setItems] = useState([]);
@@ -79,10 +93,17 @@ export function NotificationsPage() {
       .then((response) => {
         const payload = response?.data ?? response;
         const templates = (payload?.data ?? payload)?.templates || [];
-        setEmailCatalog(templates.filter((item) => item.module === "notification"));
+        setEmailCatalog(
+          templates.filter((item) => {
+            const module = normalizeText(item.module);
+            return module === "notification" || module === "notifications";
+          }),
+        );
       })
       .catch(() => undefined);
   }, []);
+
+  const autoTemplate = defaultTemplateForType(emailCatalog, form.type);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -158,7 +179,7 @@ export function NotificationsPage() {
           <label className={ui.field}>
             <span>Email Template</span>
             <select className={ui.input} value={form.templateKey} onChange={(event) => setForm((current) => ({ ...current, templateKey: event.target.value }))}>
-              <option value="">Auto select by type</option>
+              <option value="">Auto select by type{autoTemplate ? `: ${autoTemplate.name}` : ""}</option>
               {emailCatalog.map((item) => <option key={item.key} value={item.key}>{item.name} ({item.key})</option>)}
             </select>
           </label>
