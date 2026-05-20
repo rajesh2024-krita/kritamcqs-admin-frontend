@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Editor } from "../invoice-template/components/Editor/Editor";
-import { useEditorStore } from "../invoice-template/store/useEditorStore";
 import { subscriptionService } from "../api/subscriptionService";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { RefreshIcon } from "../components/common/AdminIcons";
@@ -36,98 +35,149 @@ const emptyInvoiceForm = {
   items: [{ product: "Premium Subscription", description: "", quantity: 1, price: 0, tax: 0, discount: 0, total: 0 }],
 };
 
-function tokenText(type) {
-  if (type === "i-text" || type === "text") return true;
-  return false;
-}
+const defaultInvoiceHtml = `
+<div class="invoice">
+  <header class="invoice-header">
+    <div>
+      <p class="invoice-label">INVOICE</p>
+      <h1>Invoice #INV-001</h1>
+      <p class="invoice-meta">Date: 2026-05-20</p>
+    </div>
+    <div class="company-info">
+      <strong>Krita NEET JEE</strong>
+      <p>123 Main Street</p>
+      <p>support@krita.com</p>
+    </div>
+  </header>
 
-function simplifyFabricObject(obj, pageLeft = 0, pageTop = 0) {
-  const raw = obj.toObject?.(["isPage", "id", "invoiceTable", "objects"]) || {};
-  const left = Number(obj.left || raw.left || 0);
-  const top = Number(obj.top || raw.top || 0);
-  const width = Number(obj.width || raw.width || 0);
-  const height = Number(obj.height || raw.height || 0);
-  const scaleX = Number(obj.scaleX ?? raw.scaleX ?? 1);
-  const scaleY = Number(obj.scaleY ?? raw.scaleY ?? 1);
-  return {
-    ...raw,
-    renderVersion: 2,
-    pageWidth: PAGE_WIDTH,
-    pageHeight: PAGE_HEIGHT,
-    pageX: left - pageLeft,
-    pageY: top - pageTop,
-    scaledWidth: Number(obj.getScaledWidth?.() || width * scaleX || 0),
-    scaledHeight: Number(obj.getScaledHeight?.() || height * scaleY || 0),
-    type: obj.type,
-    text: obj.text || raw.text || "",
-    fill: obj.fill || raw.fill || "#111827",
-    stroke: obj.stroke || raw.stroke || "",
-    strokeWidth: Number(obj.strokeWidth || raw.strokeWidth || 0),
-    fontFamily: obj.fontFamily || raw.fontFamily || "Inter",
-    fontSize: Number(obj.fontSize || raw.fontSize || 10),
-    fontWeight: obj.fontWeight || raw.fontWeight || "normal",
-    angle: Number(obj.angle || raw.angle || 0),
-    opacity: Number(obj.opacity ?? raw.opacity ?? 1),
-    scaleX,
-    scaleY,
-    left,
-    top,
-    width,
-    height,
-    radius: Number(obj.radius || raw.radius || 0),
-    src: obj.getSrc?.() || raw.src || "",
-    invoiceTable: obj.invoiceTable || raw.invoiceTable || null,
-    objects: Array.isArray(raw.objects) ? raw.objects : [],
-  };
-}
+  <section class="invoice-summary">
+    <div>
+      <p class="summary-label">Bill To</p>
+      <p class="summary-value">Customer Name</p>
+    </div>
+    <div>
+      <p class="summary-label">Total Due</p>
+      <p class="summary-value">INR 0.00</p>
+    </div>
+  </section>
 
-function canvasToInvoiceFields(canvas) {
-  const page = canvas.getObjects().find((obj) => obj.isPage);
-  const pageLeft = Number(page?.left || 0);
-  const pageTop = Number(page?.top || 0);
-  const scaleX = PDF_WIDTH / PAGE_WIDTH;
-  const scaleY = PDF_HEIGHT / PAGE_HEIGHT;
+  <table class="invoice-table">
+    <thead>
+      <tr>
+        <th>Item</th>
+        <th>Qty</th>
+        <th>Price</th>
+        <th>Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Premium Subscription</td>
+        <td>1</td>
+        <td>INR 0</td>
+        <td>INR 0</td>
+      </tr>
+    </tbody>
+  </table>
 
-  return canvas
-    .getObjects()
-    .filter((obj) => !obj.isPage)
-    .map((obj, index) => {
-      const isText = tokenText(obj.type);
-      const text = isText ? obj.text || "" : obj.type || "Element";
-      const raw = simplifyFabricObject(obj, pageLeft, pageTop);
-      const pageX = Number(raw.pageX || 0);
-      const pageY = Number(raw.pageY || 0);
-      return {
-        id: obj.id || `canvas-${index}-${Date.now()}`,
-        type: isText ? "text" : obj.type === "image" ? "image" : obj.type || "element",
-        label: text,
-        content: text,
-        src: obj.getSrc?.() || "",
-        x: Math.max(0, Number((pageX * scaleX).toFixed(3))),
-        y: Math.max(0, Number((pageY * scaleY).toFixed(3))),
-        width: Math.max(1, Number((Number(raw.scaledWidth || 120) * scaleX).toFixed(3))),
-        height: Math.max(1, Number((Number(raw.scaledHeight || 80) * scaleY).toFixed(3))),
-        size: Math.max(1, Number((Number(obj.fontSize || 10) * scaleY).toFixed(3))),
-        rotation: Number(obj.angle || 0),
-        opacity: Number(obj.opacity ?? 1),
-        zIndex: index + 1,
-        enabled: obj.visible !== false,
-        raw,
-        style: {
-          fontFamily: obj.fontFamily || "Inter",
-          fontWeight: obj.fontWeight || "normal",
-          color: obj.fill || "#111827",
-          fill: obj.fill || "#111827",
-          stroke: obj.stroke || "",
-          strokeWidth: Number(obj.strokeWidth || 0),
-        },
-      };
-    });
+  <footer class="invoice-footer">
+    <p>Thank you for your business!</p>
+  </footer>
+</div>
+`;
+
+const defaultInvoiceCss = `
+:root {
+  color-scheme: light;
 }
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: #f3f4f6;
+  font-family: Inter, system-ui, sans-serif;
+}
+.invoice {
+  max-width: 900px;
+  margin: 24px auto;
+  padding: 32px;
+  background: #ffffff;
+  border-radius: 28px;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.08);
+  color: #0f172a;
+}
+.invoice-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 32px;
+}
+.invoice-label {
+  margin: 0 0 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+h1 {
+  margin: 0;
+  font-size: 2.2rem;
+  letter-spacing: -0.04em;
+}
+.invoice-meta,
+.summary-label {
+  margin: 8px 0 0;
+  font-size: 0.9rem;
+  color: #475569;
+}
+.company-info {
+  text-align: right;
+}
+.invoice-summary {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 32px;
+}
+.summary-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+.summary-value {
+  margin: 0.5rem 0 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+.invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 32px;
+}
+.invoice-table th,
+.invoice-table td {
+  border: 1px solid #e2e8f0;
+  padding: 16px;
+  text-align: left;
+  font-size: 0.95rem;
+}
+.invoice-table th {
+  background: #f8fafc;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.invoice-footer {
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
+  color: #475569;
+}
+`;
+
 
 export function InvoiceSystemPage() {
   const toast = useToast();
-  const { canvas } = useEditorStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [settings, setSettings] = useState(null);
@@ -135,6 +185,8 @@ export function InvoiceSystemPage() {
   const [subscriptionId, setSubscriptionId] = useState("");
   const [invoiceForm, setInvoiceForm] = useState(emptyInvoiceForm);
   const [templateName, setTemplateName] = useState("Default Invoice Template");
+  const [editorHtml, setEditorHtml] = useState(defaultInvoiceHtml);
+  const [editorCss, setEditorCss] = useState(defaultInvoiceCss);
   const [testEmail, setTestEmail] = useState("");
   const [historyFilters, setHistoryFilters] = useState({ q: "", status: "", emailStatus: "", dateFrom: "", dateTo: "" });
   const [selectedInvoice, setSelectedInvoice] = useState(null);
@@ -244,48 +296,35 @@ export function InvoiceSystemPage() {
     load();
   }, []);
 
-  function resetEditorCanvas() {
-    if (!canvas) return;
-    canvas.getObjects().filter((obj) => !obj.isPage).forEach((obj) => canvas.remove(obj));
-    canvas.discardActiveObject();
-    canvas.renderAll();
-  }
-
-  useEffect(() => {
-    if (!canvas || !editorOpen) return;
-    if (editorTemplate?.fabricJson) {
-      canvas.loadFromJSON(editorTemplate.fabricJson, () => canvas.renderAll());
-    } else {
-      resetEditorCanvas();
-    }
-  }, [canvas, editorOpen, editorTemplate?.id]);
-
   function openTemplateEditor(template = null) {
     setEditorTemplate(template);
     setTemplateName(template?.name || "New Invoice Template");
+    setEditorHtml(template?.htmlCode || defaultInvoiceHtml);
+    setEditorCss(template?.cssCode || defaultInvoiceCss);
     setEditorFullscreen(false);
     setEditorOpen(true);
   }
 
   async function saveTemplate({ setActive = true, saveAsNew = false } = {}) {
-    if (!canvas || !settings) {
+    if (!settings) {
       toast.error("Invoice editor is not ready yet");
       return;
     }
     setSaving(true);
     try {
-      const fabricJson = canvas.toJSON(["isPage", "id", "invoiceTable"]);
-      const fields = canvasToInvoiceFields(canvas);
       const currentId = !saveAsNew && editorTemplate?.id && editorTemplate.id !== "default-template" ? editorTemplate.id : `template-${Date.now()}`;
       const name = templateName?.trim() || "Invoice Template";
+      const htmlCode = editorHtml || "";
+      const cssCode = editorCss || "";
+      const templateFields = Array.isArray(editorTemplate?.fields) ? editorTemplate.fields : settings.fields || [];
       const otherBlocks = (settings.reusableBlocks || []).filter((item) => item.type !== "fabric-template" || (item.id && item.id !== currentId));
       const templateBlocks = templates
         .filter((item) => item.id !== "default-template" && item.id !== currentId)
         .map((item) => ({ ...item, active: setActive ? false : Boolean(item.active) }));
-      const savedTemplate = { id: currentId, type: "fabric-template", name, active: setActive, savedAt: new Date().toISOString(), fabricJson, fields };
+      const savedTemplate = { id: currentId, type: "fabric-template", name, active: setActive, savedAt: new Date().toISOString(), htmlCode, cssCode, fields: templateFields };
       const payload = {
         ...settings,
-        fields: setActive ? fields : settings.fields,
+        fields: setActive ? templateFields : settings.fields,
         reusableBlocks: [
           ...otherBlocks.filter((item) => item.type !== "fabric-template"),
           ...templateBlocks,
@@ -322,9 +361,7 @@ export function InvoiceSystemPage() {
         reusableBlocks: nextBlocks,
       });
       setSettings(response.data);
-      if (canvas && template.fabricJson) {
-        canvas.loadFromJSON(template.fabricJson, () => canvas.renderAll());
-      }
+      setEditorTemplate(template);
       toast.success(`${template.name || "Template"} is active`);
     } catch (error) {
       toast.error(error.message);
@@ -772,7 +809,7 @@ export function InvoiceSystemPage() {
               </div>
             </div>
             <div className="min-h-0 flex-1 overflow-hidden">
-              <Editor />
+              <Editor htmlCode={editorHtml} cssCode={editorCss} onHtmlChange={setEditorHtml} onCssChange={setEditorCss} />
             </div>
           </div>
         </div>
