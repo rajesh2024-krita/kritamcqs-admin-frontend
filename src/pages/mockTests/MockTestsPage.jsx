@@ -214,6 +214,7 @@ export function MockTestsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState({ page: 1, limit: 10 });
+  const [filters, setFilters] = useState({ createdDate: "", active: "", examType: "" });
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
@@ -259,10 +260,20 @@ export function MockTestsPage() {
     [subjects, autoForm.examType],
   );
 
+  function buildListParams(nextQuery = query) {
+    return {
+      ...nextQuery,
+      search,
+      ...(filters.createdDate ? { createdDate: filters.createdDate } : {}),
+      ...(filters.active ? { isActive: filters.active } : {}),
+      ...(filters.examType ? { examType: filters.examType } : {}),
+    };
+  }
+
   async function loadItems(nextQuery = query) {
     setLoading(true);
     try {
-      const response = await mockTestService.list({ ...nextQuery, search });
+      const response = await mockTestService.list(buildListParams(nextQuery));
       setItems(response.data || []);
       setMeta(response.meta);
     } catch (error) {
@@ -338,7 +349,7 @@ export function MockTestsPage() {
       });
     }, 250);
     return () => window.clearTimeout(timeout);
-  }, [search]);
+  }, [search, filters.createdDate, filters.active, filters.examType]);
 
   useEffect(() => {
     if (!showForm) return;
@@ -734,6 +745,33 @@ export function MockTestsPage() {
         </div>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <SearchBar value={search} onChange={setSearch} placeholder="Search mock tests by title or description..." />
+          <div className="flex flex-wrap items-end gap-3">
+            <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+              Created Date
+              <input
+                className={ui.input}
+                type="date"
+                value={filters.createdDate}
+                onChange={(event) => setFilters((current) => ({ ...current, createdDate: event.target.value }))}
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+              Status
+              <select className={ui.input} value={filters.active} onChange={(event) => setFilters((current) => ({ ...current, active: event.target.value }))}>
+                <option value="">All Mocks</option>
+                <option value="true">Active Mocks</option>
+                <option value="false">Inactive Mocks</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+              Exam
+              <select className={ui.input} value={filters.examType} onChange={(event) => setFilters((current) => ({ ...current, examType: event.target.value }))}>
+                <option value="">All Exams</option>
+                <option value="NEET">NEET only</option>
+                <option value="JEE">JEE only</option>
+              </select>
+            </label>
+          </div>
           <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => loadItems({ ...query, page: 1 })}>
             <RefreshIcon size={16} />
             Refresh

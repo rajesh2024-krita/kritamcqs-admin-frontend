@@ -5,7 +5,7 @@ export function SubscriptionPlansPage() {
   return (
     <EntityManagerPage
       title="Subscription Plans"
-      description="Update the live subscription plan from the database. The app and admin subscriptions flow both use this stored plan."
+      description="Create multiple plans while keeping only one plan active for purchase flows."
       service={subscriptionPlanService}
       fields={[
         { name: "planId", label: "Plan ID", required: true },

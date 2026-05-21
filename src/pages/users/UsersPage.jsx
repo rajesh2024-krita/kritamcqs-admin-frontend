@@ -261,6 +261,11 @@ export function UsersPage() {
         ...formState,
         premiumExpiresAt: formState.premiumExpiresAt ? new Date(formState.premiumExpiresAt).toISOString() : "",
       };
+      if (editingUser) {
+        if (!String(payload.password || "").trim()) delete payload.password;
+        delete payload.isPremium;
+        delete payload.premiumExpiresAt;
+      }
 
       if (editingUser) {
         await userService.update(editingUser.id, payload);
@@ -851,9 +856,9 @@ export function UsersPage() {
             <Field label="Level">
               <SelectDropdown value={formState.level} onChange={(value) => setFormState((current) => ({ ...current, level: value }))} options={learningLevelOptions} placeholder="Select learning level" />
             </Field>
-            <Field label="Premium Expiry"><input className={ui.input} type="datetime-local" value={formState.premiumExpiresAt} onChange={(event) => setFormState((current) => ({ ...current, premiumExpiresAt: event.target.value }))} /></Field>
+            <Field label="Premium Expiry"><input className={ui.input} type="datetime-local" value={formState.premiumExpiresAt} disabled={Boolean(editingUser)} onChange={(event) => setFormState((current) => ({ ...current, premiumExpiresAt: event.target.value }))} /></Field>
             <Field label="Onboarding Complete"><ToggleSwitch checked={formState.onboardingComplete} onChange={(value) => setFormState((current) => ({ ...current, onboardingComplete: value }))} /></Field>
-            <Field label="Premium User"><ToggleSwitch checked={formState.isPremium} onChange={(value) => setFormState((current) => ({ ...current, isPremium: value }))} /></Field>
+            <Field label="Premium User"><ToggleSwitch checked={formState.isPremium} disabled={Boolean(editingUser)} onChange={(value) => setFormState((current) => ({ ...current, isPremium: value }))} /></Field>
             <Field label="Admin User"><ToggleSwitch checked={formState.isAdmin} onChange={(value) => setFormState((current) => ({ ...current, isAdmin: value }))} /></Field>
             <Field label="Active Account"><ToggleSwitch checked={formState.isActive} onChange={(value) => setFormState((current) => ({ ...current, isActive: value }))} /></Field>
             <Field label="Blocked"><ToggleSwitch checked={formState.isBlocked} onChange={(value) => setFormState((current) => ({ ...current, isBlocked: value }))} /></Field>

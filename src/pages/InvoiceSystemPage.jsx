@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { Editor } from "../invoice-template/components/Editor/Editor";
 import { subscriptionService } from "../api/subscriptionService";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { RefreshIcon } from "../components/common/AdminIcons";
@@ -40,24 +39,27 @@ const defaultInvoiceHtml = `
   <header class="invoice-header">
     <div>
       <p class="invoice-label">INVOICE</p>
-      <h1>Invoice #INV-001</h1>
-      <p class="invoice-meta">Date: 2026-05-20</p>
+      <h1>Invoice #{{invoice_number}}</h1>
+      <p class="invoice-meta">Date: {{invoice_date}}</p>
+      <p class="invoice-meta">Due: {{due_date}}</p>
     </div>
     <div class="company-info">
-      <strong>Krita NEET JEE</strong>
-      <p>123 Main Street</p>
-      <p>support@krita.com</p>
+      <strong>{{company_name}}</strong>
+      <p>{{company_address}}</p>
+      <p>{{customer_email}}</p>
     </div>
   </header>
 
   <section class="invoice-summary">
     <div>
       <p class="summary-label">Bill To</p>
-      <p class="summary-value">Customer Name</p>
+      <p class="summary-value">{{customer_name}}</p>
+      <p>{{customer_email}}</p>
+      <p>{{customer_phone}}</p>
     </div>
     <div>
       <p class="summary-label">Total Due</p>
-      <p class="summary-value">INR 0.00</p>
+      <p class="summary-value">{{total_amount}}</p>
     </div>
   </section>
 
@@ -71,14 +73,16 @@ const defaultInvoiceHtml = `
       </tr>
     </thead>
     <tbody>
-      <tr>
-        <td>Premium Subscription</td>
-        <td>1</td>
-        <td>INR 0</td>
-        <td>INR 0</td>
-      </tr>
+      {{items}}
     </tbody>
   </table>
+
+  <section class="totals">
+    <p>Subtotal: <strong>{{subtotal}}</strong></p>
+    <p>Tax: <strong>{{tax}}</strong></p>
+    <p>Discount: <strong>{{discount}}</strong></p>
+    <p>Total: <strong>{{total_amount}}</strong></p>
+  </section>
 
   <footer class="invoice-footer">
     <p>Thank you for your business!</p>
@@ -173,7 +177,80 @@ h1 {
   border-top: 1px solid #e2e8f0;
   color: #475569;
 }
+.totals {
+  display: grid;
+  justify-content: end;
+  gap: 8px;
+  margin-bottom: 32px;
+  text-align: right;
+}
+@media print {
+  body {
+    background: #ffffff;
+  }
+  .invoice {
+    margin: 0;
+    box-shadow: none;
+    border-radius: 0;
+  }
+}
 `;
+
+function formatMoney(currency, value) {
+  return `${currency || "INR"} ${Number(value || 0).toFixed(2)}`;
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function buildInvoiceTemplateData(invoice, totals) {
+  const currency = invoice.currency || "INR";
+  const itemRows = (invoice.items || []).map((item) => {
+    const taxable = Math.max(0, Number(item.quantity || 0) * Number(item.price || 0) - Number(item.discount || 0));
+    const total = taxable + (taxable * Number(item.tax || 0)) / 100;
+    return {
+      item_name: item.product || item.description || "Item",
+      item_description: item.description || "",
+      item_quantity: item.quantity || 0,
+      item_price: formatMoney(currency, item.price),
+      item_tax: `${Number(item.tax || 0)}%`,
+      item_discount: formatMoney(currency, item.discount),
+      item_total: formatMoney(currency, total),
+    };
+  });
+  const itemsHtml = itemRows.map((item) => `<tr><td>${escapeHtml(item.item_name)}</td><td>${escapeHtml(item.item_quantity)}</td><td>${escapeHtml(item.item_price)}</td><td>${escapeHtml(item.item_total)}</td></tr>`).join("");
+
+  return {
+    invoice_number: invoice.invoiceNumber || "INV-DRAFT",
+    customer_name: invoice.customerCompany?.name || invoice.userName || "",
+    customer_email: invoice.customerCompany?.email || invoice.userEmail || "",
+    customer_phone: invoice.customerCompany?.phone || "",
+    invoice_date: invoice.invoiceDate || "",
+    due_date: invoice.dueDate || "",
+    company_name: invoice.billingCompany?.name || "Krita NEET JEE",
+    company_address: invoice.billingCompany?.address || "",
+    items: itemsHtml,
+    subtotal: formatMoney(currency, totals.subtotal),
+    tax: formatMoney(currency, totals.taxTotal),
+    discount: formatMoney(currency, totals.discountTotal),
+    total_amount: formatMoney(currency, totals.grandTotal),
+    itemRows,
+  };
+}
+
+function renderInvoiceHtml(htmlCode, cssCode, invoice, totals) {
+  const data = buildInvoiceTemplateData(invoice, totals);
+  const loopRendered = String(htmlCode || "").replace(/\{\{#items\}\}([\s\S]*?)\{\{\/items\}\}/g, (_match, inner) => (
+    data.itemRows.map((item) => inner.replace(/\{\{\s*([\w_]+)\s*\}\}/g, (__match, key) => escapeHtml(item[key] ?? ""))).join("")
+  ));
+  const renderedHtml = loopRendered.replace(/\{\{\s*([\w_]+)\s*\}\}/g, (_match, key) => String(data[key] ?? ""));
+  return `<!doctype html><html><head><meta charset="utf-8" /><style>${cssCode || ""}</style></head><body>${renderedHtml}</body></html>`;
+}
 
 
 export function InvoiceSystemPage() {
@@ -228,6 +305,10 @@ export function InvoiceSystemPage() {
       { subtotal: 0, discountTotal: 0, taxTotal: 0, grandTotal: 0 },
     );
   }, [invoiceForm.items]);
+  const livePreviewHtml = useMemo(
+    () => renderInvoiceHtml(editorHtml, editorCss, invoiceForm, totals),
+    [editorHtml, editorCss, invoiceForm, totals],
+  );
 
   function patchInvoice(path, value) {
     setInvoiceForm((current) => {
@@ -808,8 +889,39 @@ export function InvoiceSystemPage() {
                 <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => setEditorOpen(false)}>Close</button>
               </div>
             </div>
-            <div className="min-h-0 flex-1 overflow-hidden">
-              <Editor htmlCode={editorHtml} cssCode={editorCss} onHtmlChange={setEditorHtml} onCssChange={setEditorCss} />
+            <div className="grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
+              <div className="grid min-h-0 grid-rows-2 border-r border-slate-200">
+                <label className="flex min-h-0 flex-col border-b border-slate-200">
+                  <span className="border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">HTML</span>
+                  <textarea
+                    className="min-h-0 flex-1 resize-none border-0 bg-slate-950 p-4 font-mono text-sm text-slate-50 outline-none"
+                    spellCheck={false}
+                    value={editorHtml}
+                    onChange={(event) => setEditorHtml(event.target.value)}
+                  />
+                </label>
+                <label className="flex min-h-0 flex-col">
+                  <span className="border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">CSS</span>
+                  <textarea
+                    className="min-h-0 flex-1 resize-none border-0 bg-slate-900 p-4 font-mono text-sm text-slate-50 outline-none"
+                    spellCheck={false}
+                    value={editorCss}
+                    onChange={(event) => setEditorCss(event.target.value)}
+                  />
+                </label>
+              </div>
+              <div className="flex min-h-0 flex-col bg-slate-100">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-2">
+                  <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Live Preview</span>
+                  <span className="text-xs font-semibold text-slate-500">Supports {"{{invoice_number}}"}, {"{{customer_name}}"}, {"{{items}}"}, {"{{total_amount}}"}</span>
+                </div>
+                <iframe
+                  title="Invoice live preview"
+                  sandbox=""
+                  className="min-h-0 flex-1 border-0 bg-white"
+                  srcDoc={livePreviewHtml}
+                />
+              </div>
             </div>
           </div>
         </div>

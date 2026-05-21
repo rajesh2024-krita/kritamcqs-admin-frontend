@@ -18,17 +18,13 @@ export function RevisionManagementPage() {
   const [saving, setSaving] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [settings, setSettings] = useState(defaultSettings);
-  const [analytics, setAnalytics] = useState(null);
-  const [manualInput, setManualInput] = useState({ user_id: "", exam_mode: "NEET" });
+  const [manualInput, setManualInput] = useState({ email_id: "", exam_mode: "NEET" });
   const [generatedPool, setGeneratedPool] = useState(null);
 
   async function loadData() {
     setLoading(true);
     try {
-      const [settingsResponse, analyticsResponse] = await Promise.all([
-        revisionService.getSettings(),
-        revisionService.getAnalytics(),
-      ]);
+      const settingsResponse = await revisionService.getSettings();
       setSettings({
         wrong_question_limit: settingsResponse.data?.wrong_question_limit ?? 10,
         old_question_limit: settingsResponse.data?.old_question_limit ?? 5,
@@ -37,7 +33,6 @@ export function RevisionManagementPage() {
           ? settingsResponse.data.spaced_days.slice(0, 4)
           : [1, 2, 5, 10],
       });
-      setAnalytics(analyticsResponse.data || null);
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -85,14 +80,12 @@ export function RevisionManagementPage() {
     setGenerating(true);
     try {
       const payload = {
-        user_id: manualInput.user_id.trim() || undefined,
+        email_id: manualInput.email_id.trim() || undefined,
         exam_mode: manualInput.exam_mode,
       };
       const response = await revisionService.generatePool(payload);
       setGeneratedPool(response.data || null);
       toast.success("Revision pool generated for testing");
-      const analyticsResponse = await revisionService.getAnalytics();
-      setAnalytics(analyticsResponse.data || null);
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -184,30 +177,6 @@ export function RevisionManagementPage() {
         </div>
       </form>
 
-      <section className={ui.compactPanel}>
-        <div className={ui.sectionHead}>
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">Analytics Dashboard</h3>
-            <p className={ui.muted}>Live revision trends and top revised topics across the learner base.</p>
-          </div>
-        </div>
-
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <div className={ui.tile}><span className={ui.metricLabel}>Total Revision Attempts</span><strong className="mt-3 block text-3xl font-black text-slate-900">{analytics?.total_attempts ?? 0}</strong></div>
-          <div className={ui.tile}><span className={ui.metricLabel}>Completed Revisions</span><strong className="mt-3 block text-3xl font-black text-slate-900">{analytics?.completed_count ?? 0}</strong></div>
-          <div className={ui.tile}><span className={ui.metricLabel}>Pending Revisions</span><strong className="mt-3 block text-3xl font-black text-slate-900">{analytics?.pending_count ?? 0}</strong></div>
-          <div className={ui.tile}>
-            <span className={ui.metricLabel}>Most Revised Topics</span>
-            <div className="mt-3 space-y-1">
-              {(analytics?.top_topics || []).slice(0, 4).map((topic) => (
-                <div key={topic} className="text-sm font-semibold text-slate-700">{topic}</div>
-              ))}
-              {!(analytics?.top_topics || []).length ? <div className="text-sm text-slate-500">No topics yet</div> : null}
-            </div>
-          </div>
-        </div>
-      </section>
-
       <section className={ui.panel}>
         <div className={ui.sectionHead}>
           <div>
@@ -221,11 +190,12 @@ export function RevisionManagementPage() {
 
         <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
           <label className={ui.field}>
-            <span>User ID (optional)</span>
+            <span>Email ID (optional)</span>
             <input
               className={ui.input}
-              value={manualInput.user_id}
-              onChange={(event) => setManualInput((current) => ({ ...current, user_id: event.target.value }))}
+              type="email"
+              value={manualInput.email_id}
+              onChange={(event) => setManualInput((current) => ({ ...current, email_id: event.target.value }))}
               placeholder="Leave empty to auto-pick latest learner"
             />
           </label>

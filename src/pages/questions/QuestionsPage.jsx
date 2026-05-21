@@ -61,6 +61,18 @@ function formatPercent(value) {
   return Math.max(0, Math.min(100, Math.round(percent)));
 }
 
+function uniqueYearOptions(years = []) {
+  const seen = new Set();
+  return years
+    .map((item) => ({ label: item.name, value: item.id }))
+    .filter((item) => {
+      const key = String(item.label || "").trim();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
 export function QuestionsPage() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkFile, setBulkFile] = useState(null);
@@ -229,7 +241,7 @@ export function QuestionsPage() {
             })
             .map((item) => ({ label: item.name, value: item.id })),
         },
-        { name: "yearId", label: "Year", required: false, type: "select", options: (_form, lookups) => (lookups.years || []).map((item) => ({ label: item.name, value: item.id })) },
+        { name: "yearId", label: "Year", required: false, type: "select", options: (_form, lookups) => uniqueYearOptions(lookups.years || []) },
         {
           name: "questionTypeId",
           label: "Question Type",
