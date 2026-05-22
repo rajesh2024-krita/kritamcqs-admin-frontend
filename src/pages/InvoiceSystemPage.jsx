@@ -644,7 +644,7 @@ export function InvoiceSystemPage() {
           <label className={ui.field}>
             <span>Currency</span>
             <select className={ui.input} value={invoiceForm.currency} onChange={(event) => patchInvoice("currency", event.target.value)}>
-              {["INR", "USD", "EUR", "GBP", "AED"].map((currency) => <option key={currency}>{currency}</option>)}
+              {["₹", "$", "€", "£", "د.إ"].map((currency) => <option key={currency}>{currency}</option>)}
             </select>
           </label>
           <label className={ui.field}>
