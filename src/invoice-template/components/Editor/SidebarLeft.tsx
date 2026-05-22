@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useEditorStore } from '../../store/useEditorStore';
 import { fabric } from 'fabric';
+import { subscriptionService } from '../../../api/subscriptionService';
 
 import { addInvoiceTableColumn, addInvoiceTableRow, createInvoiceTable } from '../../lib/canvasHelpers';
 import { exportToDocx, exportToImage, exportToPDF } from '../../lib/export';
@@ -80,6 +81,7 @@ function ShapesIcon(props: any) {
 
 export function SidebarLeft() {
   const [activeSection, setActiveSection] = useState('elements');
+  const [mediaItems, setMediaItems] = useState<any[]>([]);
   const { canvas } = useEditorStore();
 
   const addText = (text: string, fontSize: number = 20, isBold: boolean = false) => {
@@ -117,47 +119,61 @@ export function SidebarLeft() {
     }
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!canvas || !e.target.files?.[0]) return;
-    
     const file = e.target.files[0];
-    const reader = new FileReader();
-    
-    reader.onload = (f) => {
-      const data = f.target?.result as string;
-      const source = new Image();
-      source.onload = () => {
-        const imageCanvas = document.createElement('canvas');
-        imageCanvas.width = source.naturalWidth || source.width;
-        imageCanvas.height = source.naturalHeight || source.height;
-        const context = imageCanvas.getContext('2d');
-        if (!context) return;
-        context.fillStyle = '#ffffff';
-        context.fillRect(0, 0, imageCanvas.width, imageCanvas.height);
-        context.drawImage(source, 0, 0);
-        const jpgData = imageCanvas.toDataURL('image/jpeg', 0.92);
-        fabric.Image.fromURL(jpgData, (img) => {
-          if (img.width! > 400) {
-            img.scaleToWidth(400);
-          }
+    try {
+      // Upload to backend
+      const res = await subscriptionService.uploadInvoiceAsset(file);
+      const data = res?.data || res;
+      const url = data?.publicUrl || data?.url || data?.data?.publicUrl || data?.data?.url || data?.data?.url;
 
-          img.set({
-            left: 100,
-            top: 100,
-          });
+      // Persist in invoice settings reusableBlocks so it appears in Media Panel after reload
+      try {
+        const settingsResp = await subscriptionService.getInvoiceSettings();
+        const settings = settingsResp?.data || settingsResp;
+        const blocks = Array.isArray(settings.reusableBlocks) ? settings.reusableBlocks : [];
+        const newBlock = { id: `asset-${Date.now()}`, name: file.name, type: 'asset', src: url };
+        const updated = [...blocks, newBlock];
+        await subscriptionService.saveInvoiceSettings({ reusableBlocks: updated });
+        setMediaItems(updated.filter((b: any) => b?.src));
+      } catch (err) {
+        // ignore persistence failure but still insert into canvas
+        console.warn('Could not persist uploaded asset to settings', err);
+      }
 
-          canvas.add(img);
-          canvas.setActiveObject(img);
-          canvas.renderAll();
-        });
-      };
-      source.src = data;
-    };
-    
-    reader.readAsDataURL(file);
-    // Reset input
-    e.target.value = '';
+      // Insert into canvas
+      fabric.Image.fromURL(url, (img) => {
+        if (!img) return;
+        if (img.width! > 400) img.scaleToWidth(400);
+        img.set({ left: 100, top: 100 });
+        canvas.add(img);
+        canvas.setActiveObject(img);
+        canvas.renderAll();
+      });
+    } catch (err) {
+      console.error('Upload failed', err);
+      alert('Image upload failed: ' + (err?.message || String(err)));
+    } finally {
+      e.target.value = '';
+    }
   };
+
+  // Load media items from invoice settings
+  React.useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const resp = await subscriptionService.getInvoiceSettings();
+        const settings = resp?.data || resp;
+        const blocks = Array.isArray(settings.reusableBlocks) ? settings.reusableBlocks : [];
+        if (mounted) setMediaItems(blocks.filter((b: any) => b?.src));
+      } catch (err) {
+        console.warn('Failed to load invoice settings', err);
+      }
+    })();
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <div className="sticky left-0 top-0 z-20 w-72 shrink-0 border-r border-slate-200 bg-white flex overflow-hidden">
@@ -283,6 +299,33 @@ export function SidebarLeft() {
                   <span className="text-xs font-bold">Upload Files</span>
                   <span className="text-[10px] text-slate-400 text-center">Images or Logos (SVG, PNG, JPG)</span>
                </label>
+
+               <div className="mt-2">
+                 <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Media Library</div>
+                 {mediaItems.length === 0 ? (
+                   <div className="text-[12px] text-slate-400">No uploaded media yet.</div>
+                 ) : (
+                   <div className="grid grid-cols-2 gap-2">
+                     {mediaItems.map((m, i) => (
+                       <div key={m.id || i} className="p-1 border rounded bg-white cursor-pointer" onClick={() => {
+                         // insert into canvas
+                         if (!canvas) return;
+                         fabric.Image.fromURL(m.src, (img) => {
+                           if (!img) return;
+                           if (img.width! > 400) img.scaleToWidth(400);
+                           img.set({ left: 120, top: 120 });
+                           canvas.add(img);
+                           canvas.setActiveObject(img);
+                           canvas.renderAll();
+                         });
+                       }}>
+                         <img src={m.src} alt={m.name || 'media'} className="w-full h-28 object-contain" />
+                         <div className="text-[10px] mt-1 text-slate-500 truncate">{m.name || m.src}</div>
+                       </div>
+                     ))}
+                   </div>
+                 )}
+               </div>
             </div>
           )}
 
