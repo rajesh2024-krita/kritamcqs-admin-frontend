@@ -6,6 +6,7 @@ import { useToast } from "../../context/ToastContext";
 import { cn, ui } from "../../ui";
 
 const defaultSettings = {
+  exam_type: "BOTH",
   total_questions: 20,
   new_questions: 10,
   weak_questions: 5,
@@ -29,7 +30,7 @@ export function DailyTestManagementPage() {
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [settings, setSettings] = useState(defaultSettings);
-  const [resetInput, setResetInput] = useState({ email: "", date: "", reset_all: false });
+  const [resetInput, setResetInput] = useState({ email: "", date: "", exam_mode: "", reset_all: false });
 
   async function loadData() {
     setLoading(true);
@@ -37,6 +38,7 @@ export function DailyTestManagementPage() {
       const settingsResponse = await dailyTestManagementService.getSettings();
 
       setSettings({
+        exam_type: settingsResponse.data?.examType ?? settingsResponse.data?.exam_type ?? "BOTH",
         total_questions: settingsResponse.data?.total_questions ?? 20,
         new_questions: settingsResponse.data?.new_questions ?? 10,
         weak_questions: settingsResponse.data?.weak_questions ?? 5,
@@ -94,6 +96,7 @@ export function DailyTestManagementPage() {
     setSaving(true);
     try {
       const payload = {
+        examType: settings.exam_type || "BOTH",
         total_questions: Number(settings.total_questions || 20),
         new_questions: Number(settings.new_questions || 10),
         weak_questions: Number(settings.weak_questions || 5),
@@ -129,7 +132,8 @@ export function DailyTestManagementPage() {
       const response = await dailyTestManagementService.saveSettings(payload);
       setSettings((current) => ({
         ...current,
-        ...{
+          ...{
+          exam_type: response.data?.examType ?? response.data?.exam_type ?? payload.examType,
           total_questions: response.data?.total_questions ?? payload.total_questions,
           new_questions: response.data?.new_questions ?? payload.new_questions,
           weak_questions: response.data?.weak_questions ?? payload.weak_questions,
@@ -161,6 +165,7 @@ export function DailyTestManagementPage() {
       const payload = {
         email: resetInput.email.trim() || undefined,
         date: resetInput.date || undefined,
+        examMode: resetInput.exam_mode || undefined,
         reset_all: Boolean(resetInput.reset_all),
       };
       const response = await dailyTestManagementService.resetDailyTests(payload);
@@ -200,6 +205,18 @@ export function DailyTestManagementPage() {
         </div>
 
         <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <label className={ui.field}>
+            <span>Exam Type</span>
+            <select
+              className={ui.input}
+              value={settings.exam_type}
+              onChange={(event) => setSettings((current) => ({ ...current, exam_type: event.target.value }))}
+            >
+              <option value="BOTH">BOTH - NEET and JEE daily tests</option>
+              <option value="NEET">NEET only</option>
+              <option value="JEE">JEE only</option>
+            </select>
+          </label>
           <label className={ui.field}>
             <span>Total Daily Test Questions</span>
             <input
@@ -401,7 +418,7 @@ export function DailyTestManagementPage() {
           </button>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-4">
           <label className={ui.field}>
             <span>Email ID (optional)</span>
             <input
@@ -420,6 +437,19 @@ export function DailyTestManagementPage() {
               value={resetInput.date}
               onChange={(event) => setResetInput((current) => ({ ...current, date: event.target.value }))}
             />
+          </label>
+          <label className={ui.field}>
+            <span>Exam Type (optional)</span>
+            <select
+              className={ui.input}
+              value={resetInput.exam_mode}
+              onChange={(event) => setResetInput((current) => ({ ...current, exam_mode: event.target.value }))}
+            >
+              <option value="">All exam types</option>
+              <option value="NEET">NEET</option>
+              <option value="JEE">JEE</option>
+              <option value="BOTH">BOTH</option>
+            </select>
           </label>
           <label className={ui.field}>
             <span>Reset All Dates</span>
