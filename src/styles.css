@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
 :root {
   color-scheme: light;
@@ -116,5 +117,1119 @@ table tbody tr:hover {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ================================================================
+   INVOICE PRO EDITOR — Scoped dark-theme builder
+   ================================================================ */
+
+@keyframes builder-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ---- Base reset inside the builder ---- */
+.invoice-pro-editor * {
+  box-sizing: border-box;
+}
+
+.invoice-pro-editor {
+  background: #0b0f19;
+  color: #e2e8f0;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+/* ---- Builder Layout ---- */
+.invoice-pro-editor .builder-main {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.invoice-pro-editor .builder-left {
+  width: 42%;
+  min-width: 360px;
+  max-width: 55%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: width 0.2s ease, min-width 0.2s ease, max-width 0.2s ease;
+}
+
+.invoice-pro-editor .builder-left.collapsed {
+  width: 0;
+  min-width: 0;
+  max-width: 0;
+}
+
+.invoice-pro-editor .panel-toggle {
+  width: 24px;
+  background: #1e293b;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.invoice-pro-editor .panel-toggle:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.invoice-pro-editor .builder-right {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.invoice-pro-editor .accordion-stack {
+  flex-shrink: 0;
+  max-height: 40%;
+  overflow-y: auto;
+  border-bottom: 1px solid #1e293b;
+}
+
+/* ---- Code Editor ---- */
+.invoice-pro-editor .code-editor-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #0f172a;
+}
+
+.invoice-pro-editor .editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #1e293b;
+  flex-shrink: 0;
+}
+
+.invoice-pro-editor .editor-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.invoice-pro-editor .editor-icon-wrapper {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  background: rgba(99, 102, 241, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #818cf8;
+}
+
+.invoice-pro-editor .editor-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e2e8f0;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.invoice-pro-editor .editor-subtitle {
+  font-size: 10px;
+  color: #64748b;
+  margin: 2px 0 0 0;
+}
+
+.invoice-pro-editor .editor-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.invoice-pro-editor .editor-action-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.invoice-pro-editor .editor-action-btn:hover {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.invoice-pro-editor .editor-action-btn.active {
+  background: rgba(99, 102, 241, 0.15);
+  color: #818cf8;
+}
+
+.invoice-pro-editor .editor-tabs {
+  display: flex;
+  padding: 4px 10px 0;
+  gap: 2px;
+  background: #0f172a;
+  flex-shrink: 0;
+}
+
+.invoice-pro-editor .editor-tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: #64748b;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.invoice-pro-editor .editor-tab:hover {
+  color: #cbd5e1;
+  background: rgba(30, 41, 59, 0.5);
+}
+
+.invoice-pro-editor .editor-tab.active {
+  background: #1e293b;
+  color: #818cf8;
+}
+
+.invoice-pro-editor .editor-textarea-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.invoice-pro-editor .editor-textarea {
+  flex: 1;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  resize: none;
+  outline: none;
+  tab-size: 2;
+  white-space: pre;
+  overflow-wrap: normal;
+  overflow-x: auto;
+  caret-color: #818cf8;
+}
+
+.invoice-pro-editor .editor-textarea::placeholder {
+  color: #475569;
+  font-style: italic;
+}
+
+.invoice-pro-editor .editor-textarea.word-wrap {
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.invoice-pro-editor .editor-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 14px;
+  background: #111827;
+  border-top: 1px solid #1e293b;
+  flex-shrink: 0;
+}
+
+.invoice-pro-editor .status-item {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.invoice-pro-editor .status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.invoice-pro-editor .status-dot.html-dot {
+  background: #f97316;
+}
+
+.invoice-pro-editor .status-dot.css-dot {
+  background: #3b82f6;
+}
+
+/* ---- Live Preview ---- */
+.invoice-pro-editor .preview-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  background: #0f172a;
+  position: relative;
+}
+
+.invoice-pro-editor .preview-container.fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+}
+
+.invoice-pro-editor .preview-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: #111827;
+  border-bottom: 1px solid #1e293b;
+  flex-shrink: 0;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.invoice-pro-editor .preview-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.invoice-pro-editor .preview-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #e2e8f0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.invoice-pro-editor .preview-badge {
+  font-size: 9px;
+  font-weight: 600;
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.1);
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+.invoice-pro-editor .preview-toolbar-center {
+  display: flex;
+  align-items: center;
+}
+
+.invoice-pro-editor .zoom-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #1e293b;
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.invoice-pro-editor .zoom-btn {
+  width: 30px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.invoice-pro-editor .zoom-btn:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.invoice-pro-editor .zoom-reset {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.invoice-pro-editor .zoom-value {
+  font-size: 11px;
+  font-weight: 700;
+  color: #e2e8f0;
+  min-width: 42px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.invoice-pro-editor .preview-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.invoice-pro-editor .preview-action-btn {
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  gap: 4px;
+}
+
+.invoice-pro-editor .preview-action-btn:hover {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+.invoice-pro-editor .preview-action-btn-primary {
+  background: #6366f1;
+  color: #fff;
+  padding: 0 10px;
+  width: auto;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.invoice-pro-editor .preview-action-btn-primary:hover {
+  background: #4f46e5;
+  color: #fff;
+}
+
+.invoice-pro-editor .preview-action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.invoice-pro-editor .export-pdf-text {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.invoice-pro-editor .spinner-small {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: builder-spin 0.6s linear infinite;
+}
+
+/* Scroll Controls */
+.invoice-pro-editor .scroll-controls-v {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.invoice-pro-editor .preview-container:hover .scroll-controls-v,
+.invoice-pro-editor .preview-container:hover .scroll-controls-h {
+  opacity: 1;
+}
+
+.invoice-pro-editor .scroll-controls-h {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.invoice-pro-editor .scroll-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid #334155;
+  background: #1e293b;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  backdrop-filter: blur(8px);
+}
+
+.invoice-pro-editor .scroll-btn:hover {
+  background: #334155;
+  color: #e2e8f0;
+}
+
+.invoice-pro-editor .preview-iframe-wrapper {
+  flex: 1;
+  overflow: auto;
+  transition: transform 0.15s ease;
+}
+
+.invoice-pro-editor .preview-iframe {
+  width: 100%;
+  min-height: 100%;
+  border: none;
+  background: #fff;
+}
+
+.invoice-pro-editor .fullscreen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: #0b0f19;
+  display: flex;
+  flex-direction: column;
+}
+
+.invoice-pro-editor .fullscreen-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: #111827;
+  border-bottom: 1px solid #1e293b;
+  flex-shrink: 0;
+}
+
+.invoice-pro-editor .fullscreen-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.invoice-pro-editor .fullscreen-close-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.invoice-pro-editor .fullscreen-close-btn:hover {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+/* ---- Variable Mapper & Media Library ---- */
+.invoice-pro-editor .variable-mapper,
+.invoice-pro-editor .media-library {
+  border-bottom: 1px solid #1e293b;
+}
+
+.invoice-pro-editor .variable-mapper-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: #111827;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  text-align: left;
+}
+
+.invoice-pro-editor .variable-mapper-header:hover {
+  background: #1a2035;
+}
+
+.invoice-pro-editor .vm-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.invoice-pro-editor .vm-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(99, 102, 241, 0.12);
+  color: #818cf8;
+}
+
+.invoice-pro-editor .vm-icon.media-icon {
+  background: rgba(236, 72, 153, 0.12);
+  color: #f472b6;
+}
+
+.invoice-pro-editor .vm-title {
+  font-size: 12px;
+  font-weight: 700;
+  display: block;
+}
+
+.invoice-pro-editor .vm-count {
+  font-size: 10px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.invoice-pro-editor .variable-mapper-content,
+.invoice-pro-editor .media-library-content {
+  background: #0f172a;
+  border-top: 1px solid #1e293b;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.invoice-pro-editor .vm-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #1e293b;
+  position: sticky;
+  top: 0;
+  background: #0f172a;
+  z-index: 5;
+}
+
+.invoice-pro-editor .vm-search-icon {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.invoice-pro-editor .vm-search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: #e2e8f0;
+  font-size: 12px;
+  outline: none;
+}
+
+.invoice-pro-editor .vm-search-input::placeholder {
+  color: #475569;
+}
+
+.invoice-pro-editor .vm-list {
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.invoice-pro-editor .vm-item {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.invoice-pro-editor .vm-item:hover {
+  background: #1a2035;
+  border-color: #1e293b;
+}
+
+.invoice-pro-editor .vm-item-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 10px 12px;
+  gap: 10px;
+}
+
+.invoice-pro-editor .vm-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.invoice-pro-editor .vm-item-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.invoice-pro-editor .vm-item-key {
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(99, 102, 241, 0.12);
+  color: #a5b4fc;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', monospace;
+  white-space: nowrap;
+}
+
+.invoice-pro-editor .vm-item-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.invoice-pro-editor .vm-item-desc {
+  font-size: 10px;
+  color: #64748b;
+  margin: 4px 0 0 0;
+}
+
+.invoice-pro-editor .vm-item-example {
+  font-size: 10px;
+  color: #475569;
+  margin: 3px 0 0 0;
+}
+
+.invoice-pro-editor .example-prefix {
+  font-weight: 600;
+  color: #64748b;
+}
+
+.invoice-pro-editor .vm-copy-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.invoice-pro-editor .vm-copy-btn:hover {
+  background: #1e293b;
+  color: #818cf8;
+}
+
+.invoice-pro-editor .vm-copy-btn.copied {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.1);
+}
+
+.invoice-pro-editor .vm-tooltip {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 12px;
+  margin: 0 12px 8px;
+  background: #1e293b;
+  border-radius: 6px;
+  font-size: 10px;
+  color: #94a3b8;
+  border: 1px solid #334155;
+}
+
+.invoice-pro-editor .vm-tooltip code {
+  font-family: 'JetBrains Mono', monospace;
+  background: rgba(99, 102, 241, 0.15);
+  color: #a5b4fc;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.invoice-pro-editor .vm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 6px;
+  color: #64748b;
+  font-size: 11px;
+}
+
+.invoice-pro-editor .vm-empty-icon {
+  opacity: 0.3;
+}
+
+/* ---- Media Library ---- */
+.invoice-pro-editor .media-upload-zone {
+  margin: 8px;
+  padding: 24px 16px;
+  border: 2px dashed #334155;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.invoice-pro-editor .media-upload-zone:hover,
+.invoice-pro-editor .media-upload-zone.drag-over {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.invoice-pro-editor .upload-icon {
+  color: #6366f1;
+  opacity: 0.7;
+}
+
+.invoice-pro-editor .upload-text {
+  font-size: 12px;
+  color: #cbd5e1;
+  margin: 0;
+}
+
+.invoice-pro-editor .upload-text strong {
+  color: #818cf8;
+}
+
+.invoice-pro-editor .upload-hint {
+  font-size: 10px;
+  color: #64748b;
+  margin: 0;
+}
+
+.invoice-pro-editor .media-upload-error {
+  margin: 6px 8px 0;
+  color: #f87171;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.invoice-pro-editor .hidden-input {
+  display: none;
+}
+
+.invoice-pro-editor .media-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  padding: 8px;
+}
+
+.invoice-pro-editor .media-card {
+  background: #111827;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #1e293b;
+  transition: all 0.15s ease;
+}
+
+.invoice-pro-editor .media-card:hover {
+  border-color: #334155;
+}
+
+.invoice-pro-editor .media-thumbnail {
+  width: 100%;
+  height: 90px;
+  background: #1e293b;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.invoice-pro-editor .media-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.invoice-pro-editor .media-thumb-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.5);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  color: #fff;
+}
+
+.invoice-pro-editor .media-thumbnail:hover .media-thumb-overlay {
+  opacity: 1;
+}
+
+.invoice-pro-editor .media-info {
+  padding: 8px 10px 4px;
+}
+
+.invoice-pro-editor .media-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.invoice-pro-editor .media-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.invoice-pro-editor .media-size {
+  font-size: 9px;
+  color: #64748b;
+}
+
+.invoice-pro-editor .media-variable-code {
+  font-size: 9px;
+  font-family: 'JetBrains Mono', monospace;
+  background: rgba(236, 72, 153, 0.1);
+  color: #f472b6;
+  padding: 1px 5px;
+  border-radius: 3px;
+  max-width: 86px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.invoice-pro-editor .media-actions {
+  display: flex;
+  gap: 2px;
+  padding: 4px 8px 8px;
+}
+
+.invoice-pro-editor .media-action-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 5px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex: 1;
+}
+
+.invoice-pro-editor .media-action-btn:hover {
+  background: #1e293b;
+  color: #cbd5e1;
+}
+
+.invoice-pro-editor .media-action-btn.copied {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.1);
+}
+
+.invoice-pro-editor .media-delete-btn:hover {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.invoice-pro-editor .media-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  gap: 6px;
+  color: #64748b;
+  font-size: 11px;
+  text-align: center;
+}
+
+.invoice-pro-editor .media-empty-icon {
+  opacity: 0.25;
+  margin-bottom: 4px;
+}
+
+.invoice-pro-editor .media-empty-hint {
+  color: #475569;
+}
+
+.invoice-pro-editor .media-empty-hint code {
+  font-family: 'JetBrains Mono', monospace;
+  background: rgba(236, 72, 153, 0.1);
+  color: #f472b6;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.invoice-pro-editor .media-preview-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0,0,0,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.invoice-pro-editor .media-preview-content {
+  background: #1e293b;
+  border-radius: 12px;
+  overflow: hidden;
+  max-width: 90vw;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.invoice-pro-editor .media-preview-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+}
+
+.invoice-pro-editor .media-preview-close:hover {
+  background: rgba(0,0,0,0.8);
+}
+
+.invoice-pro-editor .media-preview-img {
+  max-width: 80vw;
+  max-height: 70vh;
+  object-fit: contain;
+}
+
+.invoice-pro-editor .media-preview-info {
+  padding: 14px;
+  border-top: 1px solid #334155;
+}
+
+.invoice-pro-editor .media-preview-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2e8f0;
+  margin: 0;
+}
+
+.invoice-pro-editor .media-preview-size {
+  font-size: 11px;
+  color: #64748b;
+  margin: 4px 0 0;
+}
+
+.invoice-pro-editor .media-preview-variable {
+  font-size: 11px;
+  font-family: 'JetBrains Mono', monospace;
+  background: rgba(99, 102, 241, 0.12);
+  color: #a5b4fc;
+  padding: 3px 8px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 8px;
+}
+
+/* ---- Builder Scrollbars ---- */
+.invoice-pro-editor ::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.invoice-pro-editor ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.invoice-pro-editor ::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+
+.invoice-pro-editor ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+.invoice-pro-editor ::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 900px) {
+  .invoice-pro-editor .builder-left {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    position: absolute;
+    inset: 52px 0 0 0;
+    z-index: 50;
+  }
+
+  .invoice-pro-editor .builder-left.collapsed {
+    display: none;
+  }
+
+  .invoice-pro-editor .builder-right {
+    width: 100%;
+  }
+
+  .invoice-pro-editor .panel-toggle {
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    z-index: 60;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+}
+
+@media (max-width: 640px) {
+  .invoice-pro-editor .preview-toolbar {
+    gap: 4px;
+    padding: 6px 8px;
+  }
+
+  .invoice-pro-editor .zoom-controls {
+    gap: 1px;
+  }
+
+  .invoice-pro-editor .zoom-btn {
+    width: 26px;
+    height: 26px;
+  }
+
+  .invoice-pro-editor .media-gallery {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
   }
 }

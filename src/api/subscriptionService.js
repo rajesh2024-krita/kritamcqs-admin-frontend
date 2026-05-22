@@ -37,10 +37,22 @@ export const subscriptionService = {
     const response = await http.post("/admin/invoice-settings", payload);
     return response.data;
   },
+  async connectInvoiceTemplate(templateId) {
+    const response = await http.post("/admin/invoice-settings/connect-template", { templateId });
+    return response.data;
+  },
   async uploadInvoiceLogo(file) {
     const formData = new FormData();
     formData.append("logo", file);
     const response = await http.post("/admin/invoice-settings/logo", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  },
+  async uploadInvoiceAsset(file) {
+    const formData = new FormData();
+    formData.append("image", file);
+    const response = await http.post("/admin/invoice-settings/assets", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
     return response.data;

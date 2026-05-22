@@ -6,6 +6,7 @@ import { ToggleSwitch } from "../components/forms/ToggleSwitch";
 import { useToast } from "../context/ToastContext";
 import { cn, ui } from "../ui";
 import { formatDate } from "../utils/format";
+import { InvoiceBuilderModal } from "../components/invoice-builder/InvoiceBuilderModal";
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api").replace(/\/api\/?$/, "");
 const PAGE_WIDTH = 794;
@@ -196,63 +197,6 @@ h1 {
 }
 `;
 
-function formatMoney(currency, value) {
-  return `${currency || "INR"} ${Number(value || 0).toFixed(2)}`;
-}
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
-
-function buildInvoiceTemplateData(invoice, totals) {
-  const currency = invoice.currency || "INR";
-  const itemRows = (invoice.items || []).map((item) => {
-    const taxable = Math.max(0, Number(item.quantity || 0) * Number(item.price || 0) - Number(item.discount || 0));
-    const total = taxable + (taxable * Number(item.tax || 0)) / 100;
-    return {
-      item_name: item.product || item.description || "Item",
-      item_description: item.description || "",
-      item_quantity: item.quantity || 0,
-      item_price: formatMoney(currency, item.price),
-      item_tax: `${Number(item.tax || 0)}%`,
-      item_discount: formatMoney(currency, item.discount),
-      item_total: formatMoney(currency, total),
-    };
-  });
-  const itemsHtml = itemRows.map((item) => `<tr><td>${escapeHtml(item.item_name)}</td><td>${escapeHtml(item.item_quantity)}</td><td>${escapeHtml(item.item_price)}</td><td>${escapeHtml(item.item_total)}</td></tr>`).join("");
-
-  return {
-    invoice_number: invoice.invoiceNumber || "INV-DRAFT",
-    customer_name: invoice.customerCompany?.name || invoice.userName || "",
-    customer_email: invoice.customerCompany?.email || invoice.userEmail || "",
-    customer_phone: invoice.customerCompany?.phone || "",
-    invoice_date: invoice.invoiceDate || "",
-    due_date: invoice.dueDate || "",
-    company_name: invoice.billingCompany?.name || "Krita NEET JEE",
-    company_address: invoice.billingCompany?.address || "",
-    items: itemsHtml,
-    subtotal: formatMoney(currency, totals.subtotal),
-    tax: formatMoney(currency, totals.taxTotal),
-    discount: formatMoney(currency, totals.discountTotal),
-    total_amount: formatMoney(currency, totals.grandTotal),
-    itemRows,
-  };
-}
-
-function renderInvoiceHtml(htmlCode, cssCode, invoice, totals) {
-  const data = buildInvoiceTemplateData(invoice, totals);
-  const loopRendered = String(htmlCode || "").replace(/\{\{#items\}\}([\s\S]*?)\{\{\/items\}\}/g, (_match, inner) => (
-    data.itemRows.map((item) => inner.replace(/\{\{\s*([\w_]+)\s*\}\}/g, (__match, key) => escapeHtml(item[key] ?? ""))).join("")
-  ));
-  const renderedHtml = loopRendered.replace(/\{\{\s*([\w_]+)\s*\}\}/g, (_match, key) => String(data[key] ?? ""));
-  return `<!doctype html><html><head><meta charset="utf-8" /><style>${cssCode || ""}</style></head><body>${renderedHtml}</body></html>`;
-}
-
-
 export function InvoiceSystemPage() {
   const toast = useToast();
   const [loading, setLoading] = useState(true);
@@ -287,6 +231,13 @@ export function InvoiceSystemPage() {
   }, [settings]);
 
   const activeTemplate = useMemo(() => templates.find((item) => item.active) || templates[0], [templates]);
+  const connectedTemplate = useMemo(() => {
+    return templates.find((item) => item.connected && item.id === settings?.connectedTemplateId)
+      || templates.find((item) => item.id === settings?.connectedTemplateId)
+      || templates.find((item) => item.connected)
+      || null;
+  }, [templates, settings?.connectedTemplateId]);
+  const invoiceEmailConnected = Boolean(connectedTemplate?.id && connectedTemplate.id !== "default-template");
 
   const totals = useMemo(() => {
     return invoiceForm.items.reduce(
@@ -305,11 +256,6 @@ export function InvoiceSystemPage() {
       { subtotal: 0, discountTotal: 0, taxTotal: 0, grandTotal: 0 },
     );
   }, [invoiceForm.items]);
-  const livePreviewHtml = useMemo(
-    () => renderInvoiceHtml(editorHtml, editorCss, invoiceForm, totals),
-    [editorHtml, editorCss, invoiceForm, totals],
-  );
-
   function patchInvoice(path, value) {
     setInvoiceForm((current) => {
       const [group, key] = path.split(".");
@@ -386,7 +332,7 @@ export function InvoiceSystemPage() {
     setEditorOpen(true);
   }
 
-  async function saveTemplate({ setActive = true, saveAsNew = false } = {}) {
+  async function saveTemplate({ setActive = true, saveAsNew = false, htmlCode, cssCode } = {}) {
     if (!settings) {
       toast.error("Invoice editor is not ready yet");
       return;
@@ -395,14 +341,15 @@ export function InvoiceSystemPage() {
     try {
       const currentId = !saveAsNew && editorTemplate?.id && editorTemplate.id !== "default-template" ? editorTemplate.id : `template-${Date.now()}`;
       const name = templateName?.trim() || "Invoice Template";
-      const htmlCode = editorHtml || "";
-      const cssCode = editorCss || "";
+      const finalHtml = htmlCode ?? editorHtml ?? "";
+      const finalCss = cssCode ?? editorCss ?? "";
       const templateFields = Array.isArray(editorTemplate?.fields) ? editorTemplate.fields : settings.fields || [];
       const otherBlocks = (settings.reusableBlocks || []).filter((item) => item.type !== "fabric-template" || (item.id && item.id !== currentId));
       const templateBlocks = templates
         .filter((item) => item.id !== "default-template" && item.id !== currentId)
         .map((item) => ({ ...item, active: setActive ? false : Boolean(item.active) }));
-      const savedTemplate = { id: currentId, type: "fabric-template", name, active: setActive, savedAt: new Date().toISOString(), htmlCode, cssCode, fields: templateFields };
+      const isConnectedTemplate = settings.connectedTemplateId === currentId || editorTemplate?.connected;
+      const savedTemplate = { id: currentId, type: "fabric-template", name, active: setActive, connected: isConnectedTemplate, connectedAt: isConnectedTemplate ? (editorTemplate?.connectedAt || settings.connectedTemplateAt || new Date().toISOString()) : undefined, savedAt: new Date().toISOString(), htmlCode: finalHtml, cssCode: finalCss, fields: templateFields };
       const payload = {
         ...settings,
         fields: setActive ? templateFields : settings.fields,
@@ -413,6 +360,8 @@ export function InvoiceSystemPage() {
         ],
         activeTemplateId: setActive ? currentId : settings.activeTemplateId,
         activeTemplateName: setActive ? name : settings.activeTemplateName,
+        connectedTemplateId: isConnectedTemplate ? currentId : settings.connectedTemplateId,
+        connectedTemplateName: isConnectedTemplate ? name : settings.connectedTemplateName,
         page: { size: "A4", orientation: "portrait", margin: 32, editor: "invoice-template" },
       };
       const response = await subscriptionService.saveInvoiceSettings(payload);
@@ -424,10 +373,6 @@ export function InvoiceSystemPage() {
     } finally {
       setSaving(false);
     }
-  }
-
-  async function saveAsNewTemplate() {
-    await saveTemplate({ setActive: true, saveAsNew: true });
   }
 
   async function activateTemplate(template) {
@@ -444,6 +389,25 @@ export function InvoiceSystemPage() {
       setSettings(response.data);
       setEditorTemplate(template);
       toast.success(`${template.name || "Template"} is active`);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  async function connectTemplateToEmail(template) {
+    if (!template?.id || template.id === "default-template") {
+      toast.error("Save an Invoice Editor template before connecting it to email");
+      return;
+    }
+    if (!String(template.htmlCode || "").trim() || !String(template.cssCode || "").trim()) {
+      toast.error("Template must include Invoice Editor HTML and CSS before connecting");
+      return;
+    }
+    try {
+      const response = await subscriptionService.connectInvoiceTemplate(template.id);
+      setSettings(response.data);
+      setEditorTemplate((current) => current?.id === template.id ? { ...current, connected: true } : current);
+      toast.success("Successfully Connected");
     } catch (error) {
       toast.error(error.message);
     }
@@ -555,9 +519,13 @@ export function InvoiceSystemPage() {
   }
 
   async function sendInvoice(id) {
+    if (!invoiceEmailConnected) {
+      toast.error("Connect an invoice template to email before sending");
+      return;
+    }
     try {
       await subscriptionService.sendInvoice(id);
-      toast.success("Invoice email processed");
+      toast.success("Invoice email processed with the connected template");
       await load();
     } catch (error) {
       toast.error(error.message);
@@ -565,6 +533,10 @@ export function InvoiceSystemPage() {
   }
 
   async function sendTestInvoice() {
+    if (!invoiceEmailConnected) {
+      toast.error("Connect an invoice template to email before sending a test invoice");
+      return;
+    }
     const to = testEmail.trim();
     if (!to) {
       toast.error("Enter an email address for the test invoice");
@@ -610,6 +582,21 @@ export function InvoiceSystemPage() {
           <div className={ui.tile}><div className={ui.metricLabel}>Email Sent</div><div className={ui.metricValue}>{invoiceStats.sent}</div></div>
           <div className={ui.tile}><div className={ui.metricLabel}>Pending</div><div className={ui.metricValue}>{invoiceStats.pending}</div></div>
           <div className={ui.tile}><div className={ui.metricLabel}>Failed</div><div className={ui.metricValue}>{invoiceStats.failed}</div></div>
+        </div>
+        <div className={`mt-4 rounded-lg border p-4 ${invoiceEmailConnected ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+            <div>
+              <div className={`text-sm font-black ${invoiceEmailConnected ? "text-emerald-800" : "text-amber-800"}`}>
+                {invoiceEmailConnected ? "Successfully Connected" : "Invoice email is not connected"}
+              </div>
+              <p className={`mt-1 text-sm ${invoiceEmailConnected ? "text-emerald-700" : "text-amber-700"}`}>
+                {invoiceEmailConnected
+                  ? `${connectedTemplate?.name || "Connected invoice template"} will be used for test emails, live purchase emails, PDF download, and resend.`
+                  : "Connect an Invoice Editor template before sending invoice emails. The default invoice will not be sent as a fallback."}
+              </p>
+            </div>
+            {invoiceEmailConnected ? <span className={ui.pill}>Connected</span> : <span className={ui.pill}>Action Required</span>}
+          </div>
         </div>
       </section>
 
@@ -759,7 +746,9 @@ export function InvoiceSystemPage() {
             Send test invoice
             <input className={ui.input} type="email" value={testEmail} onChange={(event) => setTestEmail(event.target.value)} placeholder="customer@example.com" />
           </label>
-          <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={sendTestInvoice}>Send Test Invoice</button>
+          <button className={cn(ui.buttonBase, invoiceEmailConnected ? ui.buttonPrimary : ui.buttonSecondary)} onClick={sendTestInvoice}>
+            {invoiceEmailConnected ? "Send Test Invoice" : "Connect Invoice First"}
+          </button>
         </div>
       </section>
 
@@ -767,7 +756,7 @@ export function InvoiceSystemPage() {
         <div className={ui.sectionHead}>
           <div>
             <h3 className="text-xl font-bold text-slate-900">Invoice Templates</h3>
-            <p className={ui.muted}>Save multiple invoice templates, but keep only one active for automatic purchase invoices.</p>
+            <p className={ui.muted}>Save multiple invoice templates. The connected template is the only one used for invoice emails and PDF attachments.</p>
           </div>
           <label className="flex min-w-[260px] flex-col gap-2 text-sm font-bold text-slate-700">
             Current template name
@@ -780,11 +769,12 @@ export function InvoiceSystemPage() {
         </div>
         <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {templates.map((template) => (
-            <div key={template.id} className={`rounded-xl border p-4 ${template.active ? "border-sky-300 bg-sky-50" : "border-slate-200 bg-white"}`}>
+            <div key={template.id} className={`rounded-xl border p-4 ${template.id === connectedTemplate?.id ? "border-emerald-300 bg-emerald-50" : template.active ? "border-sky-300 bg-sky-50" : "border-slate-200 bg-white"}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="font-black text-slate-900">{template.name || "Invoice Template"}</div>
                   <div className="mt-1 text-xs text-slate-500">{template.savedAt ? `Saved ${formatDate(template.savedAt)}` : "Default starter template"}</div>
+                  {template.id === connectedTemplate?.id ? <div className="mt-2 text-xs font-black uppercase tracking-wide text-emerald-700">Successfully Connected</div> : null}
                 </div>
                 <ToggleSwitch checked={Boolean(template.active)} onChange={() => activateTemplate(template)} label="Active" />
               </div>
@@ -792,6 +782,9 @@ export function InvoiceSystemPage() {
                 <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => setViewTemplate(template)}>View</button>
                 <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openTemplateEditor(template)}>Edit</button>
                 <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => activateTemplate(template)}>Use</button>
+                <button className={cn(ui.buttonBase, template.id === connectedTemplate?.id ? ui.buttonPrimary : ui.buttonSecondary)} onClick={() => connectTemplateToEmail(template)}>
+                  {template.id === connectedTemplate?.id ? "Connected" : "Connect to Email"}
+                </button>
                 <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => duplicateTemplate(template)}>Duplicate</button>
                 <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => deleteTemplate(template)}>Delete</button>
               </div>
@@ -858,7 +851,7 @@ export function InvoiceSystemPage() {
                       <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => viewInvoiceDetails(item.id)}>View</button>
                       <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => editInvoice(item)}>Edit</button>
                       <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => duplicateInvoice(item.id)}>Duplicate</button>
-                      <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => sendInvoice(item.id)}>Resend</button>
+                      <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => sendInvoice(item.id)}>Email Connected Template</button>
                       <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => deleteInvoice(item.id)}>Delete</button>
                     </div>
                   </td>
@@ -872,59 +865,22 @@ export function InvoiceSystemPage() {
         </div>
       </section>
       {editorOpen ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-2 sm:p-4">
-          <div className={`flex flex-col overflow-hidden bg-white shadow-2xl ${editorFullscreen ? "fixed inset-0 max-h-none w-screen max-w-none rounded-none" : "max-h-[96vh] w-full max-w-[1500px] rounded-xl"}`}>
-            <div className="flex flex-col gap-3 border-b border-slate-200 p-4 lg:flex-row lg:items-end lg:justify-between">
-              <div>
-                <div className={ui.eyebrow}>Invoice Pro Template Editor</div>
-                <h3 className="text-2xl font-black tracking-tight text-slate-900">{editorTemplate ? "Edit Template" : "Create Template"}</h3>
-                <p className={ui.muted}>Use Mapping to place invoice fields, then double-click text on the canvas or use Text Content to edit letters, words, and tokens.</p>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-[260px_auto_auto_auto_auto_auto] sm:items-center">
-                <input className={ui.input} value={templateName} onChange={(event) => setTemplateName(event.target.value)} placeholder="Template name" />
-                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => saveTemplate({ setActive: false })} disabled={saving}>{saving ? "Saving..." : "Save"}</button>
-                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={saveAsNewTemplate} disabled={saving}>Save as New</button>
-                <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={() => saveTemplate({ setActive: true })} disabled={saving}>{saving ? "Saving..." : "Save & Set Active"}</button>
-                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => setEditorFullscreen((current) => !current)}>{editorFullscreen ? "Exit Full Screen" : "Full Screen"}</button>
-                <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => setEditorOpen(false)}>Close</button>
-              </div>
-            </div>
-            <div className="grid min-h-0 flex-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)]">
-              <div className="grid min-h-0 grid-rows-2 border-r border-slate-200">
-                <label className="flex min-h-0 flex-col border-b border-slate-200">
-                  <span className="border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">HTML</span>
-                  <textarea
-                    className="min-h-0 flex-1 resize-none border-0 bg-slate-950 p-4 font-mono text-sm text-slate-50 outline-none"
-                    spellCheck={false}
-                    value={editorHtml}
-                    onChange={(event) => setEditorHtml(event.target.value)}
-                  />
-                </label>
-                <label className="flex min-h-0 flex-col">
-                  <span className="border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black uppercase tracking-[0.18em] text-slate-500">CSS</span>
-                  <textarea
-                    className="min-h-0 flex-1 resize-none border-0 bg-slate-900 p-4 font-mono text-sm text-slate-50 outline-none"
-                    spellCheck={false}
-                    value={editorCss}
-                    onChange={(event) => setEditorCss(event.target.value)}
-                  />
-                </label>
-              </div>
-              <div className="flex min-h-0 flex-col bg-slate-100">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-2">
-                  <span className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Live Preview</span>
-                  <span className="text-xs font-semibold text-slate-500">Supports {"{{invoice_number}}"}, {"{{customer_name}}"}, {"{{items}}"}, {"{{total_amount}}"}</span>
-                </div>
-                <iframe
-                  title="Invoice live preview"
-                  sandbox=""
-                  className="min-h-0 flex-1 border-0 bg-white"
-                  srcDoc={livePreviewHtml}
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+        <InvoiceBuilderModal
+          templateName={templateName}
+          onTemplateNameChange={setTemplateName}
+          editorTemplate={editorTemplate}
+          initialHtml={editorHtml}
+          initialCss={editorCss}
+          invoiceForm={invoiceForm}
+          totals={totals}
+          fullscreen={editorFullscreen}
+          onFullscreenChange={setEditorFullscreen}
+          saving={saving}
+          onSave={(data) => saveTemplate({ setActive: false, htmlCode: data.htmlCode, cssCode: data.cssCode })}
+          onSaveAsNew={(data) => saveTemplate({ setActive: true, saveAsNew: true, htmlCode: data.htmlCode, cssCode: data.cssCode })}
+          onSaveAndActivate={(data) => saveTemplate({ setActive: true, htmlCode: data.htmlCode, cssCode: data.cssCode })}
+          onClose={() => setEditorOpen(false)}
+        />
       ) : null}
       {selectedInvoice ? (
         <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 p-4">
@@ -949,7 +905,7 @@ export function InvoiceSystemPage() {
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
               <a className={cn(ui.buttonBase, ui.buttonPrimary)} href={pdfUrl(selectedInvoice)} target="_blank" rel="noreferrer">Download PDF</a>
-              <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => sendInvoice(selectedInvoice.id)}>Resend to Customer</button>
+              <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => sendInvoice(selectedInvoice.id)}>Email Connected Template to Customer</button>
             </div>
           </div>
         </div>
@@ -965,10 +921,11 @@ export function InvoiceSystemPage() {
               <div className={ui.tile}><div className={ui.metricLabel}>Status</div><div className="mt-2 font-black">{viewTemplate.active ? "Active" : "Inactive"}</div></div>
               <div className={ui.tile}><div className={ui.metricLabel}>Saved</div><div className="mt-2 font-black">{viewTemplate.savedAt ? formatDate(viewTemplate.savedAt) : "Starter"}</div></div>
               <div className={ui.tile}><div className={ui.metricLabel}>Fields</div><div className="mt-2 font-black">{viewTemplate.fields?.length || 0}</div></div>
-              <div className={ui.tile}><div className={ui.metricLabel}>Auto Apply</div><div className="mt-2 font-black">{viewTemplate.active ? "Enabled" : "Set active to apply"}</div></div>
+              <div className={ui.tile}><div className={ui.metricLabel}>Email Connection</div><div className="mt-2 font-black">{viewTemplate.id === connectedTemplate?.id ? "Successfully Connected" : "Not connected"}</div></div>
             </div>
             <div className="mt-5 flex flex-wrap gap-2">
               <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={() => { activateTemplate(viewTemplate); setViewTemplate(null); }}>Set Active Template</button>
+              <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => { connectTemplateToEmail(viewTemplate); setViewTemplate(null); }}>Connect to Email</button>
               <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => duplicateTemplate(viewTemplate)}>Save as New Template</button>
             </div>
           </div>
