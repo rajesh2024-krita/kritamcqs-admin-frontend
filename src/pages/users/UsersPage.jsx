@@ -36,6 +36,12 @@ function toDateTimeLocal(value) {
   return value ? new Date(value).toISOString().slice(0, 16) : "";
 }
 
+function getWeakAreaExamType(item) {
+  const normalized = String(item?.examType ?? item?.examMode ?? "").trim().toUpperCase();
+  if (normalized.startsWith("JEE")) return "JEE";
+  return "NEET";
+}
+
 export function UsersPage() {
   const toast = useToast();
   const [users, setUsers] = useState([]);
@@ -784,7 +790,14 @@ export function UsersPage() {
                           <tbody>
                             {overview.weakAreas.slice(0, 10).map((item) => (
                               <tr key={item.id}>
-                                <td>{item.subjectName}</td>
+                                <td>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span>{item.subjectName}</span>
+                                    {selectedUser.examMode === "BOTH" ? (
+                                      <span className={ui.pill}>{getWeakAreaExamType(item)}</span>
+                                    ) : null}
+                                  </div>
+                                </td>
                                 <td>{item.chapterName}</td>
                                 <td>{item.accuracy ?? 0}%</td>
                                 <td><span className={ui.pill}>{item.strength}</span></td>

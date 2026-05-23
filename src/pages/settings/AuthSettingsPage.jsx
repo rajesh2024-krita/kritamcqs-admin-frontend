@@ -12,6 +12,7 @@ export function AuthSettingsPage() {
     googleEnabled: false,
     googleClientId: "",
     googleAndroidClientId: "",
+    googleIosClientId: "",
     googleAndroidPackageName: "com.kritamcqs.androidapp",
     googleAndroidSha1: "CE:34:23:0A:77:79:E5:01:09:10:2C:3C:A9:9C:B3:BF:7B:FD:AF:C4",
     googleClientSecret: "",
@@ -160,6 +161,19 @@ export function AuthSettingsPage() {
               <label className={ui.field}><span>Android SHA-1 Fingerprint</span><input className={ui.input} value={auth.googleAndroidSha1 || ""} onChange={(event) => setAuth((current) => ({ ...current, googleAndroidSha1: event.target.value.toUpperCase() }))} /></label>
               <div className="rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm text-slate-700">
                 Android sign-in requests ID tokens with the Web Client ID. Keep the Android OAuth client in the same Google project with this package name and SHA-1/SHA-256 fingerprints.
+              </div>
+            </div>
+          </div>
+          <div className="rounded-xl border border-sky-200 bg-sky-50/70 p-5">
+            <div className="mb-4">
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-700">iOS Application</p>
+              <h4 className="mt-1 text-lg font-bold text-slate-950">iOS Google Login</h4>
+              <p className="mt-1 text-sm text-slate-600">Used by native iOS builds to authorize the bundle ID and URL scheme.</p>
+            </div>
+            <div className="grid gap-4">
+              <label className={ui.field}><span>iOS Google Client ID</span><input className={ui.input} value={auth.googleIosClientId || ""} onChange={(event) => setAuth((current) => ({ ...current, googleIosClientId: event.target.value }))} /></label>
+              <div className="rounded-lg border border-sky-200 bg-white px-4 py-3 text-sm text-slate-700">
+                Keep this iOS OAuth client in the same Google Cloud project as the Web client. The native app should use the Web Client ID as the server client ID for backend token verification.
               </div>
             </div>
           </div>
