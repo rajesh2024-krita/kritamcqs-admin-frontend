@@ -31,6 +31,8 @@ import { SupportTicketsPage } from "../pages/SupportTicketsPage";
 import { NotificationsPage } from "../pages/NotificationsPage";
 import { EmailTemplatesPage } from "../pages/EmailTemplatesPage";
 import { EmailTemplateCatalogPage } from "../pages/EmailTemplateCatalogPage";
+import { WeakAreaManagementPage } from "../pages/WeakAreaManagementPage";
+import { MistakeManagementPage } from "../pages/MistakeManagementPage";
 
 export function AppRoutes() {
   return (
@@ -68,6 +70,8 @@ export function AppRoutes() {
         <Route path="sessions" element={<SessionsPage />} />
         <Route path="daily-plans" element={<DailyPlansPage />} />
         <Route path="daily-test-management" element={<DailyTestManagementPage />} />
+        <Route path="weak-area-management" element={<WeakAreaManagementPage />} />
+        <Route path="mistake-management" element={<MistakeManagementPage />} />
         <Route path="revision-management" element={<RevisionManagementPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="support-tickets" element={<SupportTicketsPage />} />
