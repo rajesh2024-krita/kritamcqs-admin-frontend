@@ -124,6 +124,8 @@ const defaultForm = {
   availabilityMode: "all",
   availableDaysOfMonth: [],
   availableWeekdays: [],
+  freeAccessDurationValue: 1,
+  freeAccessDurationUnit: "days",
   questionIds: [],
   markingOverrideEnabled: false,
   markingSchemeVersion: "v1",
@@ -158,6 +160,8 @@ function buildFormFromItem(item) {
     availabilityMode: item.availabilityMode || "all",
     availableDaysOfMonth: Array.isArray(item.availableDaysOfMonth) ? item.availableDaysOfMonth : [],
     availableWeekdays: Array.isArray(item.availableWeekdays) ? item.availableWeekdays : [],
+    freeAccessDurationValue: item.freeAccessDurationValue || 1,
+    freeAccessDurationUnit: item.freeAccessDurationUnit || "days",
     questionIds: item.questionIds || [],
     markingOverrideEnabled: Boolean(item.markingOverrideEnabled),
     markingSchemeVersion: item.markingSchemeVersion || "v1",
@@ -460,11 +464,13 @@ export function MockTestsPage() {
         markingSchemeVersion: getDefaultSchemeForExam(markingSettings, autoForm.examType).version,
       };
       const response = await mockTestService.autoGenerate(payload);
-      toast.success("Mock test auto-generated successfully");
+      toast.success("Mock test generated. Review and save to publish.");
       setAutoForm(defaultAutoGenerateForm);
-      await loadItems({ ...query, page: 1 });
-      if (response?.data?.id) {
-        openEdit(response.data);
+      if (response?.data) {
+        setEditingItem(null);
+        setFormState(buildFormFromItem(response.data));
+        setQuestionResults(response.data.manualQuestions || []);
+        setShowForm(true);
       }
     } catch (error) {
       toast.error(error.message);
@@ -559,6 +565,8 @@ export function MockTestsPage() {
         maxScore: Number(formState.maxScore),
         markingSchemeVersion: String(formState.markingSchemeVersion || getDefaultSchemeForExam(markingSettings, formState.examType).version || "v1"),
         markingOverrideEnabled: Boolean(formState.markingOverrideEnabled),
+        freeAccessDurationValue: Number(formState.freeAccessDurationValue || 1),
+        freeAccessDurationUnit: formState.freeAccessDurationUnit || "days",
         availableDaysOfMonth: formState.availabilityMode === "day_wise" ? parsedDays : [],
         availableWeekdays: formState.availabilityMode === "week_wise" ? formState.availableWeekdays : [],
         instructions: formState.instructions
@@ -968,6 +976,18 @@ export function MockTestsPage() {
               </div>
             ) : null}
             <div className="pt-8"><ToggleSwitch checked={formState.isPremiumOnly} onChange={(value) => setFormState((current) => ({ ...current, isPremiumOnly: value }))} label="Premium only" /></div>
+            <label className={ui.field}>
+              <span>Free Access Duration</span>
+              <input className={ui.input} type="number" min="1" value={formState.freeAccessDurationValue} onChange={(event) => setFormState((current) => ({ ...current, freeAccessDurationValue: event.target.value }))} />
+            </label>
+            <label className={ui.field}>
+              <span>Free Access Unit</span>
+              <select className={ui.input} value={formState.freeAccessDurationUnit} onChange={(event) => setFormState((current) => ({ ...current, freeAccessDurationUnit: event.target.value }))}>
+                <option value="days">Days</option>
+                <option value="weeks">Weeks</option>
+                <option value="months">Months</option>
+              </select>
+            </label>
             <div className="pt-8"><ToggleSwitch checked={formState.isActive} onChange={(value) => setFormState((current) => ({ ...current, isActive: value }))} label="Publish as active" /></div>
             <label className={cn(ui.field, ui.fieldFull)}>
               <span>Instructions</span>
