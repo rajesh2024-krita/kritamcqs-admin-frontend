@@ -140,7 +140,7 @@ const defaultAutoGenerateForm = {
   examType: "NEET",
   subjectIds: [],
   difficulty: "mixed",
-  isPremiumOnly: true,
+  isPremiumOnly: false,
   isActive: true,
   randomizeQuestionOrder: true,
   markingOverrideEnabled: false,
@@ -403,7 +403,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
       predictionDescription: presetWithMarking.predictionDescription,
       markingSchemeVersion: scheme.version || "v1",
       markingOverrideEnabled: false,
-      isPremiumOnly: !freeOnly,
+      isPremiumOnly: false,
     });
     setQuestionSearch("");
     setQuestionSubjectId("");
@@ -473,14 +473,14 @@ export function MockTestsPage({ freeOnly = false } = {}) {
     try {
       const payload = {
         ...autoForm,
-        isPremiumOnly: freeOnly ? false : Boolean(autoForm.isPremiumOnly),
+        isPremiumOnly: false,
         difficulty: autoForm.difficulty === "mixed" ? "" : autoForm.difficulty,
         title: String(autoForm.title || "").trim() || undefined,
         markingSchemeVersion: getDefaultSchemeForExam(markingSettings, autoForm.examType).version,
       };
       const response = await mockTestService.autoGenerate(payload);
       toast.success("Mock test generated. Review and save to publish.");
-      setAutoForm({ ...defaultAutoGenerateForm, isPremiumOnly: !freeOnly });
+      setAutoForm({ ...defaultAutoGenerateForm, isPremiumOnly: false });
       if (response?.data) {
         setEditingItem(null);
         setFormState(buildFormFromItem(response.data));
@@ -636,8 +636,8 @@ export function MockTestsPage({ freeOnly = false } = {}) {
       <div className={ui.compactPanel}>
         <div className="mb-4 border-b border-slate-200 pb-4">
           <div className={ui.eyebrow}>Auto Generation</div>
-          <h2 className="text-xl font-black tracking-tight text-slate-900">{freeOnly ? "Generate Free Mock Test" : "Generate Premium Mock Test"}</h2>
-          <p className={ui.muted}>Generate questions first, customize in the popup, then save to publish.</p>
+          <h2 className="text-xl font-black tracking-tight text-slate-900">Generate Mock Test</h2>
+          <p className={ui.muted}>Generated mocks start free for every learner. After a free learner completes one, that mock becomes premium for that learner.</p>
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <label className={ui.field}>
               <span>Exam Type</span>
@@ -659,9 +659,6 @@ export function MockTestsPage({ freeOnly = false } = {}) {
               <span>Title (Optional)</span>
               <input className={ui.input} value={autoForm.title} onChange={(event) => setAutoForm((current) => ({ ...current, title: event.target.value }))} placeholder="Auto title if blank" />
             </label>
-            {!freeOnly ? (
-              <div className="pt-8"><ToggleSwitch checked={autoForm.isPremiumOnly} onChange={(value) => setAutoForm((current) => ({ ...current, isPremiumOnly: value }))} label="Enable Premium" /></div>
-            ) : null}
             {!freeOnly ? (
               <label className={ui.field}>
                 <span>Duration Type</span>
@@ -842,6 +839,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
                     <th className={ui.tableHead}>Score</th>
                     <th className={ui.tableHead}>Duration</th>
                     <th className={ui.tableHead}>Schedule</th>
+                    <th className={ui.tableHead}>Access Monitor</th>
                     <th className={ui.tableHead}>Status</th>
                     <th className={ui.tableHead}>Actions</th>
                   </tr>
@@ -866,8 +864,19 @@ export function MockTestsPage({ freeOnly = false } = {}) {
                       <td className={ui.tableCell}>{item.durationMinutes} min</td>
                       <td className={ui.tableCell}>{formatAvailability(item)}</td>
                       <td className={ui.tableCell}>
+                        <div className="space-y-1 text-xs text-slate-600">
+                          <div><span className="font-bold text-slate-900">{item.completedLearnerCount || 0}</span> learners completed</div>
+                          <div><span className="font-bold text-amber-700">{item.freeConvertedLearnerCount || 0}</span> free learners converted</div>
+                          <div><span className="font-bold text-slate-900">{item.completedAttemptCount || 0}</span> completed attempts</div>
+                          {item.lastCompletedAt ? <div>Last: {new Date(item.lastCompletedAt).toLocaleString()}</div> : null}
+                        </div>
+                      </td>
+                      <td className={ui.tableCell}>
                         <div className="flex flex-col gap-2">
                           <span className={ui.pill}>{item.isActive ? "Active" : "Draft"}</span>
+                          <span className="inline-flex items-center rounded-sm border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-black uppercase tracking-wider text-blue-700">
+                            Free once, then premium
+                          </span>
                           <span className={item.isPremiumOnly ? "inline-flex items-center rounded-sm border border-amber-200 bg-amber-100 px-2 py-1 text-xs font-black uppercase tracking-wider text-amber-700" : "inline-flex items-center rounded-sm border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-black uppercase tracking-wider text-emerald-700"}>
                             {item.isPremiumOnly ? "Gold Crown Premium" : "Free Mock Test"}
                           </span>
