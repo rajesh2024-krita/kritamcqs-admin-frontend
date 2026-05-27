@@ -29,4 +29,8 @@ export const userService = {
     const response = await service.getById(`${id}/overview`);
     return response;
   },
+  async truncateData(id) {
+    const response = await http.post(`/admin/users/${id}/truncate`);
+    return response.data;
+  },
 };

@@ -1,6 +1,6 @@
 import { cn, ui } from "../../ui";
 
-export function ConfirmDeleteModal({ open, title, description, onCancel, onConfirm }) {
+export function ConfirmDeleteModal({ open, title, description, onCancel, onConfirm, confirmLabel = "Delete" }) {
   if (!open) return null;
 
   return (
@@ -13,7 +13,7 @@ export function ConfirmDeleteModal({ open, title, description, onCancel, onConfi
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={onCancel}>Cancel</button>
-            <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={onConfirm}>Delete</button>
+            <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={onConfirm}>{confirmLabel}</button>
           </div>
         </div>
       </div>

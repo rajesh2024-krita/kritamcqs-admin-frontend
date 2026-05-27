@@ -15,7 +15,7 @@ import { SearchBar } from "../../components/tables/SearchBar";
 import { useToast } from "../../context/ToastContext";
 import { cn, ui } from "../../ui";
 import { formatDate } from "../../utils/format";
-import { EditIcon, EyeIcon, PlusIcon, TrashIcon, XIcon } from "../../components/common/AdminIcons";
+import { EditIcon, EyeIcon, PlusIcon, RefreshIcon, TrashIcon, XIcon } from "../../components/common/AdminIcons";
 
 const defaultForm = {
   mobile: "",
@@ -57,6 +57,7 @@ export function UsersPage() {
   const [editingUser, setEditingUser] = useState(null);
   const [formState, setFormState] = useState(defaultForm);
   const [deleteUser, setDeleteUser] = useState(null);
+  const [truncateUser, setTruncateUser] = useState(null);
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [migrationFile, setMigrationFile] = useState(null);
@@ -300,6 +301,24 @@ export function UsersPage() {
       setSelectedUser(null);
       setOverview(null);
       await loadUsers({ ...query, page: 1 });
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  async function handleTruncateUserData() {
+    try {
+      const response = await userService.truncateData(truncateUser.id);
+      const result = response.data || response;
+      toast.success(`User data reset (${Number(result.totalDeletedCount || 0)} records removed)`);
+      const truncatedUserId = truncateUser.id;
+      setTruncateUser(null);
+      await loadUsers({ ...query, page: 1 });
+      if (selectedUser?.id === truncatedUserId) {
+        const refreshed = await userService.getOverview(truncatedUserId);
+        setOverview(refreshed.data);
+        setSelectedUser(refreshed.data?.profile || selectedUser);
+      }
     } catch (error) {
       toast.error(error.message);
     }
@@ -586,6 +605,10 @@ export function UsersPage() {
                   <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openEdit(row)}>
                     <EditIcon size={16} />
                     Edit
+                  </button>
+                  <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => setTruncateUser(row)}>
+                    <RefreshIcon size={16} />
+                    Truncate
                   </button>
                   <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteUser(row)}>
                     <TrashIcon size={16} />
@@ -885,6 +908,15 @@ export function UsersPage() {
         description="This will remove the user record. Historical analytics collections are not automatically deleted."
         onCancel={() => setDeleteUser(null)}
         onConfirm={handleDelete}
+      />
+
+      <ConfirmDeleteModal
+        open={Boolean(truncateUser)}
+        title="Truncate user data"
+        description={`Reset all non-personal data for ${truncateUser?.name || truncateUser?.email || truncateUser?.mobile || "this user"}. Personal details and account identity will be kept.`}
+        confirmLabel="Truncate Data"
+        onCancel={() => setTruncateUser(null)}
+        onConfirm={handleTruncateUserData}
       />
 
       <ConfirmDeleteModal
