@@ -59,6 +59,7 @@ export function AppRoutes() {
         <Route path="question-types" element={<QuestionTypesPage />} />
         <Route path="questions" element={<QuestionsPage />} />
         <Route path="mock-tests" element={<MockTestsPage />} />
+        <Route path="free-mock-tests" element={<MockTestsPage freeOnly />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="subscriptions" element={<SubscriptionsPage />} />
         <Route path="subscription-plans" element={<SubscriptionPlansPage />} />

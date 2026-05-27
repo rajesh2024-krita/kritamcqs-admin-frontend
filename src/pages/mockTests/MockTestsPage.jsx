@@ -126,6 +126,10 @@ const defaultForm = {
   availableWeekdays: [],
   freeAccessDurationValue: 1,
   freeAccessDurationUnit: "days",
+  premiumDurationType: "daily",
+  premiumValidityDays: 1,
+  autoDailyQuestionRearrangement: false,
+  autoDailyQuestionGeneration: false,
   questionIds: [],
   markingOverrideEnabled: false,
   markingSchemeVersion: "v1",
@@ -136,10 +140,14 @@ const defaultAutoGenerateForm = {
   examType: "NEET",
   subjectIds: [],
   difficulty: "mixed",
-  isPremiumOnly: false,
+  isPremiumOnly: true,
   isActive: true,
   randomizeQuestionOrder: true,
   markingOverrideEnabled: false,
+  premiumDurationType: "daily",
+  premiumValidityDays: 1,
+  autoDailyQuestionRearrangement: true,
+  autoDailyQuestionGeneration: true,
 };
 
 function buildFormFromItem(item) {
@@ -162,6 +170,10 @@ function buildFormFromItem(item) {
     availableWeekdays: Array.isArray(item.availableWeekdays) ? item.availableWeekdays : [],
     freeAccessDurationValue: item.freeAccessDurationValue || 1,
     freeAccessDurationUnit: item.freeAccessDurationUnit || "days",
+    premiumDurationType: item.premiumDurationType || "daily",
+    premiumValidityDays: item.premiumValidityDays || 1,
+    autoDailyQuestionRearrangement: Boolean(item.autoDailyQuestionRearrangement),
+    autoDailyQuestionGeneration: Boolean(item.autoDailyQuestionGeneration),
     questionIds: item.questionIds || [],
     markingOverrideEnabled: Boolean(item.markingOverrideEnabled),
     markingSchemeVersion: item.markingSchemeVersion || "v1",
@@ -211,7 +223,7 @@ function getRequiredQuestionCount(formState) {
   return 0;
 }
 
-export function MockTestsPage() {
+export function MockTestsPage({ freeOnly = false } = {}) {
   const toast = useToast();
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -271,6 +283,7 @@ export function MockTestsPage() {
       ...(filters.createdDate ? { createdDate: filters.createdDate } : {}),
       ...(filters.active ? { isActive: filters.active } : {}),
       ...(filters.examType ? { examType: filters.examType } : {}),
+      ...(freeOnly ? { isPremiumOnly: "false" } : {}),
     };
   }
 
@@ -390,6 +403,7 @@ export function MockTestsPage() {
       predictionDescription: presetWithMarking.predictionDescription,
       markingSchemeVersion: scheme.version || "v1",
       markingOverrideEnabled: false,
+      isPremiumOnly: !freeOnly,
     });
     setQuestionSearch("");
     setQuestionSubjectId("");
@@ -459,13 +473,14 @@ export function MockTestsPage() {
     try {
       const payload = {
         ...autoForm,
+        isPremiumOnly: freeOnly ? false : Boolean(autoForm.isPremiumOnly),
         difficulty: autoForm.difficulty === "mixed" ? "" : autoForm.difficulty,
         title: String(autoForm.title || "").trim() || undefined,
         markingSchemeVersion: getDefaultSchemeForExam(markingSettings, autoForm.examType).version,
       };
       const response = await mockTestService.autoGenerate(payload);
       toast.success("Mock test generated. Review and save to publish.");
-      setAutoForm(defaultAutoGenerateForm);
+      setAutoForm({ ...defaultAutoGenerateForm, isPremiumOnly: !freeOnly });
       if (response?.data) {
         setEditingItem(null);
         setFormState(buildFormFromItem(response.data));
@@ -563,6 +578,7 @@ export function MockTestsPage() {
         marksPerQuestion: Number(formState.marksPerQuestion),
         negativeMarks: Number(formState.negativeMarks),
         maxScore: Number(formState.maxScore),
+        isPremiumOnly: freeOnly ? false : Boolean(formState.isPremiumOnly),
         markingSchemeVersion: String(formState.markingSchemeVersion || getDefaultSchemeForExam(markingSettings, formState.examType).version || "v1"),
         markingOverrideEnabled: Boolean(formState.markingOverrideEnabled),
         freeAccessDurationValue: Number(formState.freeAccessDurationValue || 1),
@@ -605,13 +621,13 @@ export function MockTestsPage() {
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <div className={ui.eyebrow}>Assessment Control</div>
-            <p className={ui.muted}>Create NEET and JEE mock tests with real score prediction, fixed papers, and schedule-based availability.</p>
+            <p className={ui.muted}>{freeOnly ? "Manage free mock tests with enable/disable options and free access duration." : "Create NEET and JEE mock tests with real score prediction, fixed papers, and schedule-based availability."}</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <div className={ui.badge}>{meta?.total ?? items.length} tests</div>
             <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={openCreate}>
               <PlusIcon size={16} />
-              Create Mock Test
+              {freeOnly ? "Create Free Mock Test" : "Create Mock Test"}
             </button>
           </div>
         </div>
@@ -620,8 +636,8 @@ export function MockTestsPage() {
       <div className={ui.compactPanel}>
         <div className="mb-4 border-b border-slate-200 pb-4">
           <div className={ui.eyebrow}>Auto Generation</div>
-          <h2 className="text-xl font-black tracking-tight text-slate-900">Auto-Generate Mock Test (NEET/JEE)</h2>
-          <p className={ui.muted}>Generate full-pattern mock tests from uploaded question bank with subject/topic/type/difficulty balancing.</p>
+          <h2 className="text-xl font-black tracking-tight text-slate-900">{freeOnly ? "Generate Free Mock Test" : "Generate Premium Mock Test"}</h2>
+          <p className={ui.muted}>Generate questions first, customize in the popup, then save to publish.</p>
           <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
             <label className={ui.field}>
               <span>Exam Type</span>
@@ -643,6 +659,31 @@ export function MockTestsPage() {
               <span>Title (Optional)</span>
               <input className={ui.input} value={autoForm.title} onChange={(event) => setAutoForm((current) => ({ ...current, title: event.target.value }))} placeholder="Auto title if blank" />
             </label>
+            {!freeOnly ? (
+              <div className="pt-8"><ToggleSwitch checked={autoForm.isPremiumOnly} onChange={(value) => setAutoForm((current) => ({ ...current, isPremiumOnly: value }))} label="Enable Premium" /></div>
+            ) : null}
+            {!freeOnly ? (
+              <label className={ui.field}>
+                <span>Duration Type</span>
+                <select className={ui.input} value={autoForm.premiumDurationType} onChange={(event) => setAutoForm((current) => ({ ...current, premiumDurationType: event.target.value }))}>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </label>
+            ) : null}
+            {!freeOnly ? (
+              <label className={ui.field}>
+                <span>Validity Days</span>
+                <input className={ui.input} type="number" min="1" value={autoForm.premiumValidityDays} onChange={(event) => setAutoForm((current) => ({ ...current, premiumValidityDays: event.target.value }))} />
+              </label>
+            ) : null}
+            {!freeOnly ? (
+              <div className="pt-8"><ToggleSwitch checked={autoForm.autoDailyQuestionRearrangement} onChange={(value) => setAutoForm((current) => ({ ...current, autoDailyQuestionRearrangement: value }))} label="Daily rearrange" /></div>
+            ) : null}
+            {!freeOnly ? (
+              <div className="pt-8"><ToggleSwitch checked={autoForm.autoDailyQuestionGeneration} onChange={(value) => setAutoForm((current) => ({ ...current, autoDailyQuestionGeneration: value }))} label="Daily generate" /></div>
+            ) : null}
             <div className="flex items-end">
               <button className={cn(ui.buttonBase, ui.buttonPrimary, "w-full")} type="button" disabled={autoGenerating} onClick={() => void handleAutoGenerate()}>
                 {autoGenerating ? "Generating..." : "Generate Mock Test"}
@@ -827,7 +868,9 @@ export function MockTestsPage() {
                       <td className={ui.tableCell}>
                         <div className="flex flex-col gap-2">
                           <span className={ui.pill}>{item.isActive ? "Active" : "Draft"}</span>
-                          <span className={ui.pill}>{item.isPremiumOnly ? "Premium" : "All users"}</span>
+                          <span className={item.isPremiumOnly ? "inline-flex items-center rounded-sm border border-amber-200 bg-amber-100 px-2 py-1 text-xs font-black uppercase tracking-wider text-amber-700" : "inline-flex items-center rounded-sm border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-black uppercase tracking-wider text-emerald-700"}>
+                            {item.isPremiumOnly ? "Gold Crown Premium" : "Free Mock Test"}
+                          </span>
                           <span className={ui.pill}>{item.generationSource === "auto" ? "Auto" : "Manual"}</span>
                         </div>
                       </td>
@@ -975,7 +1018,25 @@ export function MockTestsPage() {
                 </div>
               </div>
             ) : null}
-            <div className="pt-8"><ToggleSwitch checked={formState.isPremiumOnly} onChange={(value) => setFormState((current) => ({ ...current, isPremiumOnly: value }))} label="Premium only" /></div>
+            {!freeOnly ? <div className="pt-8"><ToggleSwitch checked={formState.isPremiumOnly} onChange={(value) => setFormState((current) => ({ ...current, isPremiumOnly: value }))} label="Premium only" /></div> : null}
+            {!freeOnly ? (
+              <label className={ui.field}>
+                <span>Premium Duration Type</span>
+                <select className={ui.input} value={formState.premiumDurationType} onChange={(event) => setFormState((current) => ({ ...current, premiumDurationType: event.target.value }))}>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </label>
+            ) : null}
+            {!freeOnly ? (
+              <label className={ui.field}>
+                <span>Premium Validity Days</span>
+                <input className={ui.input} type="number" min="1" value={formState.premiumValidityDays} onChange={(event) => setFormState((current) => ({ ...current, premiumValidityDays: event.target.value }))} />
+              </label>
+            ) : null}
+            {!freeOnly ? <div className="pt-8"><ToggleSwitch checked={Boolean(formState.autoDailyQuestionRearrangement)} onChange={(value) => setFormState((current) => ({ ...current, autoDailyQuestionRearrangement: value }))} label="Daily random rearrange" /></div> : null}
+            {!freeOnly ? <div className="pt-8"><ToggleSwitch checked={Boolean(formState.autoDailyQuestionGeneration)} onChange={(value) => setFormState((current) => ({ ...current, autoDailyQuestionGeneration: value }))} label="Daily question generation" /></div> : null}
             <label className={ui.field}>
               <span>Free Access Duration</span>
               <input className={ui.input} type="number" min="1" value={formState.freeAccessDurationValue} onChange={(event) => setFormState((current) => ({ ...current, freeAccessDurationValue: event.target.value }))} />
