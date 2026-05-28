@@ -15,6 +15,7 @@ const defaultSettings = {
   moderate_percentage: 40,
   hard_percentage: 30,
   enabled: true,
+  allow_both_exams_same_day: false,
   adaptive_mode_enabled: true,
   repeat_lookback_sessions: 5,
   max_repeated_questions: 2,
@@ -47,6 +48,7 @@ export function DailyTestManagementPage() {
         moderate_percentage: settingsResponse.data?.moderate_percentage ?? 40,
         hard_percentage: settingsResponse.data?.hard_percentage ?? 30,
         enabled: Boolean(settingsResponse.data?.enabled ?? true),
+        allow_both_exams_same_day: Boolean(settingsResponse.data?.allowBothExamsSameDay ?? settingsResponse.data?.allow_both_exams_same_day ?? false),
         adaptive_mode_enabled: Boolean(settingsResponse.data?.adaptive_mode_enabled ?? true),
         repeat_lookback_sessions: settingsResponse.data?.repeat_lookback_sessions ?? 5,
         max_repeated_questions: settingsResponse.data?.max_repeated_questions ?? 2,
@@ -105,6 +107,7 @@ export function DailyTestManagementPage() {
         moderate_percentage: Number(settings.moderate_percentage || 40),
         hard_percentage: Number(settings.hard_percentage || 30),
         enabled: Boolean(settings.enabled),
+        allowBothExamsSameDay: Boolean(settings.allow_both_exams_same_day),
         adaptive_mode_enabled: Boolean(settings.adaptive_mode_enabled),
         repeat_lookback_sessions: Number(settings.repeat_lookback_sessions || 5),
         max_repeated_questions: Number(settings.max_repeated_questions || 2),
@@ -142,6 +145,7 @@ export function DailyTestManagementPage() {
           moderate_percentage: response.data?.moderate_percentage ?? payload.moderate_percentage,
           hard_percentage: response.data?.hard_percentage ?? payload.hard_percentage,
           enabled: Boolean(response.data?.enabled ?? payload.enabled),
+          allow_both_exams_same_day: Boolean(response.data?.allowBothExamsSameDay ?? response.data?.allow_both_exams_same_day ?? payload.allowBothExamsSameDay),
           adaptive_mode_enabled: Boolean(response.data?.adaptive_mode_enabled ?? payload.adaptive_mode_enabled),
           repeat_lookback_sessions: response.data?.repeat_lookback_sessions ?? payload.repeat_lookback_sessions,
           max_repeated_questions: response.data?.max_repeated_questions ?? payload.max_repeated_questions,
@@ -310,6 +314,24 @@ export function DailyTestManagementPage() {
               <ToggleSwitch checked={Boolean(settings.enabled)} onChange={(value) => setSettings((current) => ({ ...current, enabled: value }))} label="Daily test module is active for app users" />
             </div>
           </label>
+        </div>
+
+        <div className="mt-4">
+          <label className={ui.field}>
+            <span>Allow Both Exams Same Day</span>
+            <div className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white px-4 py-3">
+              <ToggleSwitch
+                checked={Boolean(settings.allow_both_exams_same_day)}
+                onChange={(value) => setSettings((current) => ({ ...current, allow_both_exams_same_day: value }))}
+                label="Users can attend both NEET and JEE daily tests on the same day"
+              />
+            </div>
+          </label>
+          {!settings.allow_both_exams_same_day && (
+            <p className="mt-2 text-sm font-medium text-amber-700">
+              Disabled: after completing one exam, the other daily test is locked until tomorrow.
+            </p>
+          )}
         </div>
 
         <div className="mt-6 border-t border-slate-200 pt-6">
