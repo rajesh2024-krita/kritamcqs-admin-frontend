@@ -8,7 +8,18 @@ import { cn, ui } from "../../ui";
 const defaultSettings = {
   wrong_question_limit: 10,
   old_question_limit: 5,
+  daily_revision_limit: 20,
   revision_enabled: true,
+  include_wrong_questions: true,
+  include_skipped_questions: true,
+  include_low_accuracy_questions: true,
+  include_weak_area_questions: true,
+  accuracy_threshold: 80,
+  minimum_correct_answers: 1,
+  completion_attempt_count: 1,
+  difficulty_mode: "mixed",
+  schedule_mode: "daily",
+  auto_generated_revision_tests: true,
   spaced_days: [1, 2, 5, 10],
 };
 
@@ -28,7 +39,18 @@ export function RevisionManagementPage() {
       setSettings({
         wrong_question_limit: settingsResponse.data?.wrong_question_limit ?? 10,
         old_question_limit: settingsResponse.data?.old_question_limit ?? 5,
+        daily_revision_limit: settingsResponse.data?.daily_revision_limit ?? 20,
         revision_enabled: Boolean(settingsResponse.data?.revision_enabled ?? true),
+        include_wrong_questions: settingsResponse.data?.include_wrong_questions !== false,
+        include_skipped_questions: settingsResponse.data?.include_skipped_questions !== false,
+        include_low_accuracy_questions: settingsResponse.data?.include_low_accuracy_questions !== false,
+        include_weak_area_questions: settingsResponse.data?.include_weak_area_questions !== false,
+        accuracy_threshold: settingsResponse.data?.accuracy_threshold ?? 80,
+        minimum_correct_answers: settingsResponse.data?.minimum_correct_answers ?? 1,
+        completion_attempt_count: settingsResponse.data?.completion_attempt_count ?? 1,
+        difficulty_mode: settingsResponse.data?.difficulty_mode ?? "mixed",
+        schedule_mode: settingsResponse.data?.schedule_mode ?? "daily",
+        auto_generated_revision_tests: settingsResponse.data?.auto_generated_revision_tests !== false,
         spaced_days: Array.isArray(settingsResponse.data?.spaced_days)
           ? settingsResponse.data.spaced_days.slice(0, 4)
           : [1, 2, 5, 10],
@@ -58,14 +80,36 @@ export function RevisionManagementPage() {
       const payload = {
         wrong_question_limit: Number(settings.wrong_question_limit || 10),
         old_question_limit: Number(settings.old_question_limit || 5),
+        daily_revision_limit: Number(settings.daily_revision_limit || 20),
         revision_enabled: Boolean(settings.revision_enabled),
+        include_wrong_questions: Boolean(settings.include_wrong_questions),
+        include_skipped_questions: Boolean(settings.include_skipped_questions),
+        include_low_accuracy_questions: Boolean(settings.include_low_accuracy_questions),
+        include_weak_area_questions: Boolean(settings.include_weak_area_questions),
+        accuracy_threshold: Number(settings.accuracy_threshold || 80),
+        minimum_correct_answers: Number(settings.minimum_correct_answers || 1),
+        completion_attempt_count: Number(settings.completion_attempt_count || 1),
+        difficulty_mode: settings.difficulty_mode || "mixed",
+        schedule_mode: settings.schedule_mode || "daily",
+        auto_generated_revision_tests: Boolean(settings.auto_generated_revision_tests),
         spaced_days: normalizedSpacedDays.map((value) => Number(value || 1)),
       };
       const response = await revisionService.saveSettings(payload);
       setSettings({
         wrong_question_limit: response.data?.wrong_question_limit ?? payload.wrong_question_limit,
         old_question_limit: response.data?.old_question_limit ?? payload.old_question_limit,
+        daily_revision_limit: response.data?.daily_revision_limit ?? payload.daily_revision_limit,
         revision_enabled: Boolean(response.data?.revision_enabled ?? payload.revision_enabled),
+        include_wrong_questions: response.data?.include_wrong_questions !== false,
+        include_skipped_questions: response.data?.include_skipped_questions !== false,
+        include_low_accuracy_questions: response.data?.include_low_accuracy_questions !== false,
+        include_weak_area_questions: response.data?.include_weak_area_questions !== false,
+        accuracy_threshold: response.data?.accuracy_threshold ?? payload.accuracy_threshold,
+        minimum_correct_answers: response.data?.minimum_correct_answers ?? payload.minimum_correct_answers,
+        completion_attempt_count: response.data?.completion_attempt_count ?? payload.completion_attempt_count,
+        difficulty_mode: response.data?.difficulty_mode ?? payload.difficulty_mode,
+        schedule_mode: response.data?.schedule_mode ?? payload.schedule_mode,
+        auto_generated_revision_tests: response.data?.auto_generated_revision_tests !== false,
         spaced_days: Array.isArray(response.data?.spaced_days) ? response.data.spaced_days.slice(0, 4) : payload.spaced_days,
       });
       toast.success("Revision settings saved");
@@ -144,10 +188,68 @@ export function RevisionManagementPage() {
             />
           </label>
           <label className={ui.field}>
+            <span>Daily Revision Limit</span>
+            <input
+              className={ui.input}
+              type="number"
+              min={1}
+              max={200}
+              value={settings.daily_revision_limit}
+              onChange={(event) => setSettings((current) => ({ ...current, daily_revision_limit: Number(event.target.value || 1) }))}
+            />
+          </label>
+          <label className={ui.field}>
             <span>Enable Revision Module</span>
             <div className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white px-4 py-3">
               <ToggleSwitch checked={Boolean(settings.revision_enabled)} onChange={(value) => setSettings((current) => ({ ...current, revision_enabled: value }))} label="Revision module is active for app users" />
             </div>
+          </label>
+          <label className={ui.field}>
+            <span>Difficulty Mode</span>
+            <select className={ui.input} value={settings.difficulty_mode} onChange={(event) => setSettings((current) => ({ ...current, difficulty_mode: event.target.value }))}>
+              <option value="mixed">Mixed</option>
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="moderate">Moderate</option>
+              <option value="hard">Hard</option>
+            </select>
+          </label>
+          <label className={ui.field}>
+            <span>Schedule</span>
+            <select className={ui.input} value={settings.schedule_mode} onChange={(event) => setSettings((current) => ({ ...current, schedule_mode: event.target.value }))}>
+              <option value="daily">Daily Revision</option>
+              <option value="weekly">Weekly Revision</option>
+              <option value="custom">Custom Revision Sets</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+          {[
+            ["include_wrong_questions", "Include wrong questions"],
+            ["include_skipped_questions", "Include skipped questions"],
+            ["include_low_accuracy_questions", "Include low accuracy questions"],
+            ["include_weak_area_questions", "Include weak area questions"],
+            ["auto_generated_revision_tests", "Auto-generated revision tests"],
+          ].map(([key, label]) => (
+            <div key={key} className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white px-4 py-3">
+              <ToggleSwitch checked={Boolean(settings[key])} onChange={(value) => setSettings((current) => ({ ...current, [key]: value }))} label={label} />
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+          <label className={ui.field}>
+            <span>Completion Accuracy %</span>
+            <input className={ui.input} type="number" min={0} max={100} value={settings.accuracy_threshold} onChange={(event) => setSettings((current) => ({ ...current, accuracy_threshold: Number(event.target.value || 0) }))} />
+          </label>
+          <label className={ui.field}>
+            <span>Minimum Correct Answers</span>
+            <input className={ui.input} type="number" min={0} max={200} value={settings.minimum_correct_answers} onChange={(event) => setSettings((current) => ({ ...current, minimum_correct_answers: Number(event.target.value || 0) }))} />
+          </label>
+          <label className={ui.field}>
+            <span>Attempt Count Required</span>
+            <input className={ui.input} type="number" min={1} max={20} value={settings.completion_attempt_count} onChange={(event) => setSettings((current) => ({ ...current, completion_attempt_count: Number(event.target.value || 1) }))} />
           </label>
         </div>
 
