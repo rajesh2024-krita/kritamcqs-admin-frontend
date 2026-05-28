@@ -127,14 +127,14 @@ export function QuestionsPage() {
     }
   }
 
-  async function approveBulkUpload() {
+  async function approveBulkUpload(uploadAnyway = false) {
     if (!bulkPreview?.batchId) return;
     setBulkBusy(true);
     try {
       if (bulkPreview?.missingCategoriesCount > 0) {
         await questionService.createBulkUploadCategories(bulkPreview.batchId);
       }
-      const response = await questionService.approveBulkUpload(bulkPreview.batchId);
+      const response = await questionService.approveBulkUpload(bulkPreview.batchId, uploadAnyway);
       setBulkResult(response.data);
       setBulkPreview(response.data);
     } finally {
@@ -177,6 +177,9 @@ export function QuestionsPage() {
         examType: item.examType || deriveExamType(item.examMode, item.exam),
         difficultyId: item.difficultyId?.id || item.difficultyId || "",
         topicId: item.topicId?.id || item.topicId || "",
+        questionStatus: item.questionStatus || "complete",
+        reviewStatus: item.reviewStatus || "ready",
+        isVisibleToUsers: item.isVisibleToUsers !== false,
       })}
       lookupLoaders={[
         { key: "examTypes", load: () => listAllRecords(examTypeService, {}, 200) },
@@ -209,6 +212,15 @@ export function QuestionsPage() {
           options: (lookups, filters) => (lookups.topics || [])
             .filter((item) => !filters.chapterId || String(item.chapterId?.id || item.chapterId) === String(filters.chapterId))
             .map((item) => ({ label: item.name, value: item.id })),
+        },
+        {
+          name: "questionStatus",
+          label: "Review",
+          placeholder: "All Questions",
+          options: () => [
+            { label: "Complete", value: "complete" },
+            { label: "Incomplete Question", value: "incomplete" },
+          ],
         },
       ]}
       fields={[
@@ -262,6 +274,9 @@ export function QuestionsPage() {
           options: (_form, lookups) => (lookups.difficulties || []).map((item) => ({ label: item.name, value: item.id })),
         },
         { name: "responseType", label: "Response Type", required: true, type: "select", options: [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }, { label: "Numeric", value: "numeric" }], defaultValue: "single" },
+        { name: "questionStatus", label: "Question Status", type: "select", options: [{ label: "Complete", value: "complete" }, { label: "Incomplete Question", value: "incomplete" }], defaultValue: "complete" },
+        { name: "reviewStatus", label: "Review Status", type: "select", options: [{ label: "Ready", value: "ready" }, { label: "Needs Review", value: "needs_review" }], defaultValue: "ready" },
+        { name: "isVisibleToUsers", label: "Visible To App Users", type: "checkbox", defaultValue: true },
         { name: "question", label: "Question Text", required: true, type: "textarea", full: true },
         {
           name: "questionImageUrl",
@@ -331,6 +346,7 @@ export function QuestionsPage() {
         { key: "topicId", label: "Topic", render: (row) => row.topicId?.name || "-" },
         { key: "difficulty", label: "Difficulty", render: (row) => row.difficultyId?.name || row.difficulty || "-" },
         { key: "responseType", label: "Response Type" },
+        { key: "questionStatus", label: "Review", render: (row) => row.questionStatus === "incomplete" ? "Incomplete Question" : "Complete" },
       ]}
     />
     {bulkOpen ? (
@@ -367,8 +383,13 @@ export function QuestionsPage() {
               </button>
             ) : null}
             {bulkPreview?.totalRows > 0 ? (
-              <button className={cn(ui.buttonBase, ui.buttonPrimary)} type="button" disabled={bulkBusy} onClick={approveBulkUpload}>
+              <button className={cn(ui.buttonBase, ui.buttonPrimary)} type="button" disabled={bulkBusy} onClick={() => approveBulkUpload(false)}>
                 Approve & Upload
+              </button>
+            ) : null}
+            {bulkPreview?.warningCount > 0 || bulkPreview?.invalidCount > 0 ? (
+              <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" disabled={bulkBusy} onClick={() => approveBulkUpload(true)}>
+                Approve & Upload Anyway
               </button>
             ) : null}
             <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={downloadFailedRecords}>
@@ -388,6 +409,7 @@ export function QuestionsPage() {
               <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <div className={ui.metricCard}><div className={ui.metricLabel}>Total Questions</div><div className="text-2xl font-black">{bulkPreview.totalRows}</div></div>
                 <div className={ui.metricCard}><div className={ui.metricLabel}>Valid Questions</div><div className="text-2xl font-black text-emerald-700">{bulkPreview.validCount}</div></div>
+                <div className={ui.metricCard}><div className={ui.metricLabel}>Incomplete Questions</div><div className="text-2xl font-black text-amber-700">{bulkPreview.warningCount || 0}</div></div>
                 <div className={ui.metricCard}><div className={ui.metricLabel}>Invalid Questions</div><div className="text-2xl font-black text-rose-700">{bulkPreview.invalidCount}</div></div>
                 <div className={ui.metricCard}><div className={ui.metricLabel}>Missing Fields</div><div className="text-2xl font-black text-amber-700">{bulkPreview.missingCategoriesCount}</div></div>
                 <div className={ui.metricCard}><div className={ui.metricLabel}>Duplicates</div><div className="text-2xl font-black text-slate-800">{bulkPreview.duplicateCount || 0}</div></div>
@@ -441,7 +463,7 @@ export function QuestionsPage() {
 
               <div className={ui.panel}>
                 <strong>Final Preview</strong>
-                <p className={ui.muted}>Ready: {bulkPreview.validCount || 0} | Failed records: {bulkPreview.invalidCount || 0} | Duplicates: {bulkPreview.duplicateCount || 0} | Images: {bulkPreview.imageProcessingCount || 0}</p>
+                <p className={ui.muted}>Ready: {bulkPreview.completeCount ?? bulkPreview.validCount ?? 0} | Incomplete: {bulkPreview.warningCount || 0} | Failed records: {bulkPreview.invalidCount || 0} | Duplicates: {bulkPreview.duplicateCount || 0} | Images: {bulkPreview.imageProcessingCount || 0}</p>
                 <div className={ui.tableScroll}>
                   <table className={ui.table}>
                     <thead><tr><th className={ui.tableHead}>Row</th><th className={ui.tableHead}>Question</th><th className={ui.tableHead}>Status</th><th className={ui.tableHead}>Error</th></tr></thead>
@@ -465,7 +487,7 @@ export function QuestionsPage() {
             <div className={ui.panel}>
               <strong>Upload Completion Summary</strong>
               <p className={ui.muted}>
-                Total Questions: {bulkResult.totalRows} | Successfully Uploaded: {bulkResult.successCount} | Failed: {bulkResult.failedCount} | Skipped Duplicates: {bulkResult.skippedDuplicatesCount || 0} | Processing Time: {bulkResult.processingTimeSeconds || 0}s | Uploaded Images: {bulkResult.uploadedImageCount || 0}
+                Total Questions: {bulkResult.totalRows} | Successfully Uploaded: {bulkResult.successfullyUploadedRows ?? bulkResult.successCount} | Uploaded with Warning: {bulkResult.uploadedWithWarningRows ?? bulkResult.uploadedWithWarningCount ?? 0} | Failed: {bulkResult.completelyFailedRows ?? bulkResult.failedCount} | Skipped Duplicates: {bulkResult.skippedDuplicatesCount || 0} | Processing Time: {bulkResult.processingTimeSeconds || 0}s | Uploaded Images: {bulkResult.uploadedImageCount || 0}
               </p>
               <div className="mt-3 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
                 <span>Created Subjects: <b>{createdSummary.subjects || 0}</b></span>

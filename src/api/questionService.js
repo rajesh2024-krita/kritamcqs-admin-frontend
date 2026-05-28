@@ -33,8 +33,8 @@ export const questionService = {
     const response = await http.get(`/admin/questions/bulk-upload/${batchId}/status`);
     return response.data;
   },
-  async approveBulkUpload(batchId) {
-    const response = await http.post(`/admin/questions/bulk-upload/${batchId}/approve`);
+  async approveBulkUpload(batchId, uploadAnyway = false) {
+    const response = await http.post(`/admin/questions/bulk-upload/${batchId}/approve`, { uploadAnyway });
     return response.data;
   },
 };
