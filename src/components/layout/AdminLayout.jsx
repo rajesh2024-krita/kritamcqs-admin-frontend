@@ -36,6 +36,7 @@ const navItems = [
   // { label: "Daily Plans", to: "/daily-plans", section: "Content", icon: FileStackIcon },
   { label: "Mock Tests", to: "/mock-tests", section: "Content", icon: OverviewIcon },
   { label: "Free Mock Tests", to: "/free-mock-tests", section: "Content", icon: OverviewIcon },
+  { label: "Free Questions", to: "/free-questions", section: "Content", icon: BookIcon },
   { label: "Daily Test Management", to: "/daily-test-management", section: "Operations", icon: DashboardIcon },
   { label: "Weak Area Management", to: "/weak-area-management", section: "Operations", icon: OverviewIcon },
   { label: "Mistake Management", to: "/mistake-management", section: "Operations", icon: HelpIcon },

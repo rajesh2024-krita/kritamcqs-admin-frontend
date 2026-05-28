@@ -33,6 +33,7 @@ import { EmailTemplatesPage } from "../pages/EmailTemplatesPage";
 import { EmailTemplateCatalogPage } from "../pages/EmailTemplateCatalogPage";
 import { WeakAreaManagementPage } from "../pages/WeakAreaManagementPage";
 import { MistakeManagementPage } from "../pages/MistakeManagementPage";
+import { FreeQuestionsPage } from "../pages/FreeQuestionsPage";
 
 export function AppRoutes() {
   return (
@@ -60,6 +61,7 @@ export function AppRoutes() {
         <Route path="questions" element={<QuestionsPage />} />
         <Route path="mock-tests" element={<MockTestsPage />} />
         <Route path="free-mock-tests" element={<MockTestsPage freeOnly />} />
+        <Route path="free-questions" element={<FreeQuestionsPage />} />
         <Route path="users" element={<UsersPage />} />
         <Route path="subscriptions" element={<SubscriptionsPage />} />
         <Route path="subscription-plans" element={<SubscriptionPlansPage />} />
