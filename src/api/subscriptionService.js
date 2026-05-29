@@ -33,6 +33,18 @@ export const subscriptionService = {
     const response = await http.get("/admin/invoice-settings");
     return response.data;
   },
+  async getAppSettings() {
+    const response = await http.get("/admin/app-settings");
+    return response.data;
+  },
+  async uploadAppLogo(file) {
+    const formData = new FormData();
+    formData.append("logo", file);
+    const response = await http.post("/admin/app-settings/logo", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  },
   async saveInvoiceSettings(payload) {
     const response = await http.post("/admin/invoice-settings", payload);
     return response.data;
