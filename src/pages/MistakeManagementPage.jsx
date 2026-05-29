@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { insightsService } from "../api/insightsService";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { EmptyState } from "../components/common/EmptyState";
+import { MathText } from "../components/common/MathText";
 import { useToast } from "../context/ToastContext";
 import { ui } from "../ui";
 
@@ -62,7 +63,7 @@ export function MistakeManagementPage() {
                 <tbody>
                   {data.frequentIncorrectQuestions.map((row) => (
                     <tr key={row.questionId}>
-                      <td className={ui.tableCell}><div className="max-w-xl line-clamp-2">{row.question}</div></td>
+                      <td className={ui.tableCell}><MathText className="max-w-xl line-clamp-2">{row.question}</MathText></td>
                       <td className={ui.tableCell}>{row.subjectName}</td>
                       <td className={ui.tableCell}>{row.chapterName}</td>
                       <td className={ui.tableCell}>{row.difficulty}</td>

@@ -13,6 +13,7 @@ import {
 } from "../../utils/examStructure";
 import { EntityManagerPage } from "../common/EntityManagerPage";
 import { EntityFormWrapper } from "../../components/forms/EntityFormWrapper";
+import { MathText } from "../../components/common/MathText";
 import { cn, ui } from "../../ui";
 
 function matchesQuestionSubject(subject, form) {
@@ -340,7 +341,7 @@ export function QuestionsPage() {
       ]}
       columns={[
         { key: "examType", label: "Exam Type", render: (row) => row.examType || deriveExamType(row.examMode, row.exam) },
-        { key: "question", label: "Question", render: (row) => `${row.question?.slice(0, 90) || "[Image Question]"}${row.question?.length > 90 ? "..." : ""}` },
+        { key: "question", label: "Question", render: (row) => <MathText className="line-clamp-2">{row.question || "[Image Question]"}</MathText> },
         { key: "subjectId", label: "Subject", render: (row) => formatSubjectLabel(row.subjectId) },
         { key: "chapterId", label: "Chapter", render: (row) => row.chapterId?.name || "-" },
         { key: "topicId", label: "Topic", render: (row) => row.topicId?.name || "-" },
@@ -471,7 +472,7 @@ export function QuestionsPage() {
                       {(bulkPreview.rows || []).map((row) => (
                         <tr key={row.id || row.row}>
                           <td className={ui.tableCell}>{row.row}</td>
-                          <td className={ui.tableCell}>{row.question}</td>
+                          <td className={ui.tableCell}><MathText>{row.question}</MathText></td>
                           <td className={ui.tableCell}>{row.status}</td>
                           <td className={ui.tableCell}>{row.error || "-"}</td>
                         </tr>

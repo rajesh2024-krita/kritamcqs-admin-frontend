@@ -5,6 +5,7 @@ import { chapterService } from "../api/chapterService";
 import { ConfirmDeleteModal } from "../components/common/ConfirmDeleteModal";
 import { EmptyState } from "../components/common/EmptyState";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
+import { MathText } from "../components/common/MathText";
 import { EntityFormWrapper } from "../components/forms/EntityFormWrapper";
 import { ToggleSwitch } from "../components/forms/ToggleSwitch";
 import { Pagination } from "../components/tables/Pagination";
@@ -420,7 +421,7 @@ export function DailyPlansPage() {
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
-                              <div className="line-clamp-2 font-semibold text-slate-900">{item.question}</div>
+                              <MathText className="line-clamp-2 font-semibold text-slate-900">{item.question}</MathText>
                               <div className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">{item.subjectName} | {item.chapterName} | {item.difficulty}</div>
                             </div>
                             <span className={ui.pill}>{isSelected ? "Selected" : "Add"}</span>
@@ -448,7 +449,7 @@ export function DailyPlansPage() {
                         <span className={ui.pill}>#{index + 1}</span>
                         <button type="button" className="text-sm font-semibold text-rose-600" onClick={() => toggleQuestion(item.id)}>Remove</button>
                       </div>
-                      <div className="line-clamp-3 text-sm font-semibold text-slate-900">{item.question}</div>
+                      <MathText className="line-clamp-3 text-sm font-semibold text-slate-900">{item.question}</MathText>
                       <div className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">{item.subjectName} | {item.chapterName} | {item.difficulty}</div>
                     </div>
                   ))}

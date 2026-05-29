@@ -5,6 +5,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { ToastProvider } from "./context/ToastContext";
 import { SweetAlertViewport } from "./components/common/SweetAlertViewport";
+import "katex/dist/katex.min.css";
 import "./styles.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(

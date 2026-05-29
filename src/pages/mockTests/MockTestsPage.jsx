@@ -5,6 +5,7 @@ import { chapterService } from "../../api/chapterService";
 import { ConfirmDeleteModal } from "../../components/common/ConfirmDeleteModal";
 import { EmptyState } from "../../components/common/EmptyState";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
+import { MathText } from "../../components/common/MathText";
 import { EntityFormWrapper } from "../../components/forms/EntityFormWrapper";
 import { ToggleSwitch } from "../../components/forms/ToggleSwitch";
 import { Pagination } from "../../components/tables/Pagination";
@@ -1100,7 +1101,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="line-clamp-2 font-semibold text-slate-900">{item.question}</div>
+                            <MathText className="line-clamp-2 font-semibold text-slate-900">{item.question}</MathText>
                             {item.questionImageUrl ? (
                               <img src={item.questionImageUrl} alt="Question visual" className="mt-2 max-h-20 rounded-sm border border-slate-200 object-contain" />
                             ) : null}
@@ -1134,7 +1135,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
                       <span className={ui.pill}>#{index + 1}</span>
                       <button type="button" className="text-sm font-semibold text-rose-600" onClick={() => removeSelectedQuestion(item.id)}>Remove</button>
                     </div>
-                    <div className="line-clamp-3 text-sm font-semibold text-slate-900">{item.question}</div>
+                    <MathText className="line-clamp-3 text-sm font-semibold text-slate-900">{item.question}</MathText>
                     {item.questionImageUrl ? (
                       <img src={item.questionImageUrl} alt="Question visual" className="mt-2 max-h-20 rounded-sm border border-slate-200 object-contain" />
                     ) : null}

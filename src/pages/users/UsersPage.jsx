@@ -5,6 +5,7 @@ import { learningLevelService } from "../../api/learningLevelService";
 import { ConfirmDeleteModal } from "../../components/common/ConfirmDeleteModal";
 import { EmptyState } from "../../components/common/EmptyState";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
+import { MathText } from "../../components/common/MathText";
 import { EntityFormWrapper } from "../../components/forms/EntityFormWrapper";
 import { Field } from "../../components/forms/Field";
 import { SelectDropdown } from "../../components/forms/SelectDropdown";
@@ -752,7 +753,7 @@ export function UsersPage() {
                           <tbody>
                             {overview.mistakes.slice(0, 10).map((item) => (
                               <tr key={item.id}>
-                                <td>{item.question}</td>
+                                <td><MathText>{item.question}</MathText></td>
                                 <td>{item.subjectName}</td>
                                 <td><span className={ui.pill}>{item.status}</span></td>
                                 <td>{item.attempts}</td>
@@ -767,7 +768,7 @@ export function UsersPage() {
                           <div className="mt-2 space-y-2">
                             {(overview.revisionSummary?.wrongQuestions || []).slice(0, 5).map((item) => (
                               <div key={item.id} className="rounded-sm border border-red-100 bg-white/80 p-2">
-                                <p className="line-clamp-2 text-xs font-semibold text-slate-800">{item.question}</p>
+                                <MathText className="line-clamp-2 text-xs font-semibold text-slate-800">{item.question}</MathText>
                                 <p className="mt-1 text-[11px] text-slate-500">{item.subjectName} | {item.chapterName}</p>
                               </div>
                             ))}
@@ -781,7 +782,7 @@ export function UsersPage() {
                           <div className="mt-2 space-y-2">
                             {(overview.revisionSummary?.oldCorrectQuestions || []).slice(0, 5).map((item) => (
                               <div key={item.id} className="rounded-sm border border-blue-100 bg-white/80 p-2">
-                                <p className="line-clamp-2 text-xs font-semibold text-slate-800">{item.question}</p>
+                                <MathText className="line-clamp-2 text-xs font-semibold text-slate-800">{item.question}</MathText>
                                 <p className="mt-1 text-[11px] text-slate-500">{item.subjectName} | {item.chapterName}</p>
                               </div>
                             ))}
@@ -854,7 +855,7 @@ export function UsersPage() {
                         <tbody>
                           {overview.submissions.slice(0, 12).map((item) => (
                             <tr key={item.id}>
-                              <td>{item.question}</td>
+                              <td><MathText>{item.question}</MathText></td>
                               <td>{item.subjectName}</td>
                               <td>{item.chapterName}</td>
                               <td><span className={ui.pill}>{item.isCorrect ? "Correct" : item.skipped ? "Skipped" : "Incorrect"}</span></td>
