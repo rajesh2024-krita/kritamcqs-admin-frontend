@@ -425,7 +425,7 @@ export function UsersPage() {
           <div>
             <div className="mb-2 text-[11px] font-black uppercase tracking-[0.28em] text-emerald-700">Old App Migration</div>
             <h2 className="text-xl font-black tracking-tight text-slate-900">Import MySQL Users</h2>
-            <p className="mt-1 text-slate-500">Upload exported users from MySQL. Mobile numbers are cleaned, invalid rows skipped, and duplicates checked by mobile and email.</p>
+            <p className="mt-1 text-slate-500">Upload exported users from MySQL. Email is required, phone is optional, passwords are hashed before saving, and duplicates are checked by email.</p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <input
@@ -512,9 +512,9 @@ export function UsersPage() {
                 </thead>
                 <tbody>
                   {migrationPreview.previewRows.map((row) => (
-                    <tr key={`${row.mobile}-${row.email || ""}`}>
+                    <tr key={`${row.email || row.mobile || row.name}`}>
                       <td>{row.name || "-"}</td>
-                      <td>{row.mobile}</td>
+                      <td>{row.mobile || "-"}</td>
                       <td>{row.email || "-"}</td>
                       <td>{row.isPremium ? "Yes" : "No"}</td>
                       <td>{row.isAdmin ? "Yes" : "No"}</td>
