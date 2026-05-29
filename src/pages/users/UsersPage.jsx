@@ -113,6 +113,7 @@ export function UsersPage() {
   const revisionTotalCount = overview?.revisionSummary?.totalCount ?? overview?.revisionSummary?.revisionPendingCount ?? 0;
   const revisionWrongCount = overview?.revisionSummary?.wrongQuestionCount ?? 0;
   const revisionOldCorrectCount = overview?.revisionSummary?.oldCorrectQuestionCount ?? 0;
+  const hasProcessingMigration = migrationLogs.some((log) => log.status === "processing");
 
   const summaryCards = useMemo(() => {
     if (!overview) return [];
@@ -163,6 +164,15 @@ export function UsersPage() {
     loadCatalogOptions();
     loadMigrationLogs();
   }, [query.page]);
+
+  useEffect(() => {
+    if (!hasProcessingMigration) return undefined;
+    const interval = window.setInterval(async () => {
+      await loadMigrationLogs();
+      await loadUsers({ ...query, page: 1 });
+    }, 5000);
+    return () => window.clearInterval(interval);
+  }, [hasProcessingMigration, query.limit, query.page, search]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -234,7 +244,11 @@ export function UsersPage() {
       const response = await userService.importMigration(migrationFile);
       setMigrationPreview(response.data);
       setMigrationPreviewReady(false);
-      toast.success(`Imported ${response.data?.importedUsers ?? 0} users`);
+      if (response.data?.status === "processing") {
+        toast.success("User import started. This page will refresh the migration log.");
+      } else {
+        toast.success(`Imported ${response.data?.importedUsers ?? 0} users`);
+      }
       await Promise.all([loadUsers({ ...query, page: 1 }), loadMigrationLogs()]);
     } catch (error) {
       toast.error(error.message);
@@ -446,7 +460,7 @@ export function UsersPage() {
               disabled={migrationLoading || !migrationPreviewReady || Number(migrationPreview?.importableUsers ?? 0) <= 0}
               onClick={handleImportMigration}
             >
-              Import Users
+              Start Import
             </button>
           </div>
         </div>
@@ -456,7 +470,7 @@ export function UsersPage() {
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {[
                 ["Total Users", migrationPreview.totalUsers],
-                ["Imported / Ready", migrationPreview.importedUsers ?? migrationPreview.importableUsers],
+                ["Imported / Ready", migrationPreview.status === "processing" ? "Processing" : migrationPreview.importedUsers ?? migrationPreview.importableUsers],
                 ["Duplicates Skipped", migrationPreview.duplicateUsers],
                 ["Invalid Skipped", migrationPreview.invalidUsers],
               ].map(([label, value]) => (
@@ -531,7 +545,8 @@ export function UsersPage() {
             {migrationLogs.slice(0, 3).map((log) => (
               <div key={log.id} className="rounded-sm border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
                 <strong className="block text-slate-900">{formatDate(log.migrationDate)}</strong>
-                {log.importedUsers} imported | {log.duplicateUsers} duplicates | {log.invalidUsers} invalid
+                {log.status === "processing" ? "Processing..." : `${log.importedUsers} imported | ${log.duplicateUsers} duplicates | ${log.invalidUsers} invalid`}
+                {log.status === "failed" ? <span className="mt-1 block text-rose-600">{log.errorMessage || "Import failed"}</span> : null}
               </div>
             ))}
           </div>
