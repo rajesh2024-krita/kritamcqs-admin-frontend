@@ -336,6 +336,7 @@ export function QuestionsPage() {
         },
         { name: "numericAnswer", label: "Numeric Answer", visible: (form) => form.responseType === "numeric" },
         { name: "conceptTags", label: "Concept Tags", type: "tags", full: true },
+        { name: "exact", label: "Exact PYQ", type: "checkbox" },
         { name: "hasDiagram", label: "Has Diagram", type: "checkbox" },
         { name: "isNumerical", label: "Is Numerical", type: "checkbox" },
       ]}
@@ -347,6 +348,10 @@ export function QuestionsPage() {
         { key: "topicId", label: "Topic", render: (row) => row.topicId?.name || "-" },
         { key: "difficulty", label: "Difficulty", render: (row) => row.difficultyId?.name || row.difficulty || "-" },
         { key: "responseType", label: "Response Type" },
+        { key: "exact", label: "PYQ", render: (row) => {
+          const isExact = row.exact === true || ["true", "1", "yes", "y"].includes(String(row.exact || "").trim().toLowerCase());
+          return isExact ? "Exact" : (row.yearId || row.year || row.yearLabel) ? "Reference" : "-";
+        } },
         { key: "questionStatus", label: "Review", render: (row) => row.questionStatus === "incomplete" ? "Incomplete Question" : "Complete" },
       ]}
     />
