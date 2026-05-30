@@ -151,6 +151,20 @@ const defaultAutoGenerateForm = {
   autoDailyQuestionGeneration: true,
 };
 
+const defaultGenerationSchedule = {
+  enabled: false,
+  recurrenceType: "weekly",
+  weeklyDays: ["FRI"],
+  monthlyDay: 1,
+  generationTime: "09:00",
+  examType: "NEET",
+  subjectIds: [],
+  chapterIds: [],
+  difficulty: "mixed",
+  questionCount: 0,
+  titlePrefix: "Premium Auto Mock",
+};
+
 function buildFormFromItem(item) {
   return {
     title: item.title || "",
@@ -288,6 +302,10 @@ export function MockTestsPage({ freeOnly = false } = {}) {
   const [patternBlueprints, setPatternBlueprints] = useState([]);
   const [blueprintEditor, setBlueprintEditor] = useState(null);
   const [savingBlueprint, setSavingBlueprint] = useState(false);
+  const [generationSchedule, setGenerationSchedule] = useState(defaultGenerationSchedule);
+  const [generationLogs, setGenerationLogs] = useState([]);
+  const [savingGenerationSchedule, setSavingGenerationSchedule] = useState(false);
+  const [runningGenerationNow, setRunningGenerationNow] = useState(false);
 
   const selectedQuestionIds = formState.questionIds || [];
   const requiredQuestionCount = getRequiredQuestionCount(formState, patternBlueprints);
@@ -313,6 +331,18 @@ export function MockTestsPage({ freeOnly = false } = {}) {
     () => subjects.filter((item) => autoForm.examType === "BOTH" || item.examType === autoForm.examType),
     [subjects, autoForm.examType],
   );
+  const scheduleExamSubjects = useMemo(
+    () => subjects.filter((item) => generationSchedule.examType === "BOTH" || item.examType === generationSchedule.examType),
+    [subjects, generationSchedule.examType],
+  );
+  const scheduleChapters = useMemo(() => {
+    const selectedSubjects = new Set((generationSchedule.subjectIds || []).map(String));
+    return chapters.filter((item) => {
+      if (generationSchedule.examType !== "BOTH" && item.examType && item.examType !== generationSchedule.examType) return false;
+      if (!selectedSubjects.size) return true;
+      return selectedSubjects.has(String(item.subjectId?.id || item.subjectId));
+    });
+  }, [chapters, generationSchedule.examType, generationSchedule.subjectIds]);
 
   function buildListParams(nextQuery = query) {
     return {
@@ -340,15 +370,19 @@ export function MockTestsPage({ freeOnly = false } = {}) {
 
   async function loadLookups() {
     try {
-      const [subjectsResponse, chaptersResponse, markingSettingsResponse, patternBlueprintsResponse] = await Promise.all([
+      const [subjectsResponse, chaptersResponse, markingSettingsResponse, patternBlueprintsResponse, scheduleResponse, logsResponse] = await Promise.all([
         subjectService.list({ limit: 200 }),
         chapterService.list({ limit: 500 }),
         mockTestService.getMarkingSettings(),
         mockTestService.listPatternBlueprints(),
+        mockTestService.getGenerationSchedule(),
+        mockTestService.listGenerationLogs({ limit: 10 }),
       ]);
       setSubjects(subjectsResponse.data || []);
       setChapters(chaptersResponse.data || []);
       setPatternBlueprints(patternBlueprintsResponse.data || []);
+      setGenerationSchedule({ ...defaultGenerationSchedule, ...(scheduleResponse.data || {}) });
+      setGenerationLogs(logsResponse.data || []);
       const nextMarkingSettings = {
         predictionMinimumMockTests: markingSettingsResponse.data?.predictionMinimumMockTests || defaultMarkingSettings.predictionMinimumMockTests,
         neet: markingSettingsResponse.data?.neet || defaultMarkingSettings.neet,
@@ -552,6 +586,72 @@ export function MockTestsPage({ freeOnly = false } = {}) {
         subjectIds: exists ? current.subjectIds.filter((id) => id !== subjectId) : [...current.subjectIds, subjectId],
       };
     });
+  }
+
+  function toggleScheduleDay(day) {
+    setGenerationSchedule((current) => {
+      const days = current.weeklyDays || [];
+      const exists = days.includes(day);
+      const nextDays = exists ? days.filter((item) => item !== day) : [...days, day];
+      return { ...current, weeklyDays: nextDays.length ? nextDays : ["FRI"] };
+    });
+  }
+
+  function toggleScheduleSubject(subjectId) {
+    setGenerationSchedule((current) => {
+      const exists = current.subjectIds.includes(subjectId);
+      return {
+        ...current,
+        subjectIds: exists ? current.subjectIds.filter((id) => id !== subjectId) : [...current.subjectIds, subjectId],
+        chapterIds: [],
+      };
+    });
+  }
+
+  function toggleScheduleChapter(chapterId) {
+    setGenerationSchedule((current) => {
+      const exists = current.chapterIds.includes(chapterId);
+      return {
+        ...current,
+        chapterIds: exists ? current.chapterIds.filter((id) => id !== chapterId) : [...current.chapterIds, chapterId],
+      };
+    });
+  }
+
+  async function refreshGenerationLogs() {
+    const response = await mockTestService.listGenerationLogs({ limit: 10 });
+    setGenerationLogs(response.data || []);
+  }
+
+  async function handleSaveGenerationSchedule() {
+    setSavingGenerationSchedule(true);
+    try {
+      const response = await mockTestService.saveGenerationSchedule({
+        ...generationSchedule,
+        monthlyDay: Number(generationSchedule.monthlyDay || 1),
+        questionCount: Number(generationSchedule.questionCount || 0),
+      });
+      setGenerationSchedule({ ...defaultGenerationSchedule, ...(response.data || {}) });
+      toast.success("Automatic generation schedule saved");
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setSavingGenerationSchedule(false);
+    }
+  }
+
+  async function handleRunGenerationNow() {
+    setRunningGenerationNow(true);
+    try {
+      await mockTestService.runGenerationScheduleNow();
+      toast.success("Premium mock test generated and published");
+      await Promise.all([loadItems({ ...query, page: 1 }), refreshGenerationLogs()]);
+    } catch (error) {
+      toast.error(error.message);
+      await refreshGenerationLogs().catch(() => {});
+    } finally {
+      setRunningGenerationNow(false);
+    }
   }
 
   async function handleAutoGenerate() {
@@ -835,6 +935,151 @@ export function MockTestsPage({ freeOnly = false } = {}) {
           </div>
           <p className="mt-2 text-xs font-semibold text-slate-500">Patterns are read-only until Edit is clicked and the Admin Password is verified.</p>
         </div>
+        {!freeOnly ? (
+          <div className="mb-4 border-b border-slate-200 pb-4">
+            <div className={ui.eyebrow}>Premium Scheduler</div>
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <h2 className="text-xl font-black tracking-tight text-slate-900">Automatic Mock Test Generation</h2>
+                <p className={ui.muted}>Scheduled mocks are auto-published and visible only to premium users.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" disabled={runningGenerationNow} onClick={() => void handleRunGenerationNow()}>
+                  {runningGenerationNow ? "Generating..." : "Run Now"}
+                </button>
+                <button className={cn(ui.buttonBase, ui.buttonPrimary)} type="button" disabled={savingGenerationSchedule} onClick={() => void handleSaveGenerationSchedule()}>
+                  {savingGenerationSchedule ? "Saving..." : "Save Schedule"}
+                </button>
+              </div>
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <div className="pt-8">
+                <ToggleSwitch checked={Boolean(generationSchedule.enabled)} onChange={(value) => setGenerationSchedule((current) => ({ ...current, enabled: value }))} label="Enable automatic generation" />
+              </div>
+              <label className={ui.field}>
+                <span>Recurrence</span>
+                <select className={ui.input} value={generationSchedule.recurrenceType} onChange={(event) => setGenerationSchedule((current) => ({ ...current, recurrenceType: event.target.value }))}>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+              </label>
+              <label className={ui.field}>
+                <span>Generation Time</span>
+                <input className={ui.input} type="time" value={generationSchedule.generationTime} onChange={(event) => setGenerationSchedule((current) => ({ ...current, generationTime: event.target.value }))} />
+              </label>
+              <label className={ui.field}>
+                <span>Exam Type</span>
+                <select className={ui.input} value={generationSchedule.examType} onChange={(event) => setGenerationSchedule((current) => ({ ...current, examType: event.target.value, subjectIds: [], chapterIds: [] }))}>
+                  <option value="NEET">NEET</option>
+                  <option value="JEE">JEE</option>
+                </select>
+              </label>
+              {generationSchedule.recurrenceType === "monthly" ? (
+                <label className={ui.field}>
+                  <span>Monthly Date</span>
+                  <input className={ui.input} type="number" min="1" max="31" value={generationSchedule.monthlyDay} onChange={(event) => setGenerationSchedule((current) => ({ ...current, monthlyDay: event.target.value }))} />
+                </label>
+              ) : null}
+              <label className={ui.field}>
+                <span>Difficulty</span>
+                <select className={ui.input} value={generationSchedule.difficulty} onChange={(event) => setGenerationSchedule((current) => ({ ...current, difficulty: event.target.value }))}>
+                  <option value="mixed">Mixed</option>
+                  <option value="easy">Easy</option>
+                  <option value="moderate">Moderate</option>
+                  <option value="hard">Hard</option>
+                </select>
+              </label>
+              <label className={ui.field}>
+                <span>Question Count</span>
+                <input className={ui.input} type="number" min="0" max="300" value={generationSchedule.questionCount} onChange={(event) => setGenerationSchedule((current) => ({ ...current, questionCount: event.target.value }))} placeholder="0 uses blueprint" />
+              </label>
+              <label className={ui.field}>
+                <span>Title Prefix</span>
+                <input className={ui.input} value={generationSchedule.titlePrefix} onChange={(event) => setGenerationSchedule((current) => ({ ...current, titlePrefix: event.target.value }))} />
+              </label>
+            </div>
+
+            {generationSchedule.recurrenceType === "weekly" ? (
+              <div className="mt-4">
+                <div className="mb-2 text-sm font-semibold text-slate-700">Weekly Days</div>
+                <div className="flex flex-wrap gap-2">
+                  {WEEKDAY_OPTIONS.map((day) => {
+                    const active = generationSchedule.weeklyDays?.includes(day.value);
+                    return (
+                      <button key={day.value} type="button" className={cn(ui.buttonBase, active ? ui.buttonPrimary : ui.buttonSecondary)} onClick={() => toggleScheduleDay(day.value)}>
+                        {day.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
+
+            <div className="mt-4 grid gap-4 xl:grid-cols-2">
+              <div>
+                <div className="mb-2 text-sm font-semibold text-slate-700">Subjects</div>
+                <div className="flex max-h-40 flex-wrap gap-2 overflow-auto">
+                  {scheduleExamSubjects.map((subject) => {
+                    const active = generationSchedule.subjectIds.includes(subject.id);
+                    return (
+                      <button key={subject.id} type="button" className={cn(ui.buttonBase, active ? ui.buttonPrimary : ui.buttonSecondary)} onClick={() => toggleScheduleSubject(subject.id)}>
+                        {subject.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <div className="mb-2 text-sm font-semibold text-slate-700">Chapters</div>
+                <div className="flex max-h-40 flex-wrap gap-2 overflow-auto">
+                  {scheduleChapters.map((chapter) => {
+                    const active = generationSchedule.chapterIds.includes(chapter.id);
+                    return (
+                      <button key={chapter.id} type="button" className={cn(ui.buttonBase, active ? ui.buttonPrimary : ui.buttonSecondary)} onClick={() => toggleScheduleChapter(chapter.id)}>
+                        {chapter.name}
+                      </button>
+                    );
+                  })}
+                  {!scheduleChapters.length ? <span className="text-sm font-semibold text-slate-500">No chapters available for the selected filters.</span> : null}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-sm border border-slate-200 bg-white p-4">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="text-lg font-bold text-slate-900">Generation History</h3>
+                <button className={cn(ui.buttonBase, ui.buttonSecondary, "min-h-9 px-3 py-2 text-xs")} type="button" onClick={() => void refreshGenerationLogs()}>Refresh</button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className={ui.table}>
+                  <thead>
+                    <tr>
+                      <th className={ui.tableHead}>Generated At</th>
+                      <th className={ui.tableHead}>Schedule</th>
+                      <th className={ui.tableHead}>Test Name</th>
+                      <th className={ui.tableHead}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {generationLogs.map((log) => (
+                      <tr key={log.id}>
+                        <td className={ui.tableCell}>{log.generatedAt ? new Date(log.generatedAt).toLocaleString() : "-"}</td>
+                        <td className={ui.tableCell}>{log.scheduleType}</td>
+                        <td className={ui.tableCell}>{log.testName || log.message || "-"}</td>
+                        <td className={ui.tableCell}>
+                          <span className={cn(ui.badge, log.status === "success" ? "border-emerald-100 bg-emerald-50 text-emerald-700" : "border-rose-100 bg-rose-50 text-rose-700")}>{log.status}</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {!generationLogs.length ? <EmptyState title="No generation logs" description="Scheduled generation history will appear here." /> : null}
+            </div>
+          </div>
+        ) : null}
         <div className="mb-4 border-b border-slate-200 pb-4">
           <div className={ui.eyebrow}>Auto Generation</div>
           <h2 className="text-xl font-black tracking-tight text-slate-900">Generate Mock Test</h2>

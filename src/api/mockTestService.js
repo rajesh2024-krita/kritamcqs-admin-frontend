@@ -45,6 +45,22 @@ export const mockTestService = {
     const response = await http.get(`/admin/mock-tests/${id}/generation-history`);
     return response.data;
   },
+  async getGenerationSchedule() {
+    const response = await http.get("/admin/mock-tests/generation-schedule");
+    return response.data;
+  },
+  async saveGenerationSchedule(payload) {
+    const response = await http.put("/admin/mock-tests/generation-schedule", payload);
+    return response.data;
+  },
+  async runGenerationScheduleNow() {
+    const response = await http.post("/admin/mock-tests/generation-schedule/run-now");
+    return response.data;
+  },
+  async listGenerationLogs(params = {}) {
+    const response = await http.get("/admin/mock-tests/generation-logs", { params });
+    return response.data;
+  },
   async getMarkingSettings() {
     const response = await http.get("/admin/mock-tests/marking-settings");
     return response.data;
