@@ -128,8 +128,21 @@ export function QuestionsPage() {
     }
   }
 
+  async function updateNewColumnValues() {
+    if (!bulkPreview?.batchId) return;
+    setBulkBusy(true);
+    try {
+      const response = await questionService.updateNewColumnValues(bulkPreview.batchId);
+      setBulkPreview(response.data);
+      setBulkResult(null);
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   async function approveBulkUpload(uploadAnyway = false) {
     if (!bulkPreview?.batchId) return;
+    if (bulkPreview?.requiresNewColumnUpdate) return;
     setBulkBusy(true);
     try {
       if (bulkPreview?.missingCategoriesCount > 0) {
@@ -160,6 +173,8 @@ export function QuestionsPage() {
   const missingCounts = bulkPreview?.missingCounts || {};
   const createdSummary = bulkResult?.createdSummary || bulkPreview?.createdSummary || {};
   const imageSummary = bulkResult?.imageSummary || bulkPreview?.imageSummary || {};
+  const newColumnStatus = bulkPreview?.newColumnStatus || bulkResult?.newColumnStatus || {};
+  const requiresNewColumnUpdate = Boolean(bulkPreview?.requiresNewColumnUpdate);
 
   return (
     <>
@@ -388,13 +403,18 @@ export function QuestionsPage() {
                 Create Missing Fields
               </button>
             ) : null}
+            {requiresNewColumnUpdate ? (
+              <button className={cn(ui.buttonBase, ui.buttonPrimary)} type="button" disabled={bulkBusy} onClick={updateNewColumnValues}>
+                Update New Column Values
+              </button>
+            ) : null}
             {bulkPreview?.totalRows > 0 ? (
-              <button className={cn(ui.buttonBase, ui.buttonPrimary)} type="button" disabled={bulkBusy} onClick={() => approveBulkUpload(false)}>
+              <button className={cn(ui.buttonBase, ui.buttonPrimary)} type="button" disabled={bulkBusy || requiresNewColumnUpdate} onClick={() => approveBulkUpload(false)}>
                 Approve & Upload
               </button>
             ) : null}
             {bulkPreview?.warningCount > 0 || bulkPreview?.invalidCount > 0 ? (
-              <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" disabled={bulkBusy} onClick={() => approveBulkUpload(true)}>
+              <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" disabled={bulkBusy || requiresNewColumnUpdate} onClick={() => approveBulkUpload(true)}>
                 Approve & Upload Anyway
               </button>
             ) : null}
@@ -436,6 +456,27 @@ export function QuestionsPage() {
                   <span>Image Processing: <b>{bulkPreview.imageProcessingCount || 0}</b></span>
                 </div>
               </div>
+              {newColumnStatus?.columns?.length ? (
+                <div className={ui.panel}>
+                  <strong>New Column Values</strong>
+                  <div className="mt-3 grid gap-3 text-sm md:grid-cols-2">
+                    {newColumnStatus.columns.map((column) => (
+                      <span key={column.field}>
+                        Missing {column.label}: <b>{column.missingCount || 0}</b>
+                      </span>
+                    ))}
+                  </div>
+                  {requiresNewColumnUpdate ? (
+                    <p className="mt-3 text-sm font-semibold text-amber-700">
+                      Update new column values before approving this upload.
+                    </p>
+                  ) : (
+                    <p className="mt-3 text-sm font-semibold text-emerald-700">
+                      New column values updated successfully.
+                    </p>
+                  )}
+                </div>
+              ) : null}
               <div className={ui.panel}>
                 <div className="mb-2 flex items-center justify-between gap-3 text-sm font-semibold text-slate-700">
                   <span>Valid Questions</span>
