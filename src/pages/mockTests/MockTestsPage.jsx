@@ -224,6 +224,19 @@ function getRequiredQuestionCount(formState) {
   return 0;
 }
 
+const BLUEPRINT_TABLES = [
+  { key: "summary", title: "Answer Sheet", fields: [["label", "Question"], ["value", "Answer"]] },
+  { key: "subjectWise", title: "Subject Wise", fields: [["subject", "Subject"], ["questions", "Questions"], ["marks", "Marks"], ["weightage", "Weightage %"]] },
+  { key: "chapterWise", title: "Chapter Wise Blueprint", fields: [["subject", "Subject"], ["chapter", "Chapter"], ["expectedQuestions", "Expected Questions"]] },
+  { key: "topicWise", title: "Topic Wise Rules", fields: [["subject", "Subject"], ["chapter", "Chapter"], ["topic", "Topic"], ["expectedQuestions", "Expected Questions"]] },
+  { key: "rules", title: "Mock Test Rules", fields: [["rule", "Rule"], ["value", "Value"]] },
+];
+
+function getBlueprintSummaryValue(blueprint, labelPart) {
+  const found = (blueprint?.summary || []).find((item) => String(item.label || "").toLowerCase().includes(labelPart.toLowerCase()));
+  return found?.value || "-";
+}
+
 export function MockTestsPage({ freeOnly = false } = {}) {
   const toast = useToast();
   const [items, setItems] = useState([]);
@@ -255,6 +268,9 @@ export function MockTestsPage({ freeOnly = false } = {}) {
   const [savingMarkingSettings, setSavingMarkingSettings] = useState(false);
   const [verifiedAdminPassword, setVerifiedAdminPassword] = useState("");
   const [replacementTarget, setReplacementTarget] = useState(null);
+  const [patternBlueprints, setPatternBlueprints] = useState([]);
+  const [blueprintEditor, setBlueprintEditor] = useState(null);
+  const [savingBlueprint, setSavingBlueprint] = useState(false);
 
   const selectedQuestionIds = formState.questionIds || [];
   const requiredQuestionCount = getRequiredQuestionCount(formState);
@@ -307,13 +323,15 @@ export function MockTestsPage({ freeOnly = false } = {}) {
 
   async function loadLookups() {
     try {
-      const [subjectsResponse, chaptersResponse, markingSettingsResponse] = await Promise.all([
+      const [subjectsResponse, chaptersResponse, markingSettingsResponse, patternBlueprintsResponse] = await Promise.all([
         subjectService.list({ limit: 200 }),
         chapterService.list({ limit: 500 }),
         mockTestService.getMarkingSettings(),
+        mockTestService.listPatternBlueprints(),
       ]);
       setSubjects(subjectsResponse.data || []);
       setChapters(chaptersResponse.data || []);
+      setPatternBlueprints(patternBlueprintsResponse.data || []);
       const nextMarkingSettings = {
         predictionMinimumMockTests: markingSettingsResponse.data?.predictionMinimumMockTests || defaultMarkingSettings.predictionMinimumMockTests,
         neet: markingSettingsResponse.data?.neet || defaultMarkingSettings.neet,
@@ -600,6 +618,76 @@ export function MockTestsPage({ freeOnly = false } = {}) {
     }
   }
 
+  async function openBlueprintEditor(blueprint) {
+    const adminPassword = window.prompt(`Enter Admin Password to edit ${blueprint.title || blueprint.key} blueprint`);
+    if (!adminPassword) return;
+    try {
+      await mockTestService.verifyEditPassword(adminPassword);
+      setBlueprintEditor({
+        adminPassword,
+        data: JSON.parse(JSON.stringify(blueprint)),
+      });
+      toast.success("Admin password verified");
+    } catch (error) {
+      toast.error(error.message || "Admin password verification failed");
+    }
+  }
+
+  function updateBlueprintCell(tableKey, rowIndex, field, value) {
+    setBlueprintEditor((current) => {
+      if (!current) return current;
+      const rows = Array.isArray(current.data?.[tableKey]) ? [...current.data[tableKey]] : [];
+      rows[rowIndex] = { ...(rows[rowIndex] || {}), [field]: value };
+      return { ...current, data: { ...current.data, [tableKey]: rows } };
+    });
+  }
+
+  function addBlueprintRow(tableKey, fields) {
+    setBlueprintEditor((current) => {
+      if (!current) return current;
+      const blank = Object.fromEntries(fields.map(([field]) => [field, ""]));
+      return {
+        ...current,
+        data: {
+          ...current.data,
+          [tableKey]: [...(current.data?.[tableKey] || []), blank],
+        },
+      };
+    });
+  }
+
+  function removeBlueprintRow(tableKey, rowIndex) {
+    setBlueprintEditor((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        data: {
+          ...current.data,
+          [tableKey]: (current.data?.[tableKey] || []).filter((_, index) => index !== rowIndex),
+        },
+      };
+    });
+  }
+
+  async function handleSaveBlueprint(event) {
+    event.preventDefault();
+    if (!blueprintEditor?.data?.key) return;
+    setSavingBlueprint(true);
+    try {
+      const response = await mockTestService.updatePatternBlueprint(blueprintEditor.data.key, {
+        ...blueprintEditor.data,
+        adminPassword: blueprintEditor.adminPassword,
+      });
+      setPatternBlueprints((current) => current.map((item) => item.key === response.data?.key ? response.data : item));
+      setBlueprintEditor(null);
+      toast.success("Pattern blueprint updated");
+    } catch (error) {
+      toast.error(error.message || "Unable to save pattern blueprint");
+    } finally {
+      setSavingBlueprint(false);
+    }
+  }
+
   function updateMarkingRule(examKey, sectionKey, field, value) {
     setMarkingSettings((current) => ({
       ...current,
@@ -706,14 +794,24 @@ export function MockTestsPage({ freeOnly = false } = {}) {
         <div className="mb-4 border-b border-slate-200 pb-4">
           <div className={ui.eyebrow}>Read-Only Pattern Blueprints</div>
           <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
-            {[
-              ["NEET", "180 questions", "720 marks", "180 minutes", "Biology 90, Physics 45, Chemistry 45"],
-              ["JEE", "75 questions", "300 marks", "180 minutes", "Physics, Chemistry, Maths: 20 MCQ + 5 Numerical each"],
-            ].map((row) => (
-              <div key={row[0]} className="rounded-sm border border-slate-200 bg-slate-50 p-3">
-                <div className="text-sm font-black text-slate-900">{row[0]} predefined pattern</div>
+            {patternBlueprints.map((blueprint) => (
+              <div key={blueprint.key} className="rounded-sm border border-slate-200 bg-slate-50 p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-sm font-black text-slate-900">{blueprint.title || `${blueprint.key} Pattern Blueprint`}</div>
+                    <div className="mt-1 text-xs font-semibold text-slate-500">{(blueprint.chapterWise || []).length} chapter rows | {(blueprint.topicWise || []).length} topic rules</div>
+                  </div>
+                  <button className={cn(ui.buttonBase, ui.buttonSecondary, "min-h-9 px-3 py-2 text-xs")} type="button" onClick={() => void openBlueprintEditor(blueprint)}>
+                    <EditIcon size={14} />
+                    Edit
+                  </button>
+                </div>
                 <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
-                  {row.slice(1).map((item) => <span key={item} className={ui.pill}>{item}</span>)}
+                  <span className={ui.pill}>{getBlueprintSummaryValue(blueprint, "total questions")} questions</span>
+                  <span className={ui.pill}>{getBlueprintSummaryValue(blueprint, "total marks")} marks</span>
+                  {(blueprint.subjectWise || []).slice(0, 4).map((item) => (
+                    <span key={`${blueprint.key}-${item.subject}`} className={ui.pill}>{item.subject}: {item.questions}</span>
+                  ))}
                 </div>
               </div>
             ))}
@@ -1253,6 +1351,67 @@ export function MockTestsPage({ freeOnly = false } = {}) {
         onCancel={() => setDeleteItem(null)}
         onConfirm={handleDelete}
       />
+
+      {blueprintEditor ? (
+        <EntityFormWrapper
+          title={`Edit ${blueprintEditor.data.title || blueprintEditor.data.key} Blueprint`}
+          subtitle="This edits the read-only pattern blueprint shown above the mock-test list."
+          onCancel={() => setBlueprintEditor(null)}
+          onSubmit={handleSaveBlueprint}
+          submitLabel={savingBlueprint ? "Saving..." : "Save Blueprint"}
+          submitDisabled={savingBlueprint}
+        >
+          <label className={cn(ui.field, "mb-4")}>
+            <span>Blueprint Title</span>
+            <input
+              className={ui.input}
+              value={blueprintEditor.data.title || ""}
+              onChange={(event) => setBlueprintEditor((current) => ({ ...current, data: { ...current.data, title: event.target.value } }))}
+            />
+          </label>
+          <div className="space-y-5">
+            {BLUEPRINT_TABLES.map((table) => (
+              <div key={table.key} className="rounded-sm border border-slate-200 bg-slate-50 p-3">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-black uppercase tracking-[0.14em] text-slate-700">{table.title}</h3>
+                  <button className={cn(ui.buttonBase, ui.buttonSecondary, "min-h-9 px-3 py-2 text-xs")} type="button" onClick={() => addBlueprintRow(table.key, table.fields)}>
+                    <PlusIcon size={14} />
+                    Add Row
+                  </button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className={ui.table}>
+                    <thead>
+                      <tr>
+                        {table.fields.map(([, label]) => <th key={label} className={ui.tableHead}>{label}</th>)}
+                        <th className={ui.tableHead}>Action</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(blueprintEditor.data?.[table.key] || []).map((row, rowIndex) => (
+                        <tr key={`${table.key}-${rowIndex}`}>
+                          {table.fields.map(([field]) => (
+                            <td key={field} className={ui.tableCell}>
+                              <input
+                                className={ui.input}
+                                value={row?.[field] ?? ""}
+                                onChange={(event) => updateBlueprintCell(table.key, rowIndex, field, event.target.value)}
+                              />
+                            </td>
+                          ))}
+                          <td className={ui.tableCell}>
+                            <button className="text-sm font-semibold text-rose-600" type="button" onClick={() => removeBlueprintRow(table.key, rowIndex)}>Remove</button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            ))}
+          </div>
+        </EntityFormWrapper>
+      ) : null}
 
       {historyModal ? (
         <EntityFormWrapper

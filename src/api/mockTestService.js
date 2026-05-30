@@ -53,4 +53,12 @@ export const mockTestService = {
     const response = await http.post("/admin/mock-tests/marking-settings", payload);
     return response.data;
   },
+  async listPatternBlueprints() {
+    const response = await http.get("/admin/mock-tests/pattern-blueprints");
+    return response.data;
+  },
+  async updatePatternBlueprint(key, payload) {
+    const response = await http.put(`/admin/mock-tests/pattern-blueprints/${key}`, payload);
+    return response.data;
+  },
 };
