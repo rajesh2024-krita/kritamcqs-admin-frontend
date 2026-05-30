@@ -38,10 +38,10 @@ const PRESET_CONFIG = {
     predictionTitle: "Predicted JEE Score",
     predictionDescription: "This mock follows the JEE real exam pattern and predicts your likely real-exam scoring level.",
     instructions: [
-      "Physics, Chemistry, and Maths each contain 20 MCQs and 5 numerical questions.",
+      "Physics, Chemistry, and Maths question counts follow the saved JEE pattern blueprint.",
       "MCQ marking: correct +4, wrong -1, unanswered 0.",
       "Numerical marking follows the configured JEE Main pattern.",
-      "Total questions 75, total marks 300, duration 180 minutes.",
+      "Total questions and marks follow the saved JEE pattern blueprint.",
       "Chemistry is usually the fastest-scoring section, while Maths is the most time-consuming.",
     ],
   },
@@ -218,9 +218,26 @@ function formatAvailability(item) {
   return "All days";
 }
 
-function getRequiredQuestionCount(formState) {
+function parseBlueprintNumber(value) {
+  const match = String(value ?? "").match(/-?\d+(?:\.\d+)?/);
+  return match ? Number(match[0]) : 0;
+}
+
+function getBlueprintQuestionCount(blueprints, examType) {
+  const blueprint = (blueprints || []).find((item) => String(item.key || "").toUpperCase() === String(examType || "").toUpperCase());
+  const subjectTotal = (blueprint?.subjectWise || []).reduce((sum, item) => sum + parseBlueprintNumber(item?.questions), 0);
+  if (subjectTotal > 0) return subjectTotal;
+  const summaryRow = (blueprint?.summary || []).find((item) => String(item?.label || "").toLowerCase().includes("total questions"));
+  return parseBlueprintNumber(summaryRow?.value);
+}
+
+function getRequiredQuestionCount(formState, blueprints = []) {
+  if (formState.patternPreset === "NEET_REAL" || formState.patternPreset === "JEE_REAL") {
+    const blueprintCount = getBlueprintQuestionCount(blueprints, formState.examType);
+    if (blueprintCount > 0) return blueprintCount;
+  }
   if (formState.patternPreset === "NEET_REAL") return 180;
-  if (formState.patternPreset === "JEE_REAL") return 75;
+  if (formState.patternPreset === "JEE_REAL") return 90;
   return 0;
 }
 
@@ -273,7 +290,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
   const [savingBlueprint, setSavingBlueprint] = useState(false);
 
   const selectedQuestionIds = formState.questionIds || [];
-  const requiredQuestionCount = getRequiredQuestionCount(formState);
+  const requiredQuestionCount = getRequiredQuestionCount(formState, patternBlueprints);
   const questionCountValidationMessage = requiredQuestionCount && selectedQuestionIds.length !== requiredQuestionCount
     ? `The mock test requires ${requiredQuestionCount} questions based on the selected ${formState.examType} pattern, but only ${selectedQuestionIds.length} questions are currently selected.`
     : "";

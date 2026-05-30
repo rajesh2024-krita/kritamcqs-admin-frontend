@@ -31,12 +31,12 @@ export const EXAM_PATTERN_CONFIG = {
   },
   JEE: {
     durationMinutes: 180,
-    totalQuestions: 75,
+    totalQuestions: 90,
     totalMarks: 300,
     subjects: {
-      Physics: { mcq: 20, numerical: 5 },
-      Chemistry: { mcq: 20, numerical: 5 },
-      Mathematics: { mcq: 20, numerical: 5 },
+      Physics: 30,
+      Chemistry: 30,
+      Mathematics: 30,
     },
     responseTypes: ["single", "numeric"],
     marking: { mcq: { correct: 4, wrong: -1, unanswered: 0 }, numerical: { correct: 4, wrong: 0, unanswered: 0 } },
