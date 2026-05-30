@@ -253,6 +253,8 @@ export function MockTestsPage({ freeOnly = false } = {}) {
   const [historyModal, setHistoryModal] = useState(null);
   const [markingSettings, setMarkingSettings] = useState(defaultMarkingSettings);
   const [savingMarkingSettings, setSavingMarkingSettings] = useState(false);
+  const [verifiedAdminPassword, setVerifiedAdminPassword] = useState("");
+  const [replacementTarget, setReplacementTarget] = useState(null);
 
   const selectedQuestionIds = formState.questionIds || [];
   const requiredQuestionCount = getRequiredQuestionCount(formState);
@@ -265,13 +267,15 @@ export function MockTestsPage({ freeOnly = false } = {}) {
       ...questionResults.map((item) => [item.id, item]),
       ...knownSelectedQuestions.map((item) => [item.id, item]),
     ]);
-    return selectedQuestionIds.map((id) => known.get(id) || { id, question: "Selected question", subjectName: "-", chapterName: "-", difficulty: "-" });
+    return selectedQuestionIds.map((id) => known.get(id) || { id, question: "Selected question", subjectName: "-", chapterName: "-", topicName: "-", difficulty: "-" });
   }, [questionResults, knownSelectedQuestions, selectedQuestionIds]);
 
   const filteredChapters = useMemo(
     () => chapters.filter((item) => !questionSubjectId || String(item.subjectId?.id || item.subjectId) === String(questionSubjectId)),
     [chapters, questionSubjectId],
   );
+
+  const lockedReplacement = Boolean(replacementTarget);
   const autoExamSubjects = useMemo(
     () => subjects.filter((item) => autoForm.examType === "BOTH" || item.examType === autoForm.examType),
     [subjects, autoForm.examType],
@@ -339,7 +343,8 @@ export function MockTestsPage({ freeOnly = false } = {}) {
         search: questionSearch,
         examType: formState.examType,
         subjectId: questionSubjectId,
-        chapterId: questionChapterId,
+        chapterId: lockedReplacement ? replacementTarget.chapterId : questionChapterId,
+        topicId: lockedReplacement ? replacementTarget.topicId : undefined,
       });
       setQuestionResults(response.data || []);
       setQuestionMeta(response.meta);
@@ -375,7 +380,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
       loadQuestions(questionPage);
     }, 200);
     return () => window.clearTimeout(timeout);
-  }, [showForm, questionSearch, questionSubjectId, questionChapterId, formState.examType, questionPage, selectedQuestionIds.join(",")]);
+  }, [showForm, questionSearch, questionSubjectId, questionChapterId, formState.examType, questionPage, selectedQuestionIds.join(","), replacementTarget?.id]);
 
   useEffect(() => {
     if (!showForm || formState.markingOverrideEnabled) return;
@@ -390,6 +395,8 @@ export function MockTestsPage({ freeOnly = false } = {}) {
 
   function openCreate() {
     setEditingItem(null);
+    setVerifiedAdminPassword("");
+    setReplacementTarget(null);
     const presetWithMarking = getPresetWithMarking(defaultForm.patternPreset, markingSettings);
     const scheme = getDefaultSchemeForExam(markingSettings, presetWithMarking.examType);
     setFormState({
@@ -415,7 +422,17 @@ export function MockTestsPage({ freeOnly = false } = {}) {
     setShowForm(true);
   }
 
-  function openEdit(item) {
+  async function openEdit(item) {
+    const adminPassword = window.prompt("Enter Admin Password to edit this mock test pattern");
+    if (!adminPassword) return;
+    try {
+      await mockTestService.verifyEditPassword(adminPassword);
+      setVerifiedAdminPassword(adminPassword);
+      toast.success("Admin password verified");
+    } catch (error) {
+      toast.error(error.message || "Admin password verification failed");
+      return;
+    }
     const nextForm = buildFormFromItem(item);
     setEditingItem(item);
     setFormState(nextForm);
@@ -425,11 +442,32 @@ export function MockTestsPage({ freeOnly = false } = {}) {
     setKnownSelectedQuestions(Array.isArray(item.manualQuestions) ? item.manualQuestions : Array.isArray(item.questions) ? item.questions : []);
     setQuestionPage(1);
     setDayInput((nextForm.availableDaysOfMonth || []).join(", "));
+    setReplacementTarget(null);
     setShowForm(true);
   }
 
   function toggleQuestion(questionId) {
     const selectedRow = questionResults.find((item) => item.id === questionId);
+    if (replacementTarget) {
+      if (!selectedRow) return;
+      const sameSubject = String(selectedRow.subjectId || "") === String(replacementTarget.subjectId || "");
+      const sameChapter = String(selectedRow.chapterId || "") === String(replacementTarget.chapterId || "");
+      const sameTopic = String(selectedRow.topicId || "") === String(replacementTarget.topicId || "");
+      if (!sameSubject || !sameChapter || !sameTopic) {
+        toast.error("Replacement must match the same Subject, Chapter, and Topic");
+        return;
+      }
+      setKnownSelectedQuestions((known) => (
+        known.some((item) => item.id === selectedRow.id) ? known : [...known, selectedRow]
+      ));
+      setFormState((current) => ({
+        ...current,
+        questionIds: current.questionIds.map((id) => id === replacementTarget.id ? questionId : id),
+      }));
+      setReplacementTarget(null);
+      toast.success("Question replaced without changing pattern weightage");
+      return;
+    }
     const isAlreadySelected = selectedQuestionIds.includes(questionId);
     if (!isAlreadySelected && selectedRow) {
       setKnownSelectedQuestions((known) => (
@@ -447,6 +485,18 @@ export function MockTestsPage({ freeOnly = false } = {}) {
 
   function removeSelectedQuestion(questionId) {
     setFormState((current) => ({ ...current, questionIds: current.questionIds.filter((id) => id !== questionId) }));
+  }
+
+  function beginReplaceQuestion(item) {
+    if (!item.subjectId || !item.chapterId || !item.topicId) {
+      toast.error("This question is missing Subject, Chapter, or Topic metadata and cannot be safely replaced.");
+      return;
+    }
+    setReplacementTarget(item);
+    setQuestionSubjectId(item.subjectId);
+    setQuestionChapterId(item.chapterId);
+    setQuestionSearch("");
+    setQuestionPage(1);
   }
 
   function toggleWeekday(weekday) {
@@ -496,10 +546,12 @@ export function MockTestsPage({ freeOnly = false } = {}) {
   }
 
   async function handleRegenerate(item) {
+    const adminPassword = window.prompt("Enter Admin Password to regenerate this mock test pattern");
+    if (!adminPassword) return;
     const key = String(item.id);
     setRowRegenerating((current) => ({ ...current, [key]: true }));
     try {
-      await mockTestService.regenerate(item.id, {});
+      await mockTestService.regenerate(item.id, { adminPassword });
       toast.success("Mock test regenerated");
       await loadItems({ ...query, page: query.page });
     } catch (error) {
@@ -592,7 +644,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
           .filter(Boolean),
       };
       if (editingItem) {
-        await mockTestService.update(editingItem.id, payload);
+        await mockTestService.update(editingItem.id, { ...payload, adminPassword: verifiedAdminPassword });
         toast.success("Mock test updated");
       } else {
         await mockTestService.create(payload);
@@ -616,6 +668,22 @@ export function MockTestsPage({ freeOnly = false } = {}) {
     }
   }
 
+  async function handleDownload(item) {
+    try {
+      const blob = await mockTestService.download(item.id);
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${String(item.slug || item.title || "mock-test").replace(/[^a-z0-9_-]+/gi, "-")}.txt`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast.error(error.message || "Unable to download mock test");
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {/* <div className={ui.panel}>
@@ -635,6 +703,23 @@ export function MockTestsPage({ freeOnly = false } = {}) {
       </div> */}
 
       <div className={ui.compactPanel}>
+        <div className="mb-4 border-b border-slate-200 pb-4">
+          <div className={ui.eyebrow}>Read-Only Pattern Blueprints</div>
+          <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
+            {[
+              ["NEET", "180 questions", "720 marks", "180 minutes", "Biology 90, Physics 45, Chemistry 45"],
+              ["JEE", "75 questions", "300 marks", "180 minutes", "Physics, Chemistry, Maths: 20 MCQ + 5 Numerical each"],
+            ].map((row) => (
+              <div key={row[0]} className="rounded-sm border border-slate-200 bg-slate-50 p-3">
+                <div className="text-sm font-black text-slate-900">{row[0]} predefined pattern</div>
+                <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
+                  {row.slice(1).map((item) => <span key={item} className={ui.pill}>{item}</span>)}
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-xs font-semibold text-slate-500">Patterns are read-only until Edit is clicked and the Admin Password is verified.</p>
+        </div>
         <div className="mb-4 border-b border-slate-200 pb-4">
           <div className={ui.eyebrow}>Auto Generation</div>
           <h2 className="text-xl font-black tracking-tight text-slate-900">Generate Mock Test</h2>
@@ -886,9 +971,12 @@ export function MockTestsPage({ freeOnly = false } = {}) {
                       </td>
                       <td className={ui.tableCell}>
                         <div className="flex flex-wrap items-center gap-3">
-                          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openEdit(item)}>
+                          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => void openEdit(item)}>
                             <EditIcon size={16} />
                             Edit
+                          </button>
+                          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => void handleDownload(item)}>
+                            Download
                           </button>
                           {item.generationSource === "auto" ? (
                             <button
@@ -1073,19 +1161,25 @@ export function MockTestsPage({ freeOnly = false } = {}) {
                   <div className="mb-2 text-sm font-semibold text-slate-700">Find Questions</div>
                   <SearchBar value={questionSearch} onChange={(value) => { setQuestionSearch(value); setQuestionPage(1); }} placeholder="Search question text..." />
                 </div>
-                <select className={cn(ui.input, "lg:max-w-[220px]")} value={questionSubjectId} onChange={(event) => { setQuestionSubjectId(event.target.value); setQuestionChapterId(""); setQuestionPage(1); }}>
+                <select className={cn(ui.input, "lg:max-w-[220px]")} disabled={lockedReplacement} value={questionSubjectId} onChange={(event) => { setQuestionSubjectId(event.target.value); setQuestionChapterId(""); setQuestionPage(1); }}>
                   <option value="">All Subjects</option>
                   {subjects.filter((item) => formState.examType === "BOTH" || item.examType === formState.examType).map((item) => (
                     <option key={item.id} value={item.id}>{item.name}</option>
                   ))}
                 </select>
-                <select className={cn(ui.input, "lg:max-w-[220px]")} value={questionChapterId} onChange={(event) => { setQuestionChapterId(event.target.value); setQuestionPage(1); }}>
+                <select className={cn(ui.input, "lg:max-w-[220px]")} disabled={lockedReplacement} value={questionChapterId} onChange={(event) => { setQuestionChapterId(event.target.value); setQuestionPage(1); }}>
                   <option value="">All Chapters</option>
                   {filteredChapters.map((item) => (
                     <option key={item.id} value={item.id}>{item.name}</option>
                   ))}
                 </select>
               </div>
+              {replacementTarget ? (
+                <div className="mb-4 rounded-sm border border-amber-200 bg-amber-50 p-3 text-sm font-semibold text-amber-800">
+                  Replacing one question. Choose only from the same Subject, Chapter, and Topic: {replacementTarget.subjectName} | {replacementTarget.chapterName} | {replacementTarget.topicName || "-"}
+                  <button type="button" className="ml-3 text-amber-900 underline" onClick={() => setReplacementTarget(null)}>Cancel</button>
+                </div>
+              ) : null}
 
               {questionLoading ? <LoadingSpinner label="Loading questions..." /> : null}
               {!questionLoading ? (
@@ -1105,7 +1199,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
                             {item.questionImageUrl ? (
                               <img src={item.questionImageUrl} alt="Question visual" className="mt-2 max-h-20 rounded-sm border border-slate-200 object-contain" />
                             ) : null}
-                            <div className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">{item.subjectName} | {item.chapterName} | {item.difficulty}</div>
+                            <div className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">{item.subjectName} | {item.chapterName} | {item.topicName || "-"} | {item.difficulty}</div>
                           </div>
                           <span className={ui.pill}>{isSelected ? "Selected" : "Add"}</span>
                         </div>
@@ -1133,13 +1227,16 @@ export function MockTestsPage({ freeOnly = false } = {}) {
                   <div key={item.id} className="rounded-sm border border-slate-200 bg-white p-4">
                     <div className="mb-2 flex items-start justify-between gap-3">
                       <span className={ui.pill}>#{index + 1}</span>
-                      <button type="button" className="text-sm font-semibold text-rose-600" onClick={() => removeSelectedQuestion(item.id)}>Remove</button>
+                      <div className="flex gap-3">
+                        <button type="button" className="text-sm font-semibold text-blue-700" onClick={() => beginReplaceQuestion(item)}>Replace</button>
+                        <button type="button" className="text-sm font-semibold text-rose-600" onClick={() => removeSelectedQuestion(item.id)}>Remove</button>
+                      </div>
                     </div>
                     <MathText className="line-clamp-3 text-sm font-semibold text-slate-900">{item.question}</MathText>
                     {item.questionImageUrl ? (
                       <img src={item.questionImageUrl} alt="Question visual" className="mt-2 max-h-20 rounded-sm border border-slate-200 object-contain" />
                     ) : null}
-                    <div className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">{item.subjectName} | {item.chapterName} | {item.difficulty}</div>
+                    <div className="mt-2 text-xs uppercase tracking-[0.18em] text-slate-500">{item.subjectName} | {item.chapterName} | {item.topicName || "-"} | {item.difficulty}</div>
                   </div>
                 ))}
                 {!selectedQuestions.length ? <EmptyState title="No questions selected" description="Use the question finder to build a fixed test paper." /> : null}

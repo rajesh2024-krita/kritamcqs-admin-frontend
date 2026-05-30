@@ -25,6 +25,14 @@ export const mockTestService = {
     const response = await http.get("/admin/mock-tests/questions", { params });
     return response.data;
   },
+  async verifyEditPassword(adminPassword) {
+    const response = await http.post("/admin/mock-tests/verify-edit-password", { adminPassword });
+    return response.data;
+  },
+  async download(id) {
+    const response = await http.get(`/admin/mock-tests/${id}/download`, { responseType: "blob" });
+    return response.data;
+  },
   async autoGenerate(payload) {
     const response = await http.post("/admin/mock-tests/auto-generate", payload);
     return response.data;
