@@ -64,6 +64,149 @@ function formatPercent(value) {
   return Math.max(0, Math.min(100, Math.round(percent)));
 }
 
+function formatDateTime(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatAuditValue(value) {
+  if (!value) return "-";
+  if (typeof value === "string") return value;
+  return JSON.stringify(value, null, 2);
+}
+
+function resolvePreviewImageSource(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^https?:\/\//i.test(raw) || raw.startsWith("data:")) return raw;
+  if (!raw.startsWith("/")) return raw;
+  if (raw.startsWith("/uploads/")) {
+    const appBase = String(import.meta.env.VITE_APP_FRONTEND_BASE_URL || "").replace(/\/+$/, "");
+    if (appBase) return `${appBase}${raw}`;
+  }
+  const base = String(import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "").replace(/\/api$/, "");
+  return base ? `${base}${raw}` : raw;
+}
+
+function lookupById(items = [], id) {
+  if (!id) return null;
+  return items.find((item) => String(item.id || item._id) === String(id)) || null;
+}
+
+function QuestionImage({ src, alt }) {
+  const resolved = resolvePreviewImageSource(src);
+  if (!resolved) return null;
+  return (
+    <img
+      src={resolved}
+      alt={alt}
+      className="mt-3 max-h-52 w-full rounded-lg border border-slate-200 bg-white object-contain p-2"
+    />
+  );
+}
+
+function QuestionLivePreview({ formState, lookups }) {
+  const subject = lookupById(lookups.subjects, formState.subjectId);
+  const topic = lookupById(lookups.topics, formState.topicId);
+  const year = lookupById(lookups.years, formState.yearId);
+  const difficulty = lookupById(lookups.difficulties, formState.difficultyId);
+  const questionType = lookupById(lookups.questionTypes, formState.questionTypeId);
+  const examType = formState.examType || subject?.examType || deriveExamType(formState.examMode, formState.exam);
+  const optionRows = [
+    ["A", formState.optionA, formState.optionAImageUrl],
+    ["B", formState.optionB, formState.optionBImageUrl],
+    ["C", formState.optionC, formState.optionCImageUrl],
+    ["D", formState.optionD, formState.optionDImageUrl],
+  ];
+  const showOptions = formState.responseType !== "numeric";
+
+  return (
+    <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 shadow-sm">
+      <div className="border-b border-slate-200 bg-white px-4 py-3">
+        <div className="flex items-center gap-2">
+          <div className="grid h-9 w-9 place-items-center rounded-full bg-blue-600 text-sm font-black text-white">K</div>
+          <div>
+            <div className="text-lg font-black leading-none text-blue-700">KritaMCQs</div>
+            <div className="text-[9px] font-black uppercase tracking-[0.22em] text-slate-400">NEET JEE</div>
+          </div>
+        </div>
+        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-200">
+          <div className="h-full w-2/3 rounded-full bg-blue-600" />
+        </div>
+        <div className="mt-3 grid grid-cols-4 gap-1 text-[10px] font-black">
+          <span className="rounded-full bg-emerald-50 px-2 py-1 text-emerald-700">Answered 0</span>
+          <span className="rounded-full bg-amber-50 px-2 py-1 text-amber-700">Skipped 0</span>
+          <span className="rounded-full bg-violet-50 px-2 py-1 text-violet-700">Review 0</span>
+          <span className="rounded-full bg-slate-100 px-2 py-1 text-slate-600">Unanswered</span>
+        </div>
+      </div>
+
+      <div className="space-y-3 p-3">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <span className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-black text-emerald-700">
+              {examType || "Exam"} {year?.name ? `PYQ: ${year.name}` : ""}
+            </span>
+          </div>
+          <div className="mb-3 flex flex-wrap gap-2 text-[11px] font-black text-slate-700">
+            <span className="rounded-full bg-emerald-50 px-2 py-1">Exam Type: {examType || "-"}</span>
+            <span className="rounded-full bg-slate-100 px-2 py-1">{subject?.name || "Subject"}</span>
+            <span className="rounded-full bg-slate-100 px-2 py-1">{topic?.name || "Topic"}</span>
+          </div>
+          <MathText className="text-sm font-black leading-6 text-slate-950">
+            {formState.question || "Question preview will appear here as you type."}
+          </MathText>
+          <QuestionImage src={formState.questionImageUrl} alt="Question preview" />
+        </div>
+
+        {showOptions ? optionRows.map(([label, text, image]) => (
+          <div key={label} className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="grid grid-cols-[24px_minmax(0,1fr)] gap-2 text-sm text-slate-950">
+              <span className="font-medium">{label}.</span>
+              <div>
+                <MathText className="font-semibold leading-6">{text || `Option ${label}`}</MathText>
+                <QuestionImage src={image} alt={`Option ${label} preview`} />
+              </div>
+            </div>
+          </div>
+        )) : (
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Numeric Answer</div>
+            <MathText className="mt-2 text-sm font-semibold text-slate-950">{formState.numericAnswer || "-"}</MathText>
+          </div>
+        )}
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-4">
+          <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px] font-black text-slate-600">
+            <span className="rounded-full bg-blue-50 px-2 py-1 text-blue-700">Answer: {showOptions ? (formState.correctOption || formState.correctOptions?.join(", ") || "-") : "Numeric"}</span>
+            <span className="rounded-full bg-slate-100 px-2 py-1">{difficulty?.name || formState.difficulty || "Difficulty"}</span>
+            <span className="rounded-full bg-slate-100 px-2 py-1">{questionType?.name || formState.responseType || "Question Type"}</span>
+          </div>
+          <div className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Explanation</div>
+          <MathText className="mt-2 text-sm font-semibold leading-6 text-slate-950">
+            {formState.explanation || "Explanation preview will appear here."}
+          </MathText>
+          <QuestionImage src={formState.explanationImageUrl} alt="Explanation preview" />
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          <button className="rounded-lg border border-slate-200 bg-white px-2 py-3 text-xs font-bold text-slate-600" type="button">Previous</button>
+          <button className="rounded-lg border border-slate-200 bg-white px-2 py-3 text-xs font-bold text-slate-600" type="button">Skip</button>
+          <button className="rounded-lg bg-blue-600 px-2 py-3 text-xs font-bold text-white" type="button">Next</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function uniqueYearOptions(years = []) {
   const seen = new Set();
   return years
@@ -85,6 +228,9 @@ export function QuestionsPage() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [showMissingFields, setShowMissingFields] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [historyQuestion, setHistoryQuestion] = useState(null);
+  const [historyRows, setHistoryRows] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const bulkCompletionRefreshRef = useRef(false);
 
   useEffect(() => {
@@ -173,6 +319,18 @@ export function QuestionsPage() {
     URL.revokeObjectURL(url);
   }
 
+  async function openQuestionHistory(row) {
+    setHistoryQuestion(row);
+    setHistoryRows([]);
+    setHistoryLoading(true);
+    try {
+      const response = await questionService.history(row.id);
+      setHistoryRows(response?.data || []);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
   const missingCounts = bulkPreview?.missingCounts || {};
   const createdSummary = bulkResult?.createdSummary || bulkPreview?.createdSummary || {};
   const imageSummary = bulkResult?.imageSummary || bulkPreview?.imageSummary || {};
@@ -184,6 +342,7 @@ export function QuestionsPage() {
   const canEditQuestions = !isEmployee(admin) || permissions.edit === true;
   const canDeleteQuestions = !isEmployee(admin) || permissions.delete === true;
   const canBulkUploadQuestions = !isEmployee(admin) || permissions.bulkUpload === true;
+  const canViewQuestionHistory = !isEmployee(admin);
 
   if (!canViewQuestions) {
     return (
@@ -205,6 +364,7 @@ export function QuestionsPage() {
       canEdit={canEditQuestions}
       canDelete={canDeleteQuestions}
       canBulkDelete={canDeleteQuestions}
+      renderFormPreview={({ formState, lookups }) => <QuestionLivePreview formState={formState} lookups={lookups} />}
       headerActions={canBulkUploadQuestions ? (
         <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => setBulkOpen(true)}>
           Bulk Upload
@@ -378,20 +538,102 @@ export function QuestionsPage() {
         { name: "isNumerical", label: "Is Numerical", type: "checkbox" },
       ]}
       columns={[
-        { key: "examType", label: "Exam Type", render: (row) => row.examType || deriveExamType(row.examMode, row.exam) },
-        { key: "question", label: "Question", render: (row) => <MathText className="line-clamp-2">{row.question || "[Image Question]"}</MathText> },
-        { key: "subjectId", label: "Subject", render: (row) => formatSubjectLabel(row.subjectId) },
-        { key: "chapterId", label: "Chapter", render: (row) => row.chapterId?.name || "-" },
-        { key: "topicId", label: "Topic", render: (row) => row.topicId?.name || "-" },
-        { key: "difficulty", label: "Difficulty", render: (row) => row.difficultyId?.name || row.difficulty || "-" },
-        { key: "responseType", label: "Response Type" },
-        { key: "exact", label: "PYQ", render: (row) => {
-          const isExact = row.exact === true || ["true", "1", "yes", "y"].includes(String(row.exact || "").trim().toLowerCase());
-          return isExact ? "Exact" : (row.yearId || row.year || row.yearLabel) ? "Reference" : "-";
-        } },
-        { key: "questionStatus", label: "Review", render: (row) => row.questionStatus === "incomplete" ? "Incomplete Question" : "Complete" },
+        { key: "id", label: "Question ID", render: (row) => row.id || "-" },
+        {
+          key: "question",
+          label: "Question Title/Preview",
+          render: (row) => <MathText className="line-clamp-2 min-w-[220px]">{row.question || "[Image Question]"}</MathText>,
+        },
+        {
+          key: "createdByName",
+          label: "Created By",
+          render: (row) => (
+            <div className="min-w-[140px]">
+              <div className="font-semibold text-slate-900">{row.createdByName || "-"}</div>
+              <div className="text-xs text-slate-500">{row.createdByEmail || ""}</div>
+            </div>
+          ),
+        },
+        { key: "createdAt", label: "Created Date", render: (row) => formatDateTime(row.createdAt) },
+        {
+          key: "lastModifiedByName",
+          label: "Last Modified By",
+          render: (row) => (
+            <div className="min-w-[140px]">
+              <div className="font-semibold text-slate-900">{row.lastModifiedByName || row.createdByName || "-"}</div>
+              <div className="text-xs text-slate-500">{row.lastModifiedByEmail || row.createdByEmail || ""}</div>
+            </div>
+          ),
+        },
+        { key: "lastModifiedAt", label: "Last Modified Date & Time", render: (row) => formatDateTime(row.lastModifiedAt || row.updatedAt) },
+        { key: "editCount", label: "Edit Count", render: (row) => Number(row.editCount || 0) },
+        {
+          key: "history",
+          label: "Question History",
+          render: (row) => (
+            canViewQuestionHistory ? (
+              <button className={cn(ui.buttonBase, ui.buttonSecondary, "px-3 py-2 text-xs")} type="button" onClick={() => openQuestionHistory(row)}>
+                View History
+              </button>
+            ) : "-"
+          ),
+        },
       ]}
     />
+    {historyQuestion ? (
+      <EntityFormWrapper
+        title="Question History"
+        subtitle={`Question ID: ${historyQuestion.id || "-"}`}
+        onCancel={() => setHistoryQuestion(null)}
+        onSubmit={(event) => event.preventDefault()}
+        submitLabel="Close"
+      >
+        <div className="space-y-4">
+          <div className={ui.panel}>
+            <div className="grid gap-3 text-sm md:grid-cols-4">
+              <span><b>Created By:</b> {historyQuestion.createdByName || "-"}</span>
+              <span><b>Created On:</b> {formatDateTime(historyQuestion.createdAt)}</span>
+              <span><b>Last Modified By:</b> {historyQuestion.lastModifiedByName || historyQuestion.createdByName || "-"}</span>
+              <span><b>Total Edits:</b> {Number(historyQuestion.editCount || 0)}</span>
+            </div>
+          </div>
+          <div className={ui.tableScroll}>
+            <table className={ui.table}>
+              <thead>
+                <tr>
+                  <th className={ui.tableHead}>Employee/Admin Name</th>
+                  <th className={ui.tableHead}>Email Address</th>
+                  <th className={ui.tableHead}>Action Performed</th>
+                  <th className={ui.tableHead}>Previous Value</th>
+                  <th className={ui.tableHead}>Updated Value</th>
+                  <th className={ui.tableHead}>Date & Time of Change</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historyLoading ? (
+                  <tr><td className={ui.tableCell} colSpan={6}>Loading history...</td></tr>
+                ) : historyRows.length ? historyRows.map((entry) => (
+                  <tr key={entry.id || entry._id}>
+                    <td className={ui.tableCell}>{entry.employeeName || "-"}</td>
+                    <td className={ui.tableCell}>{entry.employeeEmail || "-"}</td>
+                    <td className={ui.tableCell}>{String(entry.action || "-").toUpperCase()}</td>
+                    <td className={ui.tableCell}>
+                      <pre className="max-h-40 min-w-[240px] overflow-auto whitespace-pre-wrap rounded-sm bg-slate-50 p-3 text-xs text-slate-700">{formatAuditValue(entry.previousValue)}</pre>
+                    </td>
+                    <td className={ui.tableCell}>
+                      <pre className="max-h-40 min-w-[240px] overflow-auto whitespace-pre-wrap rounded-sm bg-slate-50 p-3 text-xs text-slate-700">{formatAuditValue(entry.updatedValue)}</pre>
+                    </td>
+                    <td className={ui.tableCell}>{formatDateTime(entry.createdAt)}</td>
+                  </tr>
+                )) : (
+                  <tr><td className={ui.tableCell} colSpan={6}>No history found for this question.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </EntityFormWrapper>
+    ) : null}
     {bulkOpen ? (
       <EntityFormWrapper
         title="Questions Bulk Upload"

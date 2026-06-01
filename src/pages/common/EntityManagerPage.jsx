@@ -59,6 +59,7 @@ export function EntityManagerPage({
   canEdit = true,
   canDelete = true,
   canBulkDelete = true,
+  renderFormPreview = null,
 }) {
   const toast = useToast();
   const { admin } = useAuth();
@@ -692,13 +693,28 @@ export function EntityManagerPage({
           onSubmit={handleSubmit}
           submitLabel={editingItem ? "Save Changes" : "Create"}
         >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {visibleFields.map((field) => (
-              <Field key={field.name} label={field.label} error={errors[field.name]} className={field.full ? ui.fieldFull : ""}>
-                {renderInput(field)}
-              </Field>
-            ))}
-          </div>
+          {renderFormPreview ? (
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {visibleFields.map((field) => (
+                  <Field key={field.name} label={field.label} error={errors[field.name]} className={field.full ? ui.fieldFull : ""}>
+                    {renderInput(field)}
+                  </Field>
+                ))}
+              </div>
+              <div className="xl:sticky xl:top-0 xl:self-start">
+                {renderFormPreview({ formState, lookups, editingItem })}
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {visibleFields.map((field) => (
+                <Field key={field.name} label={field.label} error={errors[field.name]} className={field.full ? ui.fieldFull : ""}>
+                  {renderInput(field)}
+                </Field>
+              ))}
+            </div>
+          )}
         </EntityFormWrapper>
       ) : null}
 

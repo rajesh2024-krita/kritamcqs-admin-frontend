@@ -41,4 +41,10 @@ export const questionService = {
     const response = await http.post(`/admin/questions/bulk-upload/${batchId}/approve`, { uploadAnyway });
     return response.data;
   },
+  async history(questionId) {
+    const response = await http.get("/admin/question-activity-logs", {
+      params: { questionId, limit: 100 },
+    });
+    return response.data;
+  },
 };
