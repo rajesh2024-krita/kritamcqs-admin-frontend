@@ -9,15 +9,24 @@ export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem("krita_admin_token"));
   const [loading, setLoading] = useState(Boolean(localStorage.getItem("krita_admin_token")));
 
-  function logout() {
+  function clearSession() {
     localStorage.removeItem("krita_admin_token");
     localStorage.removeItem("krita_admin_user");
     setToken(null);
     setAdmin(null);
   }
 
+  async function logout(options = {}) {
+    if (options.remote !== false && token) {
+      await authService.logout().catch(() => undefined);
+    }
+    clearSession();
+  }
+
   useEffect(() => {
-    setUnauthorizedHandler(logout);
+    setUnauthorizedHandler(() => {
+      clearSession();
+    });
   }, []);
 
   useEffect(() => {
@@ -31,7 +40,7 @@ export function AuthProvider({ children }) {
         const response = await authService.me();
         setAdmin(response.data);
       } catch {
-        logout();
+        clearSession();
       } finally {
         setLoading(false);
       }

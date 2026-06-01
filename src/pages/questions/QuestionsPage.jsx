@@ -14,6 +14,7 @@ import {
 import { EntityManagerPage } from "../common/EntityManagerPage";
 import { EntityFormWrapper } from "../../components/forms/EntityFormWrapper";
 import { MathText } from "../../components/common/MathText";
+import { useAuth } from "../../context/AuthContext";
 import { cn, ui } from "../../ui";
 
 function matchesQuestionSubject(subject, form) {
@@ -75,6 +76,7 @@ function uniqueYearOptions(years = []) {
 }
 
 export function QuestionsPage() {
+  const { admin } = useAuth();
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkFile, setBulkFile] = useState(null);
   const [bulkPreview, setBulkPreview] = useState(null);
@@ -175,6 +177,21 @@ export function QuestionsPage() {
   const imageSummary = bulkResult?.imageSummary || bulkPreview?.imageSummary || {};
   const newColumnStatus = bulkPreview?.newColumnStatus || bulkResult?.newColumnStatus || {};
   const requiresNewColumnUpdate = Boolean(bulkPreview?.requiresNewColumnUpdate);
+  const permissions = admin?.adminRole === "employee" ? (admin.employeePermissions || {}) : null;
+  const canViewQuestions = !permissions || permissions.viewQuestions === true;
+  const canCreateQuestions = !permissions || permissions.createQuestions === true || permissions.createManualQuestions === true;
+  const canEditQuestions = !permissions || permissions.editQuestions === true;
+  const canDeleteQuestions = !permissions || permissions.deleteQuestions === true;
+  const canBulkUploadQuestions = !permissions || permissions.bulkUploadQuestions === true;
+
+  if (!canViewQuestions) {
+    return (
+      <div className="rounded-sm border border-rose-200 bg-rose-50 p-6 text-rose-800">
+        <h2 className="text-lg font-black">Questions access disabled</h2>
+        <p className="mt-2 text-sm">Your employee account does not have permission to view question data.</p>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -183,11 +200,15 @@ export function QuestionsPage() {
       title="Questions"
       description="Create and maintain the NEET/JEE question bank."
       service={questionService}
-      headerActions={(
+      canCreate={canCreateQuestions}
+      canEdit={canEditQuestions}
+      canDelete={canDeleteQuestions}
+      canBulkDelete={canDeleteQuestions}
+      headerActions={canBulkUploadQuestions ? (
         <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => setBulkOpen(true)}>
           Bulk Upload
         </button>
-      )}
+      ) : null}
       mapItemToForm={(item, form) => ({
         ...form,
         examType: item.examType || deriveExamType(item.examMode, item.exam),

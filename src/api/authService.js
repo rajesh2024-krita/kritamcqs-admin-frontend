@@ -9,6 +9,10 @@ export const authService = {
     const response = await http.post("/admin-auth/login", payload);
     return response.data;
   },
+  async logout() {
+    const response = await http.post("/admin-auth/logout");
+    return response.data;
+  },
   async bootstrap(payload) {
     const response = await http.post("/admin-auth/bootstrap", payload);
     return response.data;

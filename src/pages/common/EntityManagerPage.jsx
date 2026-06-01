@@ -24,7 +24,23 @@ function normalizeInitialValues(fields) {
   }, {});
 }
 
-export function EntityManagerPage({ title, description, service, fields, columns, defaultQuery = {}, lookupLoaders = [], mapItemToForm, headerActions = null, filters = [], sortable = false }) {
+export function EntityManagerPage({
+  title,
+  description,
+  service,
+  fields,
+  columns,
+  defaultQuery = {},
+  lookupLoaders = [],
+  mapItemToForm,
+  headerActions = null,
+  filters = [],
+  sortable = false,
+  canCreate = true,
+  canEdit = true,
+  canDelete = true,
+  canBulkDelete = true,
+}) {
   const toast = useToast();
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState(null);
@@ -508,10 +524,10 @@ export function EntityManagerPage({ title, description, service, fields, columns
           <div className="flex flex-wrap items-center gap-3">
             <div className="inline-flex items-center rounded-sm bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-blue-700">{meta?.total ?? items.length} records</div>
             {headerActions}
-            <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={openCreate}>
+            {canCreate ? <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={openCreate}>
               <PlusIcon size={16} />
               Create {title.slice(0, -1) || title}
-            </button>
+            </button> : null}
           </div>
         </div>
       </div>
@@ -548,7 +564,7 @@ export function EntityManagerPage({ title, description, service, fields, columns
               </select>
             </label>
           ))}
-          {selectedIds.length > 0 ? (
+          {canDelete && canBulkDelete && selectedIds.length > 0 ? (
             <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setBulkDeleteOpen(true)}>
               <TrashIcon size={16} />
               Delete Selected ({selectedIds.length})
@@ -580,7 +596,7 @@ export function EntityManagerPage({ title, description, service, fields, columns
                   <tr>
                     <th className="px-4 py-3">Sort</th>
                     {columns.map((column) => <th key={column.key} className="px-4 py-3">{column.label}</th>)}
-                    <th className="px-4 py-3">Actions</th>
+                    {(canEdit || canDelete) ? <th className="px-4 py-3">Actions</th> : null}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -599,18 +615,18 @@ export function EntityManagerPage({ title, description, service, fields, columns
                           {column.render ? column.render(row) : row[column.key]}
                         </td>
                       ))}
-                      <td className="px-4 py-3">
+                      {(canEdit || canDelete) ? <td className="px-4 py-3">
                         <div className="flex flex-wrap items-center gap-3">
-                          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openEdit(row)}>
+                          {canEdit ? <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openEdit(row)}>
                             <EditIcon size={16} />
                             Edit
-                          </button>
-                          <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteItem(row)}>
+                          </button> : null}
+                          {canDelete ? <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteItem(row)}>
                             <TrashIcon size={16} />
                             Delete
-                          </button>
+                          </button> : null}
                         </div>
-                      </td>
+                      </td> : null}
                     </tr>
                   ))}
                 </tbody>
@@ -620,22 +636,22 @@ export function EntityManagerPage({ title, description, service, fields, columns
             <DataTable
               columns={columns}
               rows={items}
-              selectable={Boolean(service?.removeMany)}
+              selectable={Boolean(service?.removeMany) && canDelete && canBulkDelete}
               selectedRowIds={selectedIds}
               onToggleRow={toggleRowSelection}
               onToggleAllRows={toggleAllSelection}
-              renderActions={(row) => (
+              renderActions={(canEdit || canDelete) ? (row) => (
                 <div className="flex flex-wrap items-center gap-3">
-                  <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openEdit(row)}>
+                  {canEdit ? <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openEdit(row)}>
                     <EditIcon size={16} />
                     Edit
-                  </button>
-                  <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteItem(row)}>
+                  </button> : null}
+                  {canDelete ? <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteItem(row)}>
                     <TrashIcon size={16} />
                     Delete
-                  </button>
+                  </button> : null}
                 </div>
-              )}
+              ) : null}
             />
           )}
           <Pagination meta={meta} onChange={(page) => setQuery((current) => ({ ...current, page }))} />

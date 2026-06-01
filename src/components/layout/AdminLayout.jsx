@@ -50,6 +50,8 @@ const navItems = [
   { label: "Help Desk", to: "/support-tickets", section: "Operations", icon: HelpIcon },
   { label: "Coupons", to: "/coupons", section: "Operations", icon: TagIcon },
   { label: "Session", to: "/sessions", section: "Operations", icon: DashboardIcon },
+  { label: "Employees", to: "/employees", section: "Security", icon: UsersIcon, mainOnly: true },
+  { label: "Audit Logs", to: "/audit-logs", section: "Security", icon: ShieldIcon, mainOnly: true },
   { label: "Settings", to: "/settings", section: "System", icon: SettingsIcon },
   { label: "Auth Settings", to: "/auth-settings", section: "System", icon: ShieldIcon },
   { label: "Email Templates", to: "/email-templates", section: "System", icon: MailIcon },
@@ -60,9 +62,15 @@ export function AdminLayout() {
   const { admin, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
-  const currentNav = navItems.find(({ to }) => (to === "/" ? location.pathname === "/" : location.pathname.startsWith(to)));
+  const isEmployee = admin?.adminRole === "employee";
+  const visibleNavItems = navItems.filter((item) => {
+    if (!isEmployee) return true;
+    if (item.mainOnly) return false;
+    return item.to === "/" || item.to === "/questions";
+  });
+  const currentNav = visibleNavItems.find(({ to }) => (to === "/" ? location.pathname === "/" : location.pathname.startsWith(to)));
   const pageTitle = currentNav?.label || "Dashboard";
-  const sectionedNav = navItems.reduce((acc, item) => {
+  const sectionedNav = visibleNavItems.reduce((acc, item) => {
     if (!acc[item.section]) acc[item.section] = [];
     acc[item.section].push(item);
     return acc;
@@ -86,7 +94,7 @@ export function AdminLayout() {
           </div>
 
           <div className="mt-5 rounded-xl border border-slate-800 bg-slate-900 px-4 py-4 shadow-inner">
-            <span className="mb-3 inline-flex rounded-full bg-slate-800 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-300">Workspace</span>
+            <span className="mb-3 inline-flex rounded-full bg-slate-800 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-300">{isEmployee ? "Employee" : "Workspace"}</span>
             <strong className="block text-base font-bold text-white">{admin?.name || "Administrator"}</strong>
             <p className="mt-1 text-sm text-slate-300">{admin?.email || admin?.mobile || "Admin access enabled"}</p>
           </div>
@@ -117,7 +125,7 @@ export function AdminLayout() {
           </nav>
 
           <div className="mt-6">
-            <button className={cn(ui.buttonBase, ui.buttonGhost, "w-full justify-center")} onClick={logout}>
+            <button className={cn(ui.buttonBase, ui.buttonGhost, "w-full justify-center")} onClick={() => void logout()}>
               <LogoutIcon size={16} />
               Logout
             </button>

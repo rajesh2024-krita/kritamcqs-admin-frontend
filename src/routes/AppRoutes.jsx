@@ -34,6 +34,15 @@ import { EmailTemplateCatalogPage } from "../pages/EmailTemplateCatalogPage";
 import { WeakAreaManagementPage } from "../pages/WeakAreaManagementPage";
 import { MistakeManagementPage } from "../pages/MistakeManagementPage";
 import { FreeQuestionsPage } from "../pages/FreeQuestionsPage";
+import { EmployeesPage } from "../pages/employees/EmployeesPage";
+import { AuditLogsPage } from "../pages/audit/AuditLogsPage";
+import { useAuth } from "../context/AuthContext";
+
+function MainAdminOnly({ children }) {
+  const { admin } = useAuth();
+  if (admin?.adminRole === "employee") return <Navigate to="/questions" replace />;
+  return children;
+}
 
 export function AppRoutes() {
   return (
@@ -59,6 +68,8 @@ export function AppRoutes() {
         <Route path="years" element={<YearsPage />} />
         <Route path="question-types" element={<QuestionTypesPage />} />
         <Route path="questions" element={<QuestionsPage />} />
+        <Route path="employees" element={<MainAdminOnly><EmployeesPage /></MainAdminOnly>} />
+        <Route path="audit-logs" element={<MainAdminOnly><AuditLogsPage /></MainAdminOnly>} />
         <Route path="mock-tests" element={<MockTestsPage />} />
         <Route path="free-mock-tests" element={<MockTestsPage freeOnly />} />
         <Route path="free-questions" element={<FreeQuestionsPage />} />
