@@ -139,14 +139,14 @@ export function LoginPage() {
                 >
                   Login
                 </button>
-                <button
+                {/* <button
                   className={cn(ui.buttonBase, authMode === "register" ? ui.buttonPrimary : ui.buttonSecondary)}
                   disabled={Boolean(pendingAction)}
                   onClick={() => setAuthMode("register")}
                   type="button"
                 >
                   Register
-                </button>
+                </button> */}
               </div>
               {authMode === "login" ? (
             <form className="flex flex-col gap-6" onSubmit={handleLogin}>

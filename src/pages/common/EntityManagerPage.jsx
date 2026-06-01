@@ -12,7 +12,26 @@ import { Pagination } from "../../components/tables/Pagination";
 import { SearchBar } from "../../components/tables/SearchBar";
 import { useToast } from "../../context/ToastContext";
 import { EditIcon, PlusIcon, RefreshIcon, TrashIcon } from "../../components/common/AdminIcons";
+import { useAuth } from "../../context/AuthContext";
+import { getModulePermission, isEmployee } from "../../config/adminPermissions";
 import { cn, ui } from "../../ui";
+
+const ENTITY_TITLE_MODULES = {
+  Modes: "modes",
+  "Learning Levels": "learning-levels",
+  Difficulties: "difficulties",
+  "Exam Types": "exam-types",
+  Subjects: "subjects",
+  Chapters: "chapters",
+  Topics: "topics",
+  Years: "years",
+  "Question Types": "question-types",
+  Questions: "questions",
+  Users: "users",
+  Coupons: "coupons",
+  "Subscription Plans": "subscription-plans",
+  "Email Templates": "email-templates",
+};
 
 function normalizeInitialValues(fields) {
   return fields.reduce((acc, field) => {
@@ -42,6 +61,13 @@ export function EntityManagerPage({
   canBulkDelete = true,
 }) {
   const toast = useToast();
+  const { admin } = useAuth();
+  const inferredModuleKey = ENTITY_TITLE_MODULES[title];
+  const inferredPermissions = inferredModuleKey ? getModulePermission(admin, inferredModuleKey) : null;
+  const effectiveCanCreate = canCreate && (!isEmployee(admin) || !inferredPermissions || inferredPermissions.create === true);
+  const effectiveCanEdit = canEdit && (!isEmployee(admin) || !inferredPermissions || inferredPermissions.edit === true);
+  const effectiveCanDelete = canDelete && (!isEmployee(admin) || !inferredPermissions || inferredPermissions.delete === true);
+  const effectiveCanBulkDelete = canBulkDelete && effectiveCanDelete;
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -524,7 +550,7 @@ export function EntityManagerPage({
           <div className="flex flex-wrap items-center gap-3">
             <div className="inline-flex items-center rounded-sm bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-blue-700">{meta?.total ?? items.length} records</div>
             {headerActions}
-            {canCreate ? <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={openCreate}>
+            {effectiveCanCreate ? <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={openCreate}>
               <PlusIcon size={16} />
               Create {title.slice(0, -1) || title}
             </button> : null}
@@ -564,7 +590,7 @@ export function EntityManagerPage({
               </select>
             </label>
           ))}
-          {canDelete && canBulkDelete && selectedIds.length > 0 ? (
+          {effectiveCanDelete && effectiveCanBulkDelete && selectedIds.length > 0 ? (
             <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setBulkDeleteOpen(true)}>
               <TrashIcon size={16} />
               Delete Selected ({selectedIds.length})
@@ -596,7 +622,7 @@ export function EntityManagerPage({
                   <tr>
                     <th className="px-4 py-3">Sort</th>
                     {columns.map((column) => <th key={column.key} className="px-4 py-3">{column.label}</th>)}
-                    {(canEdit || canDelete) ? <th className="px-4 py-3">Actions</th> : null}
+                    {(effectiveCanEdit || effectiveCanDelete) ? <th className="px-4 py-3">Actions</th> : null}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -615,13 +641,13 @@ export function EntityManagerPage({
                           {column.render ? column.render(row) : row[column.key]}
                         </td>
                       ))}
-                      {(canEdit || canDelete) ? <td className="px-4 py-3">
+                      {(effectiveCanEdit || effectiveCanDelete) ? <td className="px-4 py-3">
                         <div className="flex flex-wrap items-center gap-3">
-                          {canEdit ? <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openEdit(row)}>
+                          {effectiveCanEdit ? <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openEdit(row)}>
                             <EditIcon size={16} />
                             Edit
                           </button> : null}
-                          {canDelete ? <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteItem(row)}>
+                          {effectiveCanDelete ? <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteItem(row)}>
                             <TrashIcon size={16} />
                             Delete
                           </button> : null}
@@ -636,17 +662,17 @@ export function EntityManagerPage({
             <DataTable
               columns={columns}
               rows={items}
-              selectable={Boolean(service?.removeMany) && canDelete && canBulkDelete}
+              selectable={Boolean(service?.removeMany) && effectiveCanDelete && effectiveCanBulkDelete}
               selectedRowIds={selectedIds}
               onToggleRow={toggleRowSelection}
               onToggleAllRows={toggleAllSelection}
-              renderActions={(canEdit || canDelete) ? (row) => (
+              renderActions={(effectiveCanEdit || effectiveCanDelete) ? (row) => (
                 <div className="flex flex-wrap items-center gap-3">
-                  {canEdit ? <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openEdit(row)}>
+                  {effectiveCanEdit ? <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openEdit(row)}>
                     <EditIcon size={16} />
                     Edit
                   </button> : null}
-                  {canDelete ? <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteItem(row)}>
+                  {effectiveCanDelete ? <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteItem(row)}>
                     <TrashIcon size={16} />
                     Delete
                   </button> : null}

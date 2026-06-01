@@ -4,6 +4,7 @@ import { ConfirmDeleteModal } from "../../components/common/ConfirmDeleteModal";
 import { EditIcon, PlusIcon, TrashIcon } from "../../components/common/AdminIcons";
 import { ToggleSwitch } from "../../components/forms/ToggleSwitch";
 import { SearchBar } from "../../components/tables/SearchBar";
+import { MODULES } from "../../config/adminPermissions";
 import { useToast } from "../../context/ToastContext";
 import { cn, ui } from "../../ui";
 
@@ -22,6 +23,7 @@ const emptyForm = {
   password: "",
   isActive: true,
   employeePermissions: Object.fromEntries(PERMISSIONS.map(([key]) => [key, false])),
+  modulePermissions: Object.fromEntries(MODULES.map((module) => [module.key, { view: false, create: false, edit: false, delete: false, bulkUpload: false }])),
 };
 
 export function EmployeesPage() {
@@ -66,6 +68,10 @@ export function EmployeesPage() {
       password: "",
       isActive: item.isActive !== false,
       employeePermissions: { ...emptyForm.employeePermissions, ...(item.employeePermissions || {}) },
+      modulePermissions: {
+        ...emptyForm.modulePermissions,
+        ...(item.modulePermissions || {}),
+      },
     });
   }
 
@@ -74,6 +80,7 @@ export function EmployeesPage() {
     const payload = {
       ...form,
       employeePermissions: { ...form.employeePermissions },
+      modulePermissions: { ...form.modulePermissions },
     };
     if (editing && !payload.password) delete payload.password;
     try {
@@ -133,7 +140,7 @@ export function EmployeesPage() {
                 <tr key={item.id}>
                   <td className="px-4 py-3"><strong>{item.name}</strong><div className="text-xs text-slate-500">{item.email}</div></td>
                   <td className="px-4 py-3">{item.isActive !== false ? "Active" : "Deactivated"}</td>
-                  <td className="px-4 py-3 text-xs text-slate-600">{PERMISSIONS.filter(([key]) => item.employeePermissions?.[key]).map(([, label]) => label).join(", ") || "No permissions"}</td>
+                  <td className="px-4 py-3 text-xs text-slate-600">{MODULES.filter((module) => item.modulePermissions?.[module.key]?.view).map((module) => module.label).join(", ") || "No modules"}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
                       <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => startEdit(item)}><EditIcon size={16} /> Edit</button>
@@ -156,10 +163,45 @@ export function EmployeesPage() {
           <label className={ui.field}><span>Email</span><input className={ui.input} type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} required /></label>
           <label className={ui.field}><span>Password</span><input className={ui.input} type="password" minLength={8} value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} required={!editing} placeholder={editing ? "Leave blank to keep current password" : ""} /></label>
           <ToggleSwitch checked={form.isActive} onChange={(value) => setForm((current) => ({ ...current, isActive: value }))} label="Employee Active" />
-          <div className="grid gap-3">
-            {PERMISSIONS.map(([key, label]) => (
-              <ToggleSwitch key={key} checked={Boolean(form.employeePermissions[key])} onChange={(value) => setForm((current) => ({ ...current, employeePermissions: { ...current.employeePermissions, [key]: value } }))} label={label} />
-            ))}
+          <div className="space-y-3">
+            {MODULES.map((module) => {
+              const permission = form.modulePermissions[module.key] || {};
+              return (
+                <div key={module.key} className="rounded-sm border border-slate-200 p-3">
+                  <div className="mb-2 text-sm font-black text-slate-900">{module.label}</div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {["view", "create", "edit", "delete"].map((action) => (
+                      <ToggleSwitch
+                        key={action}
+                        checked={Boolean(permission[action])}
+                        onChange={(value) => setForm((current) => ({
+                          ...current,
+                          modulePermissions: {
+                            ...current.modulePermissions,
+                            [module.key]: { ...(current.modulePermissions[module.key] || {}), [action]: value },
+                          },
+                        }))}
+                        label={`${action.slice(0, 1).toUpperCase()}${action.slice(1)}`}
+                      />
+                    ))}
+                    {module.key === "questions" ? (
+                      <ToggleSwitch
+                        checked={Boolean(permission.bulkUpload)}
+                        onChange={(value) => setForm((current) => ({
+                          ...current,
+                          employeePermissions: { ...current.employeePermissions, bulkUploadQuestions: value },
+                          modulePermissions: {
+                            ...current.modulePermissions,
+                            questions: { ...(current.modulePermissions.questions || {}), bulkUpload: value },
+                          },
+                        }))}
+                        label="Bulk Upload"
+                      />
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
           </div>
           <button className={cn(ui.buttonBase, ui.buttonPrimary, "w-full justify-center")} type="submit">{editing ? "Save Employee" : "Create Employee"}</button>
         </div>

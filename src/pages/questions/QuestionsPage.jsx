@@ -15,6 +15,7 @@ import { EntityManagerPage } from "../common/EntityManagerPage";
 import { EntityFormWrapper } from "../../components/forms/EntityFormWrapper";
 import { MathText } from "../../components/common/MathText";
 import { useAuth } from "../../context/AuthContext";
+import { getModulePermission, isEmployee } from "../../config/adminPermissions";
 import { cn, ui } from "../../ui";
 
 function matchesQuestionSubject(subject, form) {
@@ -177,12 +178,12 @@ export function QuestionsPage() {
   const imageSummary = bulkResult?.imageSummary || bulkPreview?.imageSummary || {};
   const newColumnStatus = bulkPreview?.newColumnStatus || bulkResult?.newColumnStatus || {};
   const requiresNewColumnUpdate = Boolean(bulkPreview?.requiresNewColumnUpdate);
-  const permissions = admin?.adminRole === "employee" ? (admin.employeePermissions || {}) : null;
-  const canViewQuestions = !permissions || permissions.viewQuestions === true;
-  const canCreateQuestions = !permissions || permissions.createQuestions === true || permissions.createManualQuestions === true;
-  const canEditQuestions = !permissions || permissions.editQuestions === true;
-  const canDeleteQuestions = !permissions || permissions.deleteQuestions === true;
-  const canBulkUploadQuestions = !permissions || permissions.bulkUploadQuestions === true;
+  const permissions = getModulePermission(admin, "questions");
+  const canViewQuestions = !isEmployee(admin) || permissions.view === true;
+  const canCreateQuestions = !isEmployee(admin) || permissions.create === true;
+  const canEditQuestions = !isEmployee(admin) || permissions.edit === true;
+  const canDeleteQuestions = !isEmployee(admin) || permissions.delete === true;
+  const canBulkUploadQuestions = !isEmployee(admin) || permissions.bulkUpload === true;
 
   if (!canViewQuestions) {
     return (

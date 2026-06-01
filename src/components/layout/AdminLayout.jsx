@@ -19,54 +19,55 @@ import {
   UsersIcon,
 } from "../common/AdminIcons";
 import { cn, ui } from "../../ui";
+import { canViewModule, isEmployee as isEmployeeAdmin } from "../../config/adminPermissions";
 
 const navItems = [
-  { label: "Dashboard", to: "/", section: "Overview", icon: DashboardIcon },
-  { label: "Catalog Overview", to: "/catalog-overview", section: "Overview", icon: OverviewIcon },
-  { label: "Modes", to: "/modes", section: "Catalog", icon: LayersIcon },
-  { label: "Learning Levels", to: "/learning-levels", section: "Catalog", icon: UsersIcon },
-  { label: "Difficulties", to: "/difficulties", section: "Catalog", icon: TagIcon },
-  { label: "Exam Types", to: "/exam-types", section: "Catalog", icon: ShieldIcon },
-  { label: "Subjects", to: "/subjects", section: "Catalog", icon: BookIcon },
-  { label: "Chapters", to: "/chapters", section: "Catalog", icon: FileStackIcon },
-  { label: "Topics", to: "/topics", section: "Catalog", icon: TagIcon },
-  { label: "Years", to: "/years", section: "Catalog", icon: OverviewIcon },
-  { label: "Question Types", to: "/question-types", section: "Catalog", icon: HelpIcon },
-  { label: "Questions", to: "/questions", section: "Content", icon: TagIcon },
+  { label: "Dashboard", to: "/", section: "Overview", icon: DashboardIcon, mainOnly: true },
+  { label: "Catalog Overview", to: "/catalog-overview", section: "Overview", icon: OverviewIcon, moduleKey: "catalog-overview" },
+  { label: "Modes", to: "/modes", section: "Catalog", icon: LayersIcon, moduleKey: "modes" },
+  { label: "Learning Levels", to: "/learning-levels", section: "Catalog", icon: UsersIcon, moduleKey: "learning-levels" },
+  { label: "Difficulties", to: "/difficulties", section: "Catalog", icon: TagIcon, moduleKey: "difficulties" },
+  { label: "Exam Types", to: "/exam-types", section: "Catalog", icon: ShieldIcon, moduleKey: "exam-types" },
+  { label: "Subjects", to: "/subjects", section: "Catalog", icon: BookIcon, moduleKey: "subjects" },
+  { label: "Chapters", to: "/chapters", section: "Catalog", icon: FileStackIcon, moduleKey: "chapters" },
+  { label: "Topics", to: "/topics", section: "Catalog", icon: TagIcon, moduleKey: "topics" },
+  { label: "Years", to: "/years", section: "Catalog", icon: OverviewIcon, moduleKey: "years" },
+  { label: "Question Types", to: "/question-types", section: "Catalog", icon: HelpIcon, moduleKey: "question-types" },
+  { label: "Questions", to: "/questions", section: "Content", icon: TagIcon, moduleKey: "questions" },
   // { label: "Daily Plans", to: "/daily-plans", section: "Content", icon: FileStackIcon },
-  { label: "Mock Tests", to: "/mock-tests", section: "Content", icon: OverviewIcon },
-  { label: "Free Mock Tests", to: "/free-mock-tests", section: "Content", icon: OverviewIcon },
-  { label: "Free Questions", to: "/free-questions", section: "Content", icon: BookIcon },
-  { label: "Daily Test Management", to: "/daily-test-management", section: "Operations", icon: DashboardIcon },
-  { label: "Weak Area Management", to: "/weak-area-management", section: "Operations", icon: OverviewIcon },
-  { label: "Mistake Management", to: "/mistake-management", section: "Operations", icon: HelpIcon },
-  { label: "Revision Management", to: "/revision-management", section: "Operations", icon: DashboardIcon },
-  { label: "Users", to: "/users", section: "Operations", icon: UsersIcon },
-  { label: "Subscriptions", to: "/subscriptions", section: "Operations", icon: SubscriptionIcon },
-  { label: "Plan Config", to: "/subscription-plans", section: "Operations", icon: SubscriptionIcon },
-  { label: "Payment Gateway", to: "/payment-gateway", section: "Operations", icon: ShieldIcon },
-  { label: "Invoices", to: "/invoices", section: "Operations", icon: FileStackIcon },
-  { label: "Notifications", to: "/notifications", section: "Operations", icon: HelpIcon },
-  { label: "Help Desk", to: "/support-tickets", section: "Operations", icon: HelpIcon },
-  { label: "Coupons", to: "/coupons", section: "Operations", icon: TagIcon },
-  { label: "Session", to: "/sessions", section: "Operations", icon: DashboardIcon },
+  { label: "Mock Tests", to: "/mock-tests", section: "Content", icon: OverviewIcon, moduleKey: "mock-tests" },
+  { label: "Free Mock Tests", to: "/free-mock-tests", section: "Content", icon: OverviewIcon, moduleKey: "free-mock-tests" },
+  { label: "Free Questions", to: "/free-questions", section: "Content", icon: BookIcon, moduleKey: "free-questions" },
+  { label: "Daily Test Management", to: "/daily-test-management", section: "Operations", icon: DashboardIcon, moduleKey: "daily-test-management" },
+  { label: "Weak Area Management", to: "/weak-area-management", section: "Operations", icon: OverviewIcon, moduleKey: "weak-area-management" },
+  { label: "Mistake Management", to: "/mistake-management", section: "Operations", icon: HelpIcon, moduleKey: "mistake-management" },
+  { label: "Revision Management", to: "/revision-management", section: "Operations", icon: DashboardIcon, moduleKey: "revision-management" },
+  { label: "Users", to: "/users", section: "Operations", icon: UsersIcon, moduleKey: "users" },
+  { label: "Subscriptions", to: "/subscriptions", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscriptions" },
+  { label: "Plan Config", to: "/subscription-plans", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscription-plans" },
+  { label: "Payment Gateway", to: "/payment-gateway", section: "Operations", icon: ShieldIcon, moduleKey: "payment-gateway" },
+  { label: "Invoices", to: "/invoices", section: "Operations", icon: FileStackIcon, moduleKey: "invoices" },
+  { label: "Notifications", to: "/notifications", section: "Operations", icon: HelpIcon, moduleKey: "notifications" },
+  { label: "Help Desk", to: "/support-tickets", section: "Operations", icon: HelpIcon, moduleKey: "support-tickets" },
+  { label: "Coupons", to: "/coupons", section: "Operations", icon: TagIcon, moduleKey: "coupons" },
+  { label: "Session", to: "/sessions", section: "Operations", icon: DashboardIcon, moduleKey: "sessions" },
   { label: "Employees", to: "/employees", section: "Security", icon: UsersIcon, mainOnly: true },
   { label: "Audit Logs", to: "/audit-logs", section: "Security", icon: ShieldIcon, mainOnly: true },
-  { label: "Settings", to: "/settings", section: "System", icon: SettingsIcon },
-  { label: "Auth Settings", to: "/auth-settings", section: "System", icon: ShieldIcon },
-  { label: "Email Templates", to: "/email-templates", section: "System", icon: MailIcon },
-  { label: "Email Template Keys", to: "/email-template-keys", section: "System", icon: MailIcon },
+  { label: "Settings", to: "/settings", section: "System", icon: SettingsIcon, moduleKey: "settings" },
+  { label: "Auth Settings", to: "/auth-settings", section: "System", icon: ShieldIcon, moduleKey: "auth-settings" },
+  { label: "Email Templates", to: "/email-templates", section: "System", icon: MailIcon, moduleKey: "email-templates" },
+  { label: "Email Template Keys", to: "/email-template-keys", section: "System", icon: MailIcon, moduleKey: "email-template-keys" },
 ];
 
 export function AdminLayout() {
   const { admin, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
-  const isEmployee = admin?.adminRole === "employee";
+  const isEmployee = isEmployeeAdmin(admin);
   const visibleNavItems = navItems.filter((item) => {
     if (!isEmployee) return true;
     if (item.mainOnly) return false;
-    return item.to === "/" || item.to === "/questions";
+    return item.moduleKey && canViewModule(admin, item.moduleKey);
   });
   const currentNav = visibleNavItems.find(({ to }) => (to === "/" ? location.pathname === "/" : location.pathname.startsWith(to)));
   const pageTitle = currentNav?.label || "Dashboard";
