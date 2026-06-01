@@ -1,8 +1,28 @@
 import katex from "katex";
+import "katex/contrib/mhchem";
 import { useMemo } from "react";
 
 const DELIMITER_PATTERN = /(\$\$[\s\S]+?\$\$|\$[^$\n]+?\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\))/g;
-const BARE_MATH_PATTERN = /\\(?:frac|sqrt|sum|int|lim|log|sin|cos|tan|theta|alpha|beta|gamma|Delta|pi|cdot|times|leq|geq|neq)|(?:[A-Za-z0-9)}]\s*[_^]\s*\{?[A-Za-z0-9+\-=]+\}?)|(?:^[A-Za-z0-9\\_^{},+\-*/().\s]+=[A-Za-z0-9\\_^{},+\-*/().\s]+$)/;
+const BARE_MATH_PATTERN = /\\(?:frac|sqrt|sum|int|lim|log|sin|cos|tan|theta|alpha|beta|gamma|Delta|pi|cdot|times|leq|geq|neq)|[αβγδθλμπσφωΔΩ]|(?:[A-Za-z0-9)}]\s*[_^]\s*\{?[A-Za-z0-9+\-=]+\}?)|(?:^[A-Za-z0-9\\_^{},+\-*/().\s]+=[A-Za-z0-9\\_^{},+\-*/().\s]+$)|\\ce\{[^{}]+\}/;
+const BARE_MATH_FRAGMENT_PATTERN =
+  /(?:\\frac\s*\{[^{}]+\}\s*\{[^{}]+\}|\\sqrt\s*\{[^{}]+\}|\\(?:sum|int|lim)(?:\s*[_^]\s*\{?[^{}\s]+\}?)*|\\(?:log|sin|cos|tan|theta|alpha|beta|gamma|Delta|pi|cdot|times|leq|geq|neq)|[αβγδθλμπσφωΔΩ]|[A-Za-z0-9]+(?:\s*[_^]\s*\{?[^{}\s]+\}?)+|[A-Za-zαβγδθλμπσφωΔΩ][A-Za-z0-9_{}\\^().+\-αβγδθλμπσφωΔΩ]*(?:\s*=\s*[A-Za-z0-9_{}\\^().+\-*/αβγδθλμπσφωΔΩ]+)+|\d+(?:\.\d+)?\s*(?:x|X|×)\s*10\^?-?\d+|\d+(?:\.\d+)?e[+-]?\d+)/g;
+const CHEMISTRY_FRAGMENT_PATTERN =
+  /(?:\\ce\{[^{}]+\}|(?:\d*[A-Z][a-z]?\d*){2,}(?:\^\{?[0-9]*[+-]\}?|[+-])?(?:\s*(?:->|<-|<=>|=>|=|⇌|→|←|\+)\s*(?:\d*[A-Z][a-z]?\d*){2,}(?:\^\{?[0-9]*[+-]\}?|[+-])?)+|(?:\d*[A-Z][a-z]?\d*){2,}(?:\^\{?[0-9]*[+-]\}?|[+-])?)/g;
+const GREEK_SYMBOLS = {
+  α: "\\alpha",
+  β: "\\beta",
+  γ: "\\gamma",
+  δ: "\\delta",
+  θ: "\\theta",
+  λ: "\\lambda",
+  μ: "\\mu",
+  π: "\\pi",
+  σ: "\\sigma",
+  φ: "\\phi",
+  ω: "\\omega",
+  Δ: "\\Delta",
+  Ω: "\\Omega",
+};
 
 function stripDelimiter(value) {
   if (value.startsWith("$$") && value.endsWith("$$")) return { text: value.slice(2, -2), display: true };
@@ -30,11 +50,104 @@ function parseMathText(input) {
     segments.push({ text: input.slice(lastIndex), math: false, display: false });
   }
 
-  if (segments.length === 1 && !segments[0].math && BARE_MATH_PATTERN.test(input.trim())) {
-    return [{ text: input.trim(), math: true, display: false }];
+  if (segments.length === 1 && !segments[0].math) {
+    const trimmed = input.trim();
+    if (isStandaloneMath(trimmed)) {
+      return [{ text: normalizeFormulaText(trimmed, isLikelyChemistry(trimmed)), math: true, display: false }];
+    }
+
+    const bareSegments = parseBareMathFragments(input);
+    if (bareSegments.some((segment) => segment.math)) return bareSegments;
+  }
+
+  return expandPlainTextSegments(segments.length ? segments : [{ text: input, math: false, display: false }]);
+}
+
+function isStandaloneMath(input) {
+  if (!BARE_MATH_PATTERN.test(input)) return false;
+
+  if (/^[A-Za-z0-9\\_^{},+\-*/().\s]+=[A-Za-z0-9\\_^{},+\-*/().\s]+$/.test(input)) {
+    return input.trim().split(/\s+/).length <= 5;
+  }
+
+  const withoutMathFragments = input.replace(BARE_MATH_FRAGMENT_PATTERN, " ");
+  const proseWords = withoutMathFragments.match(/[A-Za-z]{2,}/g) ?? [];
+  if (proseWords.length > 0) return false;
+
+  if (/^\\(?:frac|sqrt|sum|int|lim|log|sin|cos|tan)|^\\ce\{[^{}]+\}$/.test(input.trim())) return true;
+
+  return !/[.!?]/.test(input) && input.trim().split(/\s+/).length <= 3;
+}
+
+function parseBareMathFragments(input) {
+  const segments = [];
+  let lastIndex = 0;
+  const matches = collectBareFragments(input);
+
+  matches.forEach(({ text, offset, chemistry }) => {
+    if (offset > lastIndex) {
+      segments.push({ text: input.slice(lastIndex, offset), math: false, display: false });
+    }
+    segments.push({ text: normalizeFormulaText(text.trim(), chemistry), math: true, display: false });
+    lastIndex = offset + text.length;
+  });
+
+  if (lastIndex < input.length) {
+    segments.push({ text: input.slice(lastIndex), math: false, display: false });
   }
 
   return segments.length ? segments : [{ text: input, math: false, display: false }];
+}
+
+function expandPlainTextSegments(segments) {
+  return segments.flatMap((segment) => {
+    if (segment.math) return [segment];
+    const bareSegments = parseBareMathFragments(segment.text);
+    return bareSegments.some((bareSegment) => bareSegment.math) ? bareSegments : [segment];
+  });
+}
+
+function collectBareFragments(input) {
+  const matches = [];
+
+  input.replace(CHEMISTRY_FRAGMENT_PATTERN, (match, offset) => {
+    if (isLikelyChemistry(match)) matches.push({ text: match, offset, chemistry: true });
+    return match;
+  });
+
+  input.replace(BARE_MATH_FRAGMENT_PATTERN, (match, offset) => {
+    matches.push({ text: match, offset, chemistry: false });
+    return match;
+  });
+
+  return matches
+    .sort((first, second) => first.offset - second.offset || second.text.length - first.text.length)
+    .reduce((accepted, match) => {
+      const previous = accepted[accepted.length - 1];
+      if (previous && match.offset < previous.offset + previous.text.length) return accepted;
+      accepted.push(match);
+      return accepted;
+    }, []);
+}
+
+function isLikelyChemistry(value) {
+  if (/^\\ce\{[^{}]+\}$/.test(value)) return true;
+  if (/(?:->|<-|<=>|=>|⇌|→|←)/.test(value)) return true;
+  if (/\^\{?[0-9]*[+-]\}?|[+-]$/.test(value)) return true;
+  return /[A-Z][a-z]?\d/.test(value) && /(?:[A-Z][a-z]?){2,}|[A-Z][a-z]?\d/.test(value);
+}
+
+function normalizeFormulaText(value, chemistry) {
+  if (/^\\ce\{[^{}]+\}$/.test(value)) return value;
+  if (chemistry) return `\\ce{${value.replace(/⇌/g, "<=>").replace(/→/g, "->").replace(/←/g, "<-")}}`;
+
+  const scientific = value.match(/^(\d+(?:\.\d+)?)\s*(?:x|X|×)\s*10\^?(-?\d+)$/);
+  if (scientific) return `${scientific[1]} \\times 10^{${scientific[2]}}`;
+
+  const eNotation = value.match(/^(\d+(?:\.\d+)?)e([+-]?\d+)$/i);
+  if (eNotation) return `${eNotation[1]} \\times 10^{${eNotation[2]}}`;
+
+  return value.replace(/[αβγδθλμπσφωΔΩ]/g, (symbol) => GREEK_SYMBOLS[symbol] ?? symbol);
 }
 
 function renderKatex(value, displayMode) {
