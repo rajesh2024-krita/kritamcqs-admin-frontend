@@ -222,6 +222,7 @@ function uniqueYearOptions(years = []) {
 export function QuestionsPage() {
   const { admin } = useAuth();
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkMode, setBulkMode] = useState("upload");
   const [bulkFile, setBulkFile] = useState(null);
   const [bulkPreview, setBulkPreview] = useState(null);
   const [bulkResult, setBulkResult] = useState(null);
@@ -256,7 +257,7 @@ export function QuestionsPage() {
     if (!bulkFile) return;
     setBulkBusy(true);
     try {
-      const response = await questionService.validateBulkUpload(bulkFile);
+      const response = await questionService.validateBulkUpload(bulkFile, bulkMode);
       setBulkPreview(response.data);
       setBulkResult(null);
       setShowMissingFields(false);
@@ -297,7 +298,7 @@ export function QuestionsPage() {
       if (bulkPreview?.missingCategoriesCount > 0) {
         await questionService.createBulkUploadCategories(bulkPreview.batchId);
       }
-      const response = await questionService.approveBulkUpload(bulkPreview.batchId, uploadAnyway);
+      const response = await questionService.approveBulkUpload(bulkPreview.batchId, uploadAnyway, bulkMode === "update");
       setBulkResult(response.data);
       setBulkPreview(response.data);
     } finally {
@@ -366,9 +367,28 @@ export function QuestionsPage() {
       canBulkDelete={canDeleteQuestions}
       renderFormPreview={({ formState, lookups }) => <QuestionLivePreview formState={formState} lookups={lookups} />}
       headerActions={canBulkUploadQuestions ? (
-        <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => setBulkOpen(true)}>
-          Bulk Upload
-        </button>
+        <>
+          <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => {
+            setBulkMode("upload");
+            setBulkFile(null);
+            setBulkPreview(null);
+            setBulkResult(null);
+            setShowMissingFields(false);
+            setBulkOpen(true);
+          }}>
+            Bulk Upload
+          </button>
+          <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => {
+            setBulkMode("update");
+            setBulkFile(null);
+            setBulkPreview(null);
+            setBulkResult(null);
+            setShowMissingFields(false);
+            setBulkOpen(true);
+          }}>
+            Bulk Update
+          </button>
+        </>
       ) : null}
       mapItemToForm={(item, form) => ({
         ...form,
@@ -419,6 +439,12 @@ export function QuestionsPage() {
             { label: "Complete", value: "complete" },
             { label: "Incomplete Question", value: "incomplete" },
           ],
+        },
+        {
+          name: "questionTypeId",
+          label: "Question Type",
+          placeholder: "All Types",
+          options: (lookups) => (lookups.questionTypes || []).map((item) => ({ label: item.name || item.label || item.key, value: item.id })),
         },
       ]}
       fields={[
@@ -636,8 +662,8 @@ export function QuestionsPage() {
     ) : null}
     {bulkOpen ? (
       <EntityFormWrapper
-        title="Questions Bulk Upload"
-        subtitle="Upload, validate, create missing fields, approve, and process questions in batches."
+        title={bulkMode === "update" ? "Questions Bulk Update" : "Questions Bulk Upload"}
+        subtitle={bulkMode === "update" ? "Upload a mapped file and update existing matching questions in batches." : "Upload, validate, create missing fields, approve, and process questions in batches."}
         onCancel={() => setBulkOpen(false)}
         onSubmit={(event) => event.preventDefault()}
         submitLabel="Close"

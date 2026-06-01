@@ -88,6 +88,12 @@ export function EntityManagerPage({
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [draggedId, setDraggedId] = useState(null);
 
+  function getActiveFilters() {
+    return Object.fromEntries(
+      Object.entries(filterValues).filter(([, value]) => value !== "" && value !== undefined && value !== null),
+    );
+  }
+
   const visibleFields = useMemo(
     () => fields.filter((field) => (field.visible ? field.visible(formState, lookups) : true)),
     [fields, formState, lookups],
@@ -96,9 +102,7 @@ export function EntityManagerPage({
   async function loadItems(nextQuery = query) {
     setLoading(true);
     try {
-      const activeFilters = Object.fromEntries(
-        Object.entries(filterValues).filter(([, value]) => value !== "" && value !== undefined && value !== null),
-      );
+      const activeFilters = getActiveFilters();
       const response = await service.list({ ...nextQuery, ...activeFilters, search });
       setItems(response.data || []);
       setMeta(response.meta);
@@ -365,6 +369,24 @@ export function EntityManagerPage({
     loadItems({ ...query, limit, page: 1 });
   }
 
+  async function handleExport(scope, format) {
+    if (!service?.exportRecords) return;
+    try {
+      const params = scope === "all" ? { scope, format } : { ...getActiveFilters(), search, scope, format };
+      const response = await service.exportRecords(params);
+      const blob = response.data;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${title.toLowerCase().replace(/\s+/g, "-")}-${scope}.${format}`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${title} export started`);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
   function getOptions(field) {
     if (typeof field.options === "function") {
       return field.options(formState, lookups);
@@ -596,6 +618,22 @@ export function EntityManagerPage({
               <TrashIcon size={16} />
               Delete Selected ({selectedIds.length})
             </button>
+          ) : null}
+          {service?.exportRecords ? (
+            <>
+              <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => handleExport("filtered", "csv")}>
+                Export Filtered CSV
+              </button>
+              <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => handleExport("filtered", "xlsx")}>
+                Export Filtered XLSX
+              </button>
+              <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => handleExport("all", "csv")}>
+                Export All CSV
+              </button>
+              <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => handleExport("all", "xlsx")}>
+                Export All XLSX
+              </button>
+            </>
           ) : null}
           <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
             Rows

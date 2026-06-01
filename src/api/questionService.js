@@ -17,9 +17,10 @@ export const questionService = {
     const response = await http.post("/admin/questions/own-asset-url", { url });
     return response.data;
   },
-  async validateBulkUpload(file) {
+  async validateBulkUpload(file, uploadMode = "upload") {
     const formData = new FormData();
     formData.append("sheet", file);
+    formData.append("uploadMode", uploadMode);
     const response = await http.post("/admin/questions/bulk-upload/validate", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });
@@ -37,9 +38,16 @@ export const questionService = {
     const response = await http.get(`/admin/questions/bulk-upload/${batchId}/status`);
     return response.data;
   },
-  async approveBulkUpload(batchId, uploadAnyway = false) {
-    const response = await http.post(`/admin/questions/bulk-upload/${batchId}/approve`, { uploadAnyway });
+  async approveBulkUpload(batchId, uploadAnyway = false, updateExisting = false) {
+    const response = await http.post(`/admin/questions/bulk-upload/${batchId}/approve`, { uploadAnyway, updateExisting });
     return response.data;
+  },
+  async exportRecords(params = {}) {
+    const response = await http.get("/admin/questions/export", {
+      params,
+      responseType: "blob",
+    });
+    return response;
   },
   async history(questionId) {
     const response = await http.get("/admin/question-activity-logs", {
