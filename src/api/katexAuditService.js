@@ -29,6 +29,39 @@ export const katexAuditService = {
     const response = await http.post("/admin/questions/katex-audit/mark-reviewed", { questionIds });
     return response.data;
   },
+  async aiScan(questionIds, provider = "") {
+    const response = await http.post("/admin/questions/katex-audit/ai-scan", { questionIds, provider });
+    return response.data;
+  },
+  async aiJob(jobId) {
+    const response = await http.get(`/admin/questions/katex-audit/ai-jobs/${jobId}`);
+    return response.data;
+  },
+  async aiFindings(params = {}) {
+    const response = await http.get("/admin/questions/katex-audit/ai-findings", { params: { page: 1, limit: 20, ...params } });
+    return response.data;
+  },
+  async aiFix(findingIds) {
+    const response = await http.post("/admin/questions/katex-audit/ai-fix", { findingIds });
+    return response.data;
+  },
+  async aiFixHistory(params = {}) {
+    const response = await http.get("/admin/questions/katex-audit/ai-fix-history", { params: { page: 1, limit: 20, ...params } });
+    return response.data;
+  },
+  async rollbackFix(historyId) {
+    const response = await http.post(`/admin/questions/katex-audit/ai-fix-history/${historyId}/rollback`);
+    return response.data;
+  },
+  async exportFixHistory() {
+    const response = await http.get("/admin/questions/katex-audit/ai-fix-history/export/csv", { responseType: "blob" });
+    const url = URL.createObjectURL(response.data);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "ai-fix-history.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  },
   async export(format = "csv", params = {}) {
     const response = await http.get(`/admin/questions/katex-audit/export/${format}`, {
       params,

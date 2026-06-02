@@ -54,6 +54,7 @@ const navItems = [
   { label: "Session", to: "/sessions", section: "Operations", icon: DashboardIcon, moduleKey: "sessions" },
   { label: "Employees", to: "/employees", section: "Security", icon: UsersIcon, mainOnly: true },
   { label: "Audit Logs", to: "/audit-logs", section: "Security", icon: ShieldIcon, mainOnly: true },
+  { label: "AI Configuration", to: "/ai-configuration", section: "System", icon: SettingsIcon, mainOnly: true },
   { label: "Settings", to: "/settings", section: "System", icon: SettingsIcon, moduleKey: "settings" },
   { label: "Auth Settings", to: "/auth-settings", section: "System", icon: ShieldIcon, moduleKey: "auth-settings" },
   { label: "Email Templates", to: "/email-templates", section: "System", icon: MailIcon, moduleKey: "email-templates" },

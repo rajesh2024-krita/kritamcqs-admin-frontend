@@ -37,6 +37,7 @@ import { MistakeManagementPage } from "../pages/MistakeManagementPage";
 import { FreeQuestionsPage } from "../pages/FreeQuestionsPage";
 import { EmployeesPage } from "../pages/employees/EmployeesPage";
 import { AuditLogsPage } from "../pages/audit/AuditLogsPage";
+import { AIConfigurationPage } from "../pages/settings/AIConfigurationPage";
 import { useAuth } from "../context/AuthContext";
 import { canViewModule, firstAllowedModulePath, isEmployee } from "../config/adminPermissions";
 
@@ -98,6 +99,7 @@ export function AppRoutes() {
         <Route path="questions/katex-audit" element={<ModuleAccess moduleKey="katex-audit"><KatexAuditPage /></ModuleAccess>} />
         <Route path="employees" element={<MainAdminOnly><EmployeesPage /></MainAdminOnly>} />
         <Route path="audit-logs" element={<MainAdminOnly><AuditLogsPage /></MainAdminOnly>} />
+        <Route path="ai-configuration" element={<MainAdminOnly><AIConfigurationPage /></MainAdminOnly>} />
         <Route path="mock-tests" element={<ModuleAccess moduleKey="mock-tests"><MockTestsPage /></ModuleAccess>} />
         <Route path="free-mock-tests" element={<ModuleAccess moduleKey="free-mock-tests"><MockTestsPage freeOnly /></ModuleAccess>} />
         <Route path="free-questions" element={<ModuleAccess moduleKey="free-questions"><FreeQuestionsPage /></ModuleAccess>} />
