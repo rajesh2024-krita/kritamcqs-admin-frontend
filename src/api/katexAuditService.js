@@ -5,6 +5,10 @@ export const katexAuditService = {
     const response = await http.get("/admin/questions/katex-audit", { params: { page: 1, limit: 20, ...params } });
     return response.data;
   },
+  async questions(params = {}) {
+    const response = await http.get("/admin/questions/katex-audit/questions", { params: { page: 1, limit: 20, ...params } });
+    return response.data;
+  },
   async scanAll(batchSize = 500) {
     const response = await http.post("/admin/questions/katex-audit/scan", { batchSize });
     return response.data;
@@ -41,6 +45,10 @@ export const katexAuditService = {
     const response = await http.get("/admin/questions/katex-audit/ai-findings", { params: { page: 1, limit: 20, ...params } });
     return response.data;
   },
+  async issueTypes(params = {}) {
+    const response = await http.get("/admin/questions/katex-audit/ai-findings/issue-types", { params });
+    return response.data;
+  },
   async aiSummary() {
     const response = await http.get("/admin/questions/katex-audit/ai-summary");
     return response.data;
@@ -51,6 +59,10 @@ export const katexAuditService = {
   },
   async rejectFindings(findingIds) {
     const response = await http.post("/admin/questions/katex-audit/ai-findings/reject", { findingIds });
+    return response.data;
+  },
+  async refixFindings(findingIds) {
+    const response = await http.post("/admin/questions/katex-audit/ai-findings/refix", { findingIds });
     return response.data;
   },
   async editFinding(findingId, payload) {

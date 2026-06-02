@@ -10,10 +10,10 @@ import { Pagination } from "../../components/tables/Pagination";
 import { useToast } from "../../context/ToastContext";
 import { cn, ui } from "../../ui";
 
-const STATUS_OPTIONS = ["", "PASS", "KATEX_ISSUE"];
+const STATUS_OPTIONS = ["", "PENDING", "PASS", "KATEX_ISSUE"];
 const ISSUE_TYPES = ["", "formula", "answer", "explanation", "ocr", "katex", "grammar", "option", "science"];
 const AI_STATUSES = ["", "PASS", "KATEX_ISSUE", "MINOR_ISSUE", "ANSWER_MISMATCH", "EXPLANATION_MISMATCH", "QUESTION_ERROR", "CRITICAL"];
-const PAGE_SIZES = [10, 25, 50, 100, 250, 500];
+const PAGE_SIZES = [10, 25, 50, 100, 250, 500, 750, 1000];
 
 async function listLookup(service, params = {}) {
   const response = await service.list({ page: 1, limit: 1000, ...params });
@@ -59,9 +59,9 @@ export function KatexAuditPage() {
   const [summary, setSummary] = useState({});
   const [aiSummary, setAiSummary] = useState({});
   const [lookups, setLookups] = useState({ subjects: [], chapters: [], topics: [], questionTypes: [] });
-  const [filters, setFilters] = useState({ page: 1, limit: 20, subjectId: "", chapterId: "", topicId: "", questionTypeId: "", status: "" });
+  const [filters, setFilters] = useState({ page: 1, limit: 20, subjectId: "", chapterId: "", topicId: "", questionTypeId: "", status: "", search: "" });
   const [customLimit, setCustomLimit] = useState("");
-  const [activeTab, setActiveTab] = useState("audit");
+  const [activeTab, setActiveTab] = useState("questions");
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState([]);
@@ -69,12 +69,14 @@ export function KatexAuditPage() {
   const [aiJob, setAiJob] = useState(null);
   const [findings, setFindings] = useState([]);
   const [findingsMeta, setFindingsMeta] = useState(null);
-  const [findingFilter, setFindingFilter] = useState({ page: 1, limit: 20, issueType: "", auditStatus: "", status: "pending" });
+  const [findingFilter, setFindingFilter] = useState({ issueType: "", auditStatus: "" });
+  const [issueTypes, setIssueTypes] = useState([]);
   const [selectedFindings, setSelectedFindings] = useState([]);
   const [historyRows, setHistoryRows] = useState([]);
   const [historyMeta, setHistoryMeta] = useState(null);
   const [expandedFinding, setExpandedFinding] = useState("");
   const [editingFinding, setEditingFinding] = useState(null);
+  const [previewItem, setPreviewItem] = useState(null);
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const filteredChapters = useMemo(
@@ -93,7 +95,7 @@ export function KatexAuditPage() {
     setLoading(true);
     try {
       const [response, summaryResponse] = await Promise.all([
-        katexAuditService.list(nextFilters),
+        katexAuditService.questions(nextFilters),
         katexAuditService.aiSummary(),
       ]);
       setRows(response.data || []);
@@ -106,14 +108,32 @@ export function KatexAuditPage() {
     }
   }
 
-  async function loadFindings(nextFilter = findingFilter) {
-    const [response, summaryResponse] = await Promise.all([
-      katexAuditService.aiFindings(nextFilter),
+  function findingParams(status = activeTab === "preview" ? "approved" : "pending", nextFilter = findingFilter) {
+    return {
+      page: filters.page,
+      limit: filters.limit,
+      subjectId: filters.subjectId || undefined,
+      chapterId: filters.chapterId || undefined,
+      topicId: filters.topicId || undefined,
+      questionTypeId: filters.questionTypeId || undefined,
+      search: filters.search || undefined,
+      issueType: nextFilter.issueType || undefined,
+      auditStatus: nextFilter.auditStatus || filters.status || undefined,
+      status,
+    };
+  }
+
+  async function loadFindings(nextFilter = findingFilter, status = activeTab === "preview" ? "approved" : "pending") {
+    const params = findingParams(status, nextFilter);
+    const [response, summaryResponse, issueTypeResponse] = await Promise.all([
+      katexAuditService.aiFindings(params),
       katexAuditService.aiSummary(),
+      katexAuditService.issueTypes(params),
     ]);
     setFindings(response.data || []);
     setFindingsMeta(response.meta || null);
     setAiSummary(summaryResponse.data || {});
+    setIssueTypes(issueTypeResponse.data || []);
     setSelectedFindings([]);
   }
 
@@ -135,12 +155,15 @@ export function KatexAuditPage() {
   }, []);
 
   useEffect(() => {
-    void loadData(filters);
-  }, [filters.page, filters.limit, filters.subjectId, filters.chapterId, filters.topicId, filters.questionTypeId, filters.status]);
+    if (activeTab === "questions") void loadData(filters);
+    if (activeTab === "draft") void loadFindings(findingFilter, "pending");
+    if (activeTab === "preview") void loadFindings(findingFilter, "approved");
+  }, [activeTab, filters.page, filters.limit, filters.subjectId, filters.chapterId, filters.topicId, filters.questionTypeId, filters.status, filters.search]);
 
   useEffect(() => {
-    if (activeTab === "findings") void loadFindings(findingFilter);
-  }, [activeTab, findingFilter.page, findingFilter.issueType, findingFilter.auditStatus, findingFilter.status]);
+    if (activeTab === "draft") void loadFindings(findingFilter, "pending");
+    if (activeTab === "preview") void loadFindings(findingFilter, "approved");
+  }, [activeTab, findingFilter.issueType, findingFilter.auditStatus]);
 
   useEffect(() => {
     if (activeTab === "history") void loadHistory({ page: historyMeta?.page || 1, limit: 20 });
@@ -154,7 +177,7 @@ export function KatexAuditPage() {
       const response = await katexAuditService.aiJob(jobId);
       setAiJob(response.data);
       if (!["queued", "processing"].includes(response.data?.status)) {
-        await loadFindings(findingFilter);
+        await loadFindings(findingFilter, "pending");
         window.clearInterval(timer);
       }
     }, 2500);
@@ -205,7 +228,7 @@ export function KatexAuditPage() {
       if (action === "aiScan") {
         const response = await katexAuditService.aiScan(selected);
         setAiJob(response.data);
-        setActiveTab("findings");
+        setActiveTab("draft");
         toast.success(`AI audit queued for ${response.data?.total || selected.length} questions.`);
       }
       await loadData(filters);
@@ -216,17 +239,16 @@ export function KatexAuditPage() {
     }
   }
 
-  async function applyAIFixes() {
+  async function aiFixDraft() {
     if (!selectedFindings.length) {
-      toast.info("Select AI findings first.");
+      toast.info("Select draft rows first.");
       return;
     }
     setBusy(true);
     try {
       const response = await katexAuditService.approveFindings(selectedFindings);
-      toast.success(`Approved ${response.data?.approved || 0} AI fixes.`);
-      await loadFindings(findingFilter);
-      await loadHistory();
+      toast.success(`Moved ${response.data?.approved || 0} corrected rows to Preview.`);
+      await loadFindings(findingFilter, "pending");
       await loadData(filters);
     } catch (error) {
       toast.error(error?.response?.data?.message || "AI fix failed.");
@@ -244,7 +266,7 @@ export function KatexAuditPage() {
     try {
       const response = await katexAuditService.applyApprovedFixes(selectedFindings);
       toast.success(`Applied ${response.data?.applied || 0} approved fixes.`);
-      await loadFindings(findingFilter);
+      await loadFindings(findingFilter, "approved");
       await loadHistory();
       await loadData(filters);
     } catch (error) {
@@ -259,8 +281,22 @@ export function KatexAuditPage() {
     setBusy(true);
     try {
       const response = await katexAuditService.rejectFindings(selectedFindings);
-      toast.success(`Rejected ${response.data?.rejected || 0} AI fixes.`);
-      await loadFindings(findingFilter);
+      toast.success(`Rolled back ${response.data?.rejected || 0} preview rows.`);
+      await loadFindings(findingFilter, activeTab === "preview" ? "approved" : "pending");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function refixSelected() {
+    if (!selectedFindings.length) return;
+    setBusy(true);
+    try {
+      const response = await katexAuditService.refixFindings(selectedFindings);
+      toast.success(`Moved ${response.data?.movedToDraft || 0} rows back to Draft.`);
+      await loadFindings(findingFilter, "approved");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Re-fix failed.");
     } finally {
       setBusy(false);
     }
@@ -276,7 +312,7 @@ export function KatexAuditPage() {
       });
       toast.success("Draft suggestion updated.");
       setEditingFinding(null);
-      await loadFindings(findingFilter);
+      await loadFindings(findingFilter, activeTab === "preview" ? "approved" : "pending");
     } catch (error) {
       toast.error(error?.response?.data?.message || "Draft update failed.");
     } finally {
@@ -305,6 +341,7 @@ export function KatexAuditPage() {
     questionTypeId: filters.questionTypeId || undefined,
     status: filters.status || undefined,
   };
+  const currentFindingExportParams = findingParams(activeTab === "preview" ? "approved" : "pending");
   const filteredCount = meta?.total || 0;
   const shownCount = rows.length;
   const totalCount = summary.totalQuestions || 0;
@@ -313,12 +350,12 @@ export function KatexAuditPage() {
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
-          <h2 className="text-2xl font-black text-slate-950">Question Bank KaTeX Audit</h2>
-          <p className={ui.muted}>AI Academic Audit Center for rule scans, AI draft review, approvals, and rollback-safe fixes.</p>
+          <h2 className="text-2xl font-black text-slate-950">AI Academic Audit Center</h2>
+          <p className={ui.muted}>Analyze questions, review AI drafts, preview corrected content, and apply approved formatting fixes.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy} onClick={() => runAction("scan")} type="button">
-            {busy ? "Processing..." : filters.subjectId ? "Scan Subject" : "Scan All Questions"}
+            {busy ? "Processing..." : filters.subjectId ? "Fast Scan Subject" : "Fast Scan All"}
           </button>
           <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy} onClick={() => katexAuditService.export("csv", exportParams)} type="button">Export CSV</button>
           <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy} onClick={() => katexAuditService.export("xlsx", exportParams)} type="button">Export XLSX</button>
@@ -326,22 +363,20 @@ export function KatexAuditPage() {
       </div>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        {metric("Total Questions", summary.totalQuestions)}
-        {metric("Passed", summary.passed, "text-emerald-700")}
+        {metric("Total Questions", aiSummary.totalQuestions || summary.totalQuestions)}
+        {metric("Audited Questions", aiSummary.auditedQuestions, "text-blue-700")}
+        {metric("Draft Questions", aiSummary.draftQuestions, "text-amber-700")}
+        {metric("Fixed Questions", aiSummary.fixedQuestions, "text-emerald-700")}
+        {metric("Approved Questions", aiSummary.approvedQuestions, "text-emerald-700")}
+        {metric("Rollback Count", aiSummary.rollbackCount, "text-rose-700")}
+        {metric("Processing Queue", aiSummary.processingQueueCount, "text-slate-700")}
         {metric("KaTeX Issues", summary.katexIssue, "text-amber-700")}
-        {metric("Need Review", summary.needReview, "text-blue-700")}
-        {metric("Pending Audit", aiSummary.pendingAudit, "text-slate-700")}
-        {metric("Critical Review", aiSummary.critical, "text-rose-700")}
-        {metric("Minor Issues", aiSummary.minorIssues, "text-amber-700")}
         {metric("Answer Mismatch", aiSummary.answerMismatch, "text-rose-700")}
-        {metric("Explanation Mismatch", aiSummary.explanationMismatch, "text-orange-700")}
-        {metric("Question Errors", aiSummary.questionErrors, "text-rose-700")}
-        {metric("Approved Fixes", aiSummary.approvedFixes, "text-emerald-700")}
-        {metric("Rejected Fixes", aiSummary.rejectedFixes, "text-slate-500")}
+        {metric("Critical Review", aiSummary.critical, "text-rose-700")}
       </div>
 
       <div className={ui.panel}>
-        <div className="grid gap-3 md:grid-cols-6">
+        <div className="grid gap-3 md:grid-cols-7">
           <select className={ui.input} value={filters.subjectId} onChange={(event) => updateFilter("subjectId", event.target.value)}>
             <option value="">All Subjects</option>
             {lookups.subjects.map((item) => <option key={recordId(item)} value={recordId(item)}>{item.name}</option>)}
@@ -361,6 +396,7 @@ export function KatexAuditPage() {
           <select className={ui.input} value={filters.status} onChange={(event) => updateFilter("status", event.target.value)}>
             {STATUS_OPTIONS.map((status) => <option key={status || "all"} value={status}>{status || "All Statuses"}</option>)}
           </select>
+          <input className={ui.input} value={filters.search} placeholder="Search ID / keywords" onChange={(event) => updateFilter("search", event.target.value)} />
           <div className="flex gap-2">
             <select className={ui.input} value={PAGE_SIZES.includes(Number(filters.limit)) ? filters.limit : "custom"} onChange={(event) => {
               if (event.target.value === "custom") return;
@@ -370,9 +406,9 @@ export function KatexAuditPage() {
               {PAGE_SIZES.map((size) => <option key={size} value={size}>{size} Rows</option>)}
               <option value="custom">Custom</option>
             </select>
-            <input className={cn(ui.input, "max-w-[120px]")} type="number" min="1" max="500" value={customLimit} placeholder="Custom" onChange={(event) => {
+            <input className={cn(ui.input, "max-w-[120px]")} type="number" min="10" max="1000" value={customLimit} placeholder="Custom" onChange={(event) => {
               setCustomLimit(event.target.value);
-              const next = Math.max(1, Math.min(500, Number(event.target.value || 0)));
+              const next = Math.max(10, Math.min(1000, Number(event.target.value || 0)));
               if (next) setFilters((current) => ({ ...current, page: 1, limit: next }));
             }} />
           </div>
@@ -384,20 +420,30 @@ export function KatexAuditPage() {
 
       <div className="flex flex-wrap gap-2">
         {[
-          ["audit", "KaTeX Audit"],
-          ["findings", "Question Draft Queue"],
-          ["history", "AI Fix History"],
+          ["questions", "Questions"],
+          ["draft", "Draft"],
+          ["preview", "Preview"],
+          ["history", "Audit Logs"],
         ].map(([key, label]) => (
-          <button key={key} type="button" className={cn(ui.buttonBase, activeTab === key ? ui.buttonPrimary : ui.buttonSecondary)} onClick={() => setActiveTab(key)}>
+          <button key={key} type="button" className={cn(ui.buttonBase, activeTab === key ? ui.buttonPrimary : ui.buttonSecondary)} onClick={() => {
+            setActiveTab(key);
+            setFilters((current) => ({ ...current, page: 1 }));
+            setSelected([]);
+            setSelectedFindings([]);
+          }}>
             {label}
           </button>
         ))}
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy || !selected.length} onClick={() => runAction("aiScan")} type="button">AI Scan Selected</button>
-        <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy || !selected.length} onClick={() => runAction("review")} type="button">Mark Reviewed</button>
-        <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600">{selected.length} selected</span>
+        {activeTab === "questions" ? (
+          <>
+            <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy || !selected.length} onClick={() => runAction("aiScan")} type="button">AI Analyze Selected</button>
+            <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy || !selected.length} onClick={() => runAction("review")} type="button">Mark Reviewed</button>
+            <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600">{selected.length} selected</span>
+          </>
+        ) : null}
       </div>
 
       {aiJob ? (
@@ -412,7 +458,7 @@ export function KatexAuditPage() {
         </div>
       ) : null}
 
-      {activeTab === "audit" && (loading ? <LoadingSpinner label="Loading KaTeX audit results..." /> : (
+      {activeTab === "questions" && (loading ? <LoadingSpinner label="Loading question records..." /> : (
         <div className={ui.panel}>
           <div className={ui.tableScroll}>
             <table className={ui.table}>
@@ -421,11 +467,11 @@ export function KatexAuditPage() {
                   <th className={ui.tableHead}><input type="checkbox" checked={rows.length > 0 && selected.length === rows.length} onChange={toggleAll} /></th>
                   <th className={ui.tableHead}>Question ID</th>
                   <th className={ui.tableHead}>Subject</th>
+                  <th className={ui.tableHead}>Chapter</th>
+                  <th className={ui.tableHead}>Topic</th>
+                  <th className={ui.tableHead}>Question Type</th>
                   <th className={ui.tableHead}>Status</th>
-                  <th className={ui.tableHead}>Confidence</th>
-                  <th className={ui.tableHead}>Error Count</th>
                   <th className={ui.tableHead}>Preview</th>
-                  <th className={ui.tableHead}>Draft Fix</th>
                   <th className={ui.tableHead}>Review</th>
                 </tr>
               </thead>
@@ -434,13 +480,11 @@ export function KatexAuditPage() {
                   <tr key={row.id}>
                     <td className={ui.tableCell}><input type="checkbox" checked={selectedSet.has(row.questionId)} onChange={() => toggleSelected(row.questionId)} /></td>
                     <td className={ui.tableCell}><span className="font-mono text-xs">{row.questionId}</span></td>
-                    <td className={ui.tableCell}>
-                      <div className="font-semibold text-slate-900">{row.subject}</div>
-                      <div className="text-xs text-slate-500">{row.chapter} / {row.topic}</div>
-                    </td>
+                    <td className={ui.tableCell}>{row.subject}</td>
+                    <td className={ui.tableCell}>{row.chapter}</td>
+                    <td className={ui.tableCell}>{row.topic}</td>
+                    <td className={ui.tableCell}>{row.questionType}</td>
                     <td className={ui.tableCell}><span className={cn("rounded-full border px-2 py-1 text-xs font-black", statusClass(row.status))}>{row.status}</span></td>
-                    <td className={ui.tableCell}>{row.confidence}</td>
-                    <td className={ui.tableCell}>{row.errorCount} errors / {row.warningCount} warnings</td>
                     <td className={cn(ui.tableCell, "min-w-[320px]")}>
                       <MathText className="line-clamp-3 text-sm">{row.preview}</MathText>
                       {expanded === row.id ? (
@@ -454,11 +498,6 @@ export function KatexAuditPage() {
                       ) : null}
                     </td>
                     <td className={ui.tableCell}>
-                      <span className={cn("rounded-full border px-2 py-1 text-xs font-bold", row.autoFixAvailable ? "border-amber-100 bg-amber-50 text-amber-700" : "border-slate-200 bg-slate-50 text-slate-500")}>
-                        {row.autoFixAvailable ? "Suggestion available" : "None"}
-                      </span>
-                    </td>
-                    <td className={ui.tableCell}>
                       <button className={cn(ui.buttonBase, ui.buttonGhost, "px-3 py-2 text-xs")} onClick={() => setExpanded((current) => current === row.id ? "" : row.id)} type="button">
                         {expanded === row.id ? "Hide" : "Review"}
                       </button>
@@ -466,7 +505,7 @@ export function KatexAuditPage() {
                   </tr>
                 ))}
                 {!rows.length ? (
-                  <tr><td className={ui.tableCell} colSpan={9}>No audit rows found. Run Scan All Questions to create audit results.</td></tr>
+                  <tr><td className={ui.tableCell} colSpan={9}>No questions found for the selected filters.</td></tr>
                 ) : null}
               </tbody>
             </table>
@@ -475,31 +514,35 @@ export function KatexAuditPage() {
         </div>
       ))}
 
-      {activeTab === "findings" ? (
+      {(activeTab === "draft" || activeTab === "preview") ? (
         <div className={ui.panel}>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
             <select className={cn(ui.input, "max-w-[220px]")} value={findingFilter.issueType} onChange={(event) => setFindingFilter((current) => ({ ...current, page: 1, issueType: event.target.value }))}>
-              {ISSUE_TYPES.map((type) => <option key={type || "all"} value={type}>{type ? `${type[0].toUpperCase()}${type.slice(1)} Issues` : "All AI Issues"}</option>)}
+              <option value="">All Issue Types</option>
+              {(issueTypes.length ? issueTypes : ISSUE_TYPES.filter(Boolean)).map((type) => <option key={type} value={type}>{type.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())}</option>)}
             </select>
             <select className={cn(ui.input, "max-w-[240px]")} value={findingFilter.auditStatus} onChange={(event) => setFindingFilter((current) => ({ ...current, page: 1, auditStatus: event.target.value }))}>
               {AI_STATUSES.map((status) => <option key={status || "all"} value={status}>{status || "All AI Statuses"}</option>)}
             </select>
-            <select className={cn(ui.input, "max-w-[180px]")} value={findingFilter.status} onChange={(event) => setFindingFilter((current) => ({ ...current, page: 1, status: event.target.value }))}>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="applied">Applied</option>
-            </select>
-            <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy || !selectedFindings.length} onClick={applyAIFixes} type="button">Approve Selected</button>
-            <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy || !selectedFindings.length} onClick={applyApprovedFixes} type="button">Apply Approved Fixes</button>
-            <button className={cn(ui.buttonBase, ui.buttonGhost)} disabled={busy || !selectedFindings.length} onClick={rejectAIFixes} type="button">Reject Selected</button>
-            <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy} onClick={() => katexAuditService.exportFindings("csv", findingFilter)} type="button">Export CSV</button>
-            <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy} onClick={() => katexAuditService.exportFindings("xlsx", findingFilter)} type="button">Export XLSX</button>
-            <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy} onClick={() => katexAuditService.exportFindings("json", findingFilter)} type="button">Export JSON</button>
+            {activeTab === "draft" ? (
+              <>
+                <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy || !selectedFindings.length} onClick={aiFixDraft} type="button">AI Fix Selected</button>
+                <button className={cn(ui.buttonBase, ui.buttonGhost)} disabled={busy || !selectedFindings.length} onClick={rejectAIFixes} type="button">Reject Selected</button>
+              </>
+            ) : (
+              <>
+                <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy || !selectedFindings.length} onClick={applyApprovedFixes} type="button">Approve Selected</button>
+                <button className={cn(ui.buttonBase, ui.buttonGhost)} disabled={busy || !selectedFindings.length} onClick={rejectAIFixes} type="button">Rollback Selected</button>
+                <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy || !selectedFindings.length} onClick={refixSelected} type="button">Re-Fix Selected</button>
+              </>
+            )}
+            <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy} onClick={() => katexAuditService.exportFindings("csv", currentFindingExportParams)} type="button">Export CSV</button>
+            <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy} onClick={() => katexAuditService.exportFindings("xlsx", currentFindingExportParams)} type="button">Export XLSX</button>
+            <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy} onClick={() => katexAuditService.exportFindings("json", currentFindingExportParams)} type="button">Export JSON</button>
           </div>
           <div className={ui.tableScroll}>
             <table className={ui.table}>
-              <thead><tr><th className={ui.tableHead}><input type="checkbox" checked={findings.length > 0 && selectedFindings.length === findings.length} onChange={toggleAllFindings} /></th><th className={ui.tableHead}>Question ID</th><th className={ui.tableHead}>Audit Status</th><th className={ui.tableHead}>Confidence</th><th className={ui.tableHead}>Issue Type</th><th className={ui.tableHead}>Severity</th><th className={ui.tableHead}>Description</th><th className={ui.tableHead}>Suggested Fix</th><th className={ui.tableHead}>Actions</th></tr></thead>
+              <thead><tr><th className={ui.tableHead}><input type="checkbox" checked={findings.length > 0 && selectedFindings.length === findings.length} onChange={toggleAllFindings} /></th><th className={ui.tableHead}>Question ID</th><th className={ui.tableHead}>Subject</th><th className={ui.tableHead}>Chapter</th><th className={ui.tableHead}>Topic</th><th className={ui.tableHead}>Question Type</th><th className={ui.tableHead}>Issue Type</th><th className={ui.tableHead}>{activeTab === "preview" ? "Fixed Date" : "Issue Description"}</th><th className={ui.tableHead}>Status</th><th className={ui.tableHead}>Suggested Fix</th><th className={ui.tableHead}>Action</th></tr></thead>
               <tbody>
                 {findings.map((item) => {
                   const id = recordId(item);
@@ -510,15 +553,17 @@ export function KatexAuditPage() {
                       <tr key={id}>
                         <td className={ui.tableCell}><input type="checkbox" checked={selectedFindings.includes(id)} onChange={() => toggleFinding(id)} /></td>
                         <td className={ui.tableCell}><span className="font-mono text-xs">{relationId(item.questionId)}</span></td>
-                        <td className={ui.tableCell}>{item.auditStatus}</td>
-                        <td className={ui.tableCell}>{item.confidence || 0}%</td>
+                        <td className={ui.tableCell}>{item.subject}</td>
+                        <td className={ui.tableCell}>{item.chapter}</td>
+                        <td className={ui.tableCell}>{item.topic}</td>
+                        <td className={ui.tableCell}>{item.questionType}</td>
                         <td className={ui.tableCell}>{item.issueType}</td>
-                        <td className={ui.tableCell}>{item.severity}</td>
                         <td className={ui.tableCell}>
                           {isEditing ? (
                             <textarea className={cn(ui.input, "min-h-24 min-w-[260px]")} value={editingFinding.description} onChange={(event) => setEditingFinding((current) => ({ ...current, description: event.target.value }))} />
-                          ) : item.description}
+                          ) : activeTab === "preview" ? formatDate(item.fixedAt || item.updatedAt || item.createdAt) : item.description}
                         </td>
+                        <td className={ui.tableCell}>{item.status}</td>
                         <td className={ui.tableCell}>
                           {isEditing ? (
                             <textarea className={cn(ui.input, "min-h-24 min-w-[300px]")} value={editingFinding.suggestedValue} onChange={(event) => setEditingFinding((current) => ({ ...current, suggestedValue: event.target.value }))} />
@@ -532,18 +577,18 @@ export function KatexAuditPage() {
                         </td>
                         <td className={ui.tableCell}>
                           <div className="flex flex-wrap gap-2">
-                            <button className={cn(ui.buttonBase, ui.buttonGhost, "px-3 py-2 text-xs")} type="button" onClick={() => setExpandedFinding((current) => current === id ? "" : id)}>{expandedFinding === id ? "Hide" : "View"}</button>
+                            <button className={cn(ui.buttonBase, ui.buttonGhost, "px-3 py-2 text-xs")} type="button" onClick={() => activeTab === "preview" ? setPreviewItem(item) : setExpandedFinding((current) => current === id ? "" : id)}>View</button>
                             {isEditing ? (
                               <button className={cn(ui.buttonBase, ui.buttonPrimary, "px-3 py-2 text-xs")} disabled={busy} type="button" onClick={saveFindingEdit}>Save</button>
                             ) : (
-                              <button className={cn(ui.buttonBase, ui.buttonSecondary, "px-3 py-2 text-xs")} disabled={busy || item.status === "applied"} type="button" onClick={() => setEditingFinding({ id, description: item.description || "", suggestedValue: item.suggestedValue || fixes[0]?.newValue || "" })}>Edit</button>
+                              activeTab === "draft" ? <button className={cn(ui.buttonBase, ui.buttonSecondary, "px-3 py-2 text-xs")} disabled={busy || item.status === "applied"} type="button" onClick={() => setEditingFinding({ id, description: item.description || "", suggestedValue: item.suggestedValue || fixes[0]?.newValue || "" })}>Edit</button> : null
                             )}
                           </div>
                         </td>
                       </tr>
                       {expandedFinding === id ? (
                         <tr key={`${id}-preview`}>
-                          <td className={ui.tableCell} colSpan={9}>
+                          <td className={ui.tableCell} colSpan={11}>
                             <div className="grid gap-3 md:grid-cols-2">
                               {fixes.map((fix, index) => (
                                 <div key={`${fix.field}-diff-${index}`} className="rounded-sm border border-slate-200 bg-slate-50 p-3">
@@ -561,11 +606,11 @@ export function KatexAuditPage() {
                     </Fragment>
                   );
                 })}
-                {!findings.length ? <tr><td className={ui.tableCell} colSpan={9}>No AI draft queue rows yet. Select questions and run AI Scan Selected.</td></tr> : null}
+                {!findings.length ? <tr><td className={ui.tableCell} colSpan={11}>No {activeTab === "preview" ? "preview" : "draft"} rows found for the selected filters.</td></tr> : null}
               </tbody>
             </table>
           </div>
-          <Pagination meta={findingsMeta} onChange={(page) => setFindingFilter((current) => ({ ...current, page }))} />
+          <Pagination meta={findingsMeta} onChange={(page) => setFilters((current) => ({ ...current, page }))} />
         </div>
       ) : null}
 
@@ -601,6 +646,57 @@ export function KatexAuditPage() {
           <Pagination meta={historyMeta} onChange={(page) => loadHistory({ page, limit: 20 })} />
         </div>
       ) : null}
+
+      {previewItem ? (() => {
+        const fixes = previewItem.suggestedFixes?.length ? previewItem.suggestedFixes : [{ field: previewItem.field, oldValue: previewItem.oldValue, newValue: previewItem.suggestedValue }];
+        const corrected = {
+          question: previewItem.originalQuestion?.question || "",
+          options: [...(previewItem.originalQuestion?.options || ["", "", "", ""])],
+          explanation: previewItem.originalQuestion?.explanation || "",
+        };
+        fixes.forEach((fix) => {
+          if (fix.field === "question") corrected.question = fix.newValue || corrected.question;
+          if (fix.field === "explanation") corrected.explanation = fix.newValue || corrected.explanation;
+          if (fix.field === "optionA") corrected.options[0] = fix.newValue || corrected.options[0];
+          if (fix.field === "optionB") corrected.options[1] = fix.newValue || corrected.options[1];
+          if (fix.field === "optionC") corrected.options[2] = fix.newValue || corrected.options[2];
+          if (fix.field === "optionD") corrected.options[3] = fix.newValue || corrected.options[3];
+        });
+        const changedFields = new Set(fixes.map((fix) => fix.field));
+        const renderBlock = (label, value, changed = false) => (
+          <div className={cn("rounded-sm border p-3", changed ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white")}>
+            <div className="mb-2 text-xs font-black uppercase text-slate-500">{label}</div>
+            <MathText className="text-sm text-slate-800">{value || "-"}</MathText>
+          </div>
+        );
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+            <div className="max-h-[90vh] w-full max-w-6xl overflow-auto rounded-md bg-white p-5 shadow-2xl">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-lg font-black text-slate-950">Question Comparison</div>
+                  <div className="text-xs font-semibold text-slate-500">Issue type: {previewItem.issueType}</div>
+                </div>
+                <button className={cn(ui.buttonBase, ui.buttonGhost)} type="button" onClick={() => setPreviewItem(null)}>Close</button>
+              </div>
+              <div className="grid gap-4 lg:grid-cols-2">
+                <div className="space-y-3">
+                  <div className="text-sm font-black text-slate-700">Original</div>
+                  {renderBlock("Question", previewItem.originalQuestion?.question)}
+                  {(previewItem.originalQuestion?.options || []).map((option, index) => renderBlock(`Option ${String.fromCharCode(65 + index)}`, option))}
+                  {renderBlock("Explanation", previewItem.originalQuestion?.explanation)}
+                </div>
+                <div className="space-y-3">
+                  <div className="text-sm font-black text-slate-700">Corrected</div>
+                  {renderBlock("Question", corrected.question, changedFields.has("question"))}
+                  {corrected.options.map((option, index) => renderBlock(`Option ${String.fromCharCode(65 + index)}`, option, changedFields.has(`option${String.fromCharCode(65 + index)}`)))}
+                  {renderBlock("Explanation", corrected.explanation, changedFields.has("explanation"))}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })() : null}
     </div>
   );
 }
