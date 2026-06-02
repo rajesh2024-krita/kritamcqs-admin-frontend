@@ -10,7 +10,7 @@ export const MODULES = [
   { key: "years", label: "Years", path: "/years" },
   { key: "question-types", label: "Question Types", path: "/question-types" },
   { key: "questions", label: "Questions", path: "/questions", extraActions: [{ key: "bulkUpload", label: "Bulk Upload" }] },
-  { key: "katex-audit", label: "KaTeX Audit", path: "/questions/katex-audit" },
+  { key: "katex-audit", label: "AI Academic Audit", path: "/questions/katex-audit" },
   { key: "mock-tests", label: "Mock Tests", path: "/mock-tests" },
   { key: "free-mock-tests", label: "Free Mock Tests", path: "/free-mock-tests" },
   { key: "free-questions", label: "Free Questions", path: "/free-questions" },

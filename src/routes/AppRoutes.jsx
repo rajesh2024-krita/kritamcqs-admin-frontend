@@ -97,6 +97,7 @@ export function AppRoutes() {
         <Route path="question-types" element={<ModuleAccess moduleKey="question-types"><QuestionTypesPage /></ModuleAccess>} />
         <Route path="questions" element={<ModuleAccess moduleKey="questions"><QuestionsPage /></ModuleAccess>} />
         <Route path="questions/katex-audit" element={<ModuleAccess moduleKey="katex-audit"><KatexAuditPage /></ModuleAccess>} />
+        <Route path="questions/ai-academic-audit" element={<ModuleAccess moduleKey="katex-audit"><KatexAuditPage /></ModuleAccess>} />
         <Route path="employees" element={<MainAdminOnly><EmployeesPage /></MainAdminOnly>} />
         <Route path="audit-logs" element={<MainAdminOnly><AuditLogsPage /></MainAdminOnly>} />
         <Route path="ai-configuration" element={<MainAdminOnly><AIConfigurationPage /></MainAdminOnly>} />

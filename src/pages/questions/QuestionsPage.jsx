@@ -429,7 +429,7 @@ export function QuestionsPage() {
       headerActions={canBulkUploadQuestions ? (
         <>
           <Link className={cn(ui.buttonBase, ui.buttonSecondary)} to="/questions/katex-audit">
-            KaTeX Audit
+            AI Academic Audit
           </Link>
           <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => {
             setBulkMode("upload");

@@ -33,7 +33,7 @@ const navItems = [
   { label: "Topics", to: "/topics", section: "Catalog", icon: TagIcon, moduleKey: "topics" },
   { label: "Years", to: "/years", section: "Catalog", icon: OverviewIcon, moduleKey: "years" },
   { label: "Question Types", to: "/question-types", section: "Catalog", icon: HelpIcon, moduleKey: "question-types" },
-  { label: "KaTeX Audit", to: "/questions/katex-audit", section: "Content", icon: ShieldIcon, moduleKey: "katex-audit" },
+  { label: "AI Academic Audit", to: "/questions/katex-audit", section: "Content", icon: ShieldIcon, moduleKey: "katex-audit" },
   { label: "Questions", to: "/questions", section: "Content", icon: TagIcon, moduleKey: "questions" },
   // { label: "Daily Plans", to: "/daily-plans", section: "Content", icon: FileStackIcon },
   { label: "Mock Tests", to: "/mock-tests", section: "Content", icon: OverviewIcon, moduleKey: "mock-tests" },

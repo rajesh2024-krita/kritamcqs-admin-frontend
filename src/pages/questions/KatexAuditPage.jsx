@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { katexAuditService } from "../../api/katexAuditService";
 import { subjectService } from "../../api/subjectService";
 import { chapterService } from "../../api/chapterService";
@@ -10,7 +10,7 @@ import { Pagination } from "../../components/tables/Pagination";
 import { useToast } from "../../context/ToastContext";
 import { cn, ui } from "../../ui";
 
-const STATUS_OPTIONS = ["", "PASS", "WARNING", "FAILED"];
+const STATUS_OPTIONS = ["", "PASS", "KATEX_ISSUE"];
 const ISSUE_TYPES = ["", "formula", "answer", "explanation", "ocr", "katex", "grammar", "option", "science"];
 const AI_STATUSES = ["", "PASS", "KATEX_ISSUE", "MINOR_ISSUE", "ANSWER_MISMATCH", "EXPLANATION_MISMATCH", "QUESTION_ERROR", "CRITICAL"];
 const PAGE_SIZES = [10, 25, 50, 100, 250, 500];
@@ -57,6 +57,7 @@ export function KatexAuditPage() {
   const [rows, setRows] = useState([]);
   const [meta, setMeta] = useState(null);
   const [summary, setSummary] = useState({});
+  const [aiSummary, setAiSummary] = useState({});
   const [lookups, setLookups] = useState({ subjects: [], chapters: [], topics: [], questionTypes: [] });
   const [filters, setFilters] = useState({ page: 1, limit: 20, subjectId: "", chapterId: "", topicId: "", questionTypeId: "", status: "" });
   const [customLimit, setCustomLimit] = useState("");
@@ -72,6 +73,8 @@ export function KatexAuditPage() {
   const [selectedFindings, setSelectedFindings] = useState([]);
   const [historyRows, setHistoryRows] = useState([]);
   const [historyMeta, setHistoryMeta] = useState(null);
+  const [expandedFinding, setExpandedFinding] = useState("");
+  const [editingFinding, setEditingFinding] = useState(null);
 
   const selectedSet = useMemo(() => new Set(selected), [selected]);
   const filteredChapters = useMemo(
@@ -89,10 +92,14 @@ export function KatexAuditPage() {
   async function loadData(nextFilters = filters) {
     setLoading(true);
     try {
-      const response = await katexAuditService.list(nextFilters);
+      const [response, summaryResponse] = await Promise.all([
+        katexAuditService.list(nextFilters),
+        katexAuditService.aiSummary(),
+      ]);
       setRows(response.data || []);
       setMeta(response.meta || null);
       setSummary(response.summary || {});
+      setAiSummary(summaryResponse.data || {});
       setSelected([]);
     } finally {
       setLoading(false);
@@ -100,9 +107,13 @@ export function KatexAuditPage() {
   }
 
   async function loadFindings(nextFilter = findingFilter) {
-    const response = await katexAuditService.aiFindings(nextFilter);
+    const [response, summaryResponse] = await Promise.all([
+      katexAuditService.aiFindings(nextFilter),
+      katexAuditService.aiSummary(),
+    ]);
     setFindings(response.data || []);
     setFindingsMeta(response.meta || null);
+    setAiSummary(summaryResponse.data || {});
     setSelectedFindings([]);
   }
 
@@ -187,10 +198,6 @@ export function KatexAuditPage() {
         const response = filters.subjectId ? await katexAuditService.scanBySubject(filters.subjectId) : await katexAuditService.scanAll();
         toast.success(`Scanned ${response.data?.processed || 0} questions.`);
       }
-      if (action === "fix") {
-        const response = await katexAuditService.bulkAutoFix(selected);
-        toast.success(`Auto fixed ${response.data?.updated || 0} questions.`);
-      }
       if (action === "review") {
         const response = await katexAuditService.markReviewed(selected);
         toast.success(`Marked ${response.data?.reviewed || 0} questions reviewed.`);
@@ -259,6 +266,24 @@ export function KatexAuditPage() {
     }
   }
 
+  async function saveFindingEdit() {
+    if (!editingFinding?.id) return;
+    setBusy(true);
+    try {
+      await katexAuditService.editFinding(editingFinding.id, {
+        suggestedValue: editingFinding.suggestedValue,
+        description: editingFinding.description,
+      });
+      toast.success("Draft suggestion updated.");
+      setEditingFinding(null);
+      await loadFindings(findingFilter);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Draft update failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function rollback(historyId) {
     setBusy(true);
     try {
@@ -268,19 +293,6 @@ export function KatexAuditPage() {
       await loadData(filters);
     } catch (error) {
       toast.error(error?.response?.data?.message || "Rollback failed.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function autoFixSingle(questionId) {
-    setBusy(true);
-    try {
-      await katexAuditService.autoFix(questionId);
-      toast.success("Question auto-fix completed.");
-      await loadData(filters);
-    } catch (error) {
-      toast.error(error?.response?.data?.message || "Auto-fix failed.");
     } finally {
       setBusy(false);
     }
@@ -302,7 +314,7 @@ export function KatexAuditPage() {
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div>
           <h2 className="text-2xl font-black text-slate-950">Question Bank KaTeX Audit</h2>
-          <p className={ui.muted}>Scan stored questions for formula, chemistry, notation, and render-risk issues.</p>
+          <p className={ui.muted}>AI Academic Audit Center for rule scans, AI draft review, approvals, and rollback-safe fixes.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy} onClick={() => runAction("scan")} type="button">
@@ -316,9 +328,16 @@ export function KatexAuditPage() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         {metric("Total Questions", summary.totalQuestions)}
         {metric("Passed", summary.passed, "text-emerald-700")}
-        {metric("Warning", summary.warning, "text-amber-700")}
-        {metric("Failed", summary.failed, "text-rose-700")}
+        {metric("KaTeX Issues", summary.katexIssue, "text-amber-700")}
         {metric("Need Review", summary.needReview, "text-blue-700")}
+        {metric("Pending Audit", aiSummary.pendingAudit, "text-slate-700")}
+        {metric("Critical Review", aiSummary.critical, "text-rose-700")}
+        {metric("Minor Issues", aiSummary.minorIssues, "text-amber-700")}
+        {metric("Answer Mismatch", aiSummary.answerMismatch, "text-rose-700")}
+        {metric("Explanation Mismatch", aiSummary.explanationMismatch, "text-orange-700")}
+        {metric("Question Errors", aiSummary.questionErrors, "text-rose-700")}
+        {metric("Approved Fixes", aiSummary.approvedFixes, "text-emerald-700")}
+        {metric("Rejected Fixes", aiSummary.rejectedFixes, "text-slate-500")}
       </div>
 
       <div className={ui.panel}>
@@ -376,7 +395,6 @@ export function KatexAuditPage() {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy || !selected.length} onClick={() => runAction("fix")} type="button">Auto Fix Selected</button>
         <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy || !selected.length} onClick={() => runAction("aiScan")} type="button">AI Scan Selected</button>
         <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy || !selected.length} onClick={() => runAction("review")} type="button">Mark Reviewed</button>
         <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600">{selected.length} selected</span>
@@ -407,7 +425,7 @@ export function KatexAuditPage() {
                   <th className={ui.tableHead}>Confidence</th>
                   <th className={ui.tableHead}>Error Count</th>
                   <th className={ui.tableHead}>Preview</th>
-                  <th className={ui.tableHead}>Auto Fix</th>
+                  <th className={ui.tableHead}>Draft Fix</th>
                   <th className={ui.tableHead}>Review</th>
                 </tr>
               </thead>
@@ -436,7 +454,9 @@ export function KatexAuditPage() {
                       ) : null}
                     </td>
                     <td className={ui.tableCell}>
-                      <button className={cn(ui.buttonBase, ui.buttonSecondary, "px-3 py-2 text-xs")} disabled={busy || !row.autoFixAvailable} onClick={() => autoFixSingle(row.questionId)} type="button">Auto Fix</button>
+                      <span className={cn("rounded-full border px-2 py-1 text-xs font-bold", row.autoFixAvailable ? "border-amber-100 bg-amber-50 text-amber-700" : "border-slate-200 bg-slate-50 text-slate-500")}>
+                        {row.autoFixAvailable ? "Suggestion available" : "None"}
+                      </span>
                     </td>
                     <td className={ui.tableCell}>
                       <button className={cn(ui.buttonBase, ui.buttonGhost, "px-3 py-2 text-xs")} onClick={() => setExpanded((current) => current === row.id ? "" : row.id)} type="button">
@@ -473,30 +493,75 @@ export function KatexAuditPage() {
             <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy || !selectedFindings.length} onClick={applyAIFixes} type="button">Approve Selected</button>
             <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy || !selectedFindings.length} onClick={applyApprovedFixes} type="button">Apply Approved Fixes</button>
             <button className={cn(ui.buttonBase, ui.buttonGhost)} disabled={busy || !selectedFindings.length} onClick={rejectAIFixes} type="button">Reject Selected</button>
+            <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy} onClick={() => katexAuditService.exportFindings("csv", findingFilter)} type="button">Export CSV</button>
+            <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy} onClick={() => katexAuditService.exportFindings("xlsx", findingFilter)} type="button">Export XLSX</button>
+            <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy} onClick={() => katexAuditService.exportFindings("json", findingFilter)} type="button">Export JSON</button>
           </div>
           <div className={ui.tableScroll}>
             <table className={ui.table}>
-              <thead><tr><th className={ui.tableHead}><input type="checkbox" checked={findings.length > 0 && selectedFindings.length === findings.length} onChange={toggleAllFindings} /></th><th className={ui.tableHead}>Question ID</th><th className={ui.tableHead}>Audit Status</th><th className={ui.tableHead}>Confidence</th><th className={ui.tableHead}>Issue Type</th><th className={ui.tableHead}>Severity</th><th className={ui.tableHead}>Description</th><th className={ui.tableHead}>Suggested Fix</th></tr></thead>
+              <thead><tr><th className={ui.tableHead}><input type="checkbox" checked={findings.length > 0 && selectedFindings.length === findings.length} onChange={toggleAllFindings} /></th><th className={ui.tableHead}>Question ID</th><th className={ui.tableHead}>Audit Status</th><th className={ui.tableHead}>Confidence</th><th className={ui.tableHead}>Issue Type</th><th className={ui.tableHead}>Severity</th><th className={ui.tableHead}>Description</th><th className={ui.tableHead}>Suggested Fix</th><th className={ui.tableHead}>Actions</th></tr></thead>
               <tbody>
-                {findings.map((item) => (
-                  <tr key={recordId(item)}>
-                    <td className={ui.tableCell}><input type="checkbox" checked={selectedFindings.includes(recordId(item))} onChange={() => toggleFinding(recordId(item))} /></td>
-                    <td className={ui.tableCell}><span className="font-mono text-xs">{relationId(item.questionId)}</span></td>
-                    <td className={ui.tableCell}>{item.auditStatus}</td>
-                    <td className={ui.tableCell}>{item.confidence || 0}%</td>
-                    <td className={ui.tableCell}>{item.issueType}</td>
-                    <td className={ui.tableCell}>{item.severity}</td>
-                    <td className={ui.tableCell}>{item.description}</td>
-                    <td className={ui.tableCell}>
-                      <div className="max-w-[360px] text-xs text-slate-600">
-                        {(item.suggestedFixes || []).map((fix, index) => (
-                          <div key={`${fix.field}-${index}`}><b>{fix.field}</b>: {String(fix.oldValue || "").slice(0, 60)} {"->"} {String(fix.newValue || "").slice(0, 60)}</div>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {!findings.length ? <tr><td className={ui.tableCell} colSpan={8}>No AI draft queue rows yet. Select questions and run AI Scan Selected.</td></tr> : null}
+                {findings.map((item) => {
+                  const id = recordId(item);
+                  const isEditing = editingFinding?.id === id;
+                  const fixes = item.suggestedFixes?.length ? item.suggestedFixes : [{ field: item.field, oldValue: item.oldValue, newValue: item.suggestedValue }];
+                  return (
+                    <Fragment key={id}>
+                      <tr key={id}>
+                        <td className={ui.tableCell}><input type="checkbox" checked={selectedFindings.includes(id)} onChange={() => toggleFinding(id)} /></td>
+                        <td className={ui.tableCell}><span className="font-mono text-xs">{relationId(item.questionId)}</span></td>
+                        <td className={ui.tableCell}>{item.auditStatus}</td>
+                        <td className={ui.tableCell}>{item.confidence || 0}%</td>
+                        <td className={ui.tableCell}>{item.issueType}</td>
+                        <td className={ui.tableCell}>{item.severity}</td>
+                        <td className={ui.tableCell}>
+                          {isEditing ? (
+                            <textarea className={cn(ui.input, "min-h-24 min-w-[260px]")} value={editingFinding.description} onChange={(event) => setEditingFinding((current) => ({ ...current, description: event.target.value }))} />
+                          ) : item.description}
+                        </td>
+                        <td className={ui.tableCell}>
+                          {isEditing ? (
+                            <textarea className={cn(ui.input, "min-h-24 min-w-[300px]")} value={editingFinding.suggestedValue} onChange={(event) => setEditingFinding((current) => ({ ...current, suggestedValue: event.target.value }))} />
+                          ) : (
+                            <div className="max-w-[360px] text-xs text-slate-600">
+                              {fixes.map((fix, index) => (
+                                <div key={`${fix.field}-${index}`}><b>{fix.field}</b>: {String(fix.oldValue || "").slice(0, 60)} {"->"} {String(fix.newValue || "").slice(0, 60)}</div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className={ui.tableCell}>
+                          <div className="flex flex-wrap gap-2">
+                            <button className={cn(ui.buttonBase, ui.buttonGhost, "px-3 py-2 text-xs")} type="button" onClick={() => setExpandedFinding((current) => current === id ? "" : id)}>{expandedFinding === id ? "Hide" : "View"}</button>
+                            {isEditing ? (
+                              <button className={cn(ui.buttonBase, ui.buttonPrimary, "px-3 py-2 text-xs")} disabled={busy} type="button" onClick={saveFindingEdit}>Save</button>
+                            ) : (
+                              <button className={cn(ui.buttonBase, ui.buttonSecondary, "px-3 py-2 text-xs")} disabled={busy || item.status === "applied"} type="button" onClick={() => setEditingFinding({ id, description: item.description || "", suggestedValue: item.suggestedValue || fixes[0]?.newValue || "" })}>Edit</button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                      {expandedFinding === id ? (
+                        <tr key={`${id}-preview`}>
+                          <td className={ui.tableCell} colSpan={9}>
+                            <div className="grid gap-3 md:grid-cols-2">
+                              {fixes.map((fix, index) => (
+                                <div key={`${fix.field}-diff-${index}`} className="rounded-sm border border-slate-200 bg-slate-50 p-3">
+                                  <div className="mb-2 text-xs font-black uppercase text-slate-500">{fix.field}</div>
+                                  <div className="grid gap-3 md:grid-cols-2">
+                                    <pre className="max-h-52 overflow-auto whitespace-pre-wrap rounded-sm bg-white p-3 text-xs text-slate-700">{fix.oldValue}</pre>
+                                    <pre className="max-h-52 overflow-auto whitespace-pre-wrap rounded-sm bg-emerald-50 p-3 text-xs text-emerald-900">{fix.newValue}</pre>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
+                {!findings.length ? <tr><td className={ui.tableCell} colSpan={9}>No AI draft queue rows yet. Select questions and run AI Scan Selected.</td></tr> : null}
               </tbody>
             </table>
           </div>

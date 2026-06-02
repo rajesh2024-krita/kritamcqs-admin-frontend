@@ -41,6 +41,10 @@ export const katexAuditService = {
     const response = await http.get("/admin/questions/katex-audit/ai-findings", { params: { page: 1, limit: 20, ...params } });
     return response.data;
   },
+  async aiSummary() {
+    const response = await http.get("/admin/questions/katex-audit/ai-summary");
+    return response.data;
+  },
   async approveFindings(findingIds) {
     const response = await http.post("/admin/questions/katex-audit/ai-findings/approve", { findingIds });
     return response.data;
@@ -71,6 +75,18 @@ export const katexAuditService = {
     const link = document.createElement("a");
     link.href = url;
     link.download = "ai-fix-history.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  },
+  async exportFindings(format = "csv", params = {}) {
+    const response = await http.get(`/admin/questions/katex-audit/ai-findings/export/${format}`, {
+      params,
+      responseType: "blob",
+    });
+    const url = URL.createObjectURL(response.data);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = format === "xlsx" ? "ai-draft-queue.xlsx" : format === "json" ? "ai-draft-queue.json" : "ai-draft-queue.csv";
     link.click();
     URL.revokeObjectURL(url);
   },
