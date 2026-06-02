@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { chapterService } from "../../api/chapterService";
 import { difficultyService } from "../../api/difficultyService";
 import { examTypeService } from "../../api/examTypeService";
@@ -223,6 +224,7 @@ export function QuestionsPage() {
   const { admin } = useAuth();
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkMode, setBulkMode] = useState("upload");
+  const [bulkCreateMissingQuestions, setBulkCreateMissingQuestions] = useState(false);
   const [bulkFile, setBulkFile] = useState(null);
   const [bulkPreview, setBulkPreview] = useState(null);
   const [bulkResult, setBulkResult] = useState(null);
@@ -257,7 +259,7 @@ export function QuestionsPage() {
     if (!bulkFile) return;
     setBulkBusy(true);
     try {
-      const response = await questionService.validateBulkUpload(bulkFile, bulkMode);
+      const response = await questionService.validateBulkUpload(bulkFile, bulkMode, bulkCreateMissingQuestions);
       setBulkPreview(response.data);
       setBulkResult(null);
       setShowMissingFields(false);
@@ -368,8 +370,12 @@ export function QuestionsPage() {
       renderFormPreview={({ formState, lookups }) => <QuestionLivePreview formState={formState} lookups={lookups} />}
       headerActions={canBulkUploadQuestions ? (
         <>
+          <Link className={cn(ui.buttonBase, ui.buttonSecondary)} to="/questions/katex-audit">
+            KaTeX Audit
+          </Link>
           <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => {
             setBulkMode("upload");
+            setBulkCreateMissingQuestions(false);
             setBulkFile(null);
             setBulkPreview(null);
             setBulkResult(null);
@@ -380,6 +386,7 @@ export function QuestionsPage() {
           </button>
           <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => {
             setBulkMode("update");
+            setBulkCreateMissingQuestions(false);
             setBulkFile(null);
             setBulkPreview(null);
             setBulkResult(null);
@@ -663,7 +670,7 @@ export function QuestionsPage() {
     {bulkOpen ? (
       <EntityFormWrapper
         title={bulkMode === "update" ? "Questions Bulk Update" : "Questions Bulk Upload"}
-        subtitle={bulkMode === "update" ? "Upload a mapped file and update existing matching questions in batches." : "Upload, validate, create missing fields, approve, and process questions in batches."}
+        subtitle={bulkMode === "update" ? "Upload a Question ID file and update only supplied values in batches." : "Upload, validate, create missing fields, approve, and process questions in batches."}
         onCancel={() => setBulkOpen(false)}
         onSubmit={(event) => event.preventDefault()}
         submitLabel="Close"
@@ -673,6 +680,16 @@ export function QuestionsPage() {
             <label>File Upload</label>
             <input className={ui.input} type="file" accept=".xlsx,.xls,.csv,.json" onChange={(event) => setBulkFile(event.target.files?.[0] || null)} />
           </div>
+          {bulkMode === "update" ? (
+            <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <input
+                type="checkbox"
+                checked={bulkCreateMissingQuestions}
+                onChange={(event) => setBulkCreateMissingQuestions(event.target.checked)}
+              />
+              Create new questions when Question ID is not found
+            </label>
+          ) : null}
           <div className="grid gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 md:grid-cols-4">
             <span className={bulkPreview ? "text-emerald-700" : ""}>1 Upload</span>
             <span className={bulkPreview ? "text-emerald-700" : ""}>2 Validate</span>
@@ -824,7 +841,7 @@ export function QuestionsPage() {
             <div className={ui.panel}>
               <strong>Upload Completion Summary</strong>
               <p className={ui.muted}>
-                Total Questions: {bulkResult.totalRows} | Successfully Uploaded: {bulkResult.successfullyUploadedRows ?? bulkResult.successCount} | Uploaded with Warning: {bulkResult.uploadedWithWarningRows ?? bulkResult.uploadedWithWarningCount ?? 0} | Failed: {bulkResult.completelyFailedRows ?? bulkResult.failedCount} | Skipped Duplicates: {bulkResult.skippedDuplicatesCount || 0} | Processing Time: {bulkResult.processingTimeSeconds || 0}s | Uploaded Images: {bulkResult.uploadedImageCount || 0}
+                Total Questions: {bulkResult.totalRows} | Updated: {bulkResult.successfullyUpdatedRows ?? bulkResult.updatedCount ?? 0} | Newly Created: {bulkResult.newlyCreatedRows ?? bulkResult.createdCount ?? 0} | Success: {bulkResult.successfullyUploadedRows ?? bulkResult.successCount} | Failed: {bulkResult.completelyFailedRows ?? bulkResult.failedCount} | Skipped: {bulkResult.skippedCount || bulkResult.skippedDuplicatesCount || 0} | Processing Time: {bulkResult.processingTimeSeconds || 0}s | Uploaded Images: {bulkResult.uploadedImageCount || 0}
               </p>
               <div className="mt-3 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
                 <span>Created Subjects: <b>{createdSummary.subjects || 0}</b></span>

@@ -13,6 +13,7 @@ import { TopicsPage } from "../pages/TopicsPage";
 import { YearsPage } from "../pages/years/YearsPage";
 import { QuestionTypesPage } from "../pages/questionTypes/QuestionTypesPage";
 import { QuestionsPage } from "../pages/questions/QuestionsPage";
+import { KatexAuditPage } from "../pages/questions/KatexAuditPage";
 import { UsersPage } from "../pages/users/UsersPage";
 import { SubscriptionsPage } from "../pages/SubscriptionsPage";
 import { SubscriptionPlansPage } from "../pages/SubscriptionPlansPage";
@@ -94,6 +95,7 @@ export function AppRoutes() {
         <Route path="years" element={<ModuleAccess moduleKey="years"><YearsPage /></ModuleAccess>} />
         <Route path="question-types" element={<ModuleAccess moduleKey="question-types"><QuestionTypesPage /></ModuleAccess>} />
         <Route path="questions" element={<ModuleAccess moduleKey="questions"><QuestionsPage /></ModuleAccess>} />
+        <Route path="questions/katex-audit" element={<ModuleAccess moduleKey="katex-audit"><KatexAuditPage /></ModuleAccess>} />
         <Route path="employees" element={<MainAdminOnly><EmployeesPage /></MainAdminOnly>} />
         <Route path="audit-logs" element={<MainAdminOnly><AuditLogsPage /></MainAdminOnly>} />
         <Route path="mock-tests" element={<ModuleAccess moduleKey="mock-tests"><MockTestsPage /></ModuleAccess>} />

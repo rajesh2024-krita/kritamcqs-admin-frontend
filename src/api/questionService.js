@@ -17,10 +17,11 @@ export const questionService = {
     const response = await http.post("/admin/questions/own-asset-url", { url });
     return response.data;
   },
-  async validateBulkUpload(file, uploadMode = "upload") {
+  async validateBulkUpload(file, uploadMode = "upload", createMissingQuestions = false) {
     const formData = new FormData();
     formData.append("sheet", file);
     formData.append("uploadMode", uploadMode);
+    formData.append("createMissingQuestions", String(createMissingQuestions));
     const response = await http.post("/admin/questions/bulk-upload/validate", formData, {
       headers: { "Content-Type": "multipart/form-data" },
     });

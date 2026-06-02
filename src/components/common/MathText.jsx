@@ -152,6 +152,12 @@ function normalizeFormulaText(value, chemistry) {
 
 function renderKatex(value, displayMode) {
   try {
+    katex.renderToString(value, {
+      displayMode,
+      throwOnError: true,
+      strict: "ignore",
+      trust: false,
+    });
     return katex.renderToString(value, {
       displayMode,
       throwOnError: false,
