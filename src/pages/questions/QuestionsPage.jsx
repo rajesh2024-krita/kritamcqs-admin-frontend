@@ -16,6 +16,7 @@ import { EntityManagerPage } from "../common/EntityManagerPage";
 import { EntityFormWrapper } from "../../components/forms/EntityFormWrapper";
 import { MathText } from "../../components/common/MathText";
 import { useAuth } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
 import { getModulePermission, isEmployee } from "../../config/adminPermissions";
 import { cn, ui } from "../../ui";
 
@@ -114,7 +115,10 @@ function QuestionImage({ src, alt }) {
   );
 }
 
-function QuestionLivePreview({ formState, lookups }) {
+function QuestionLivePreview({ formState, setFormState, lookups, editingItem }) {
+  const toast = useToast();
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiFindings, setAiFindings] = useState([]);
   const subject = lookupById(lookups.subjects, formState.subjectId);
   const topic = lookupById(lookups.topics, formState.topicId);
   const year = lookupById(lookups.years, formState.yearId);
@@ -128,6 +132,39 @@ function QuestionLivePreview({ formState, lookups }) {
     ["D", formState.optionD, formState.optionDImageUrl],
   ];
   const showOptions = formState.responseType !== "numeric";
+
+  async function runAIScan() {
+    if (!editingItem?.id) {
+      toast.info("Save the question before running AI scan.");
+      return;
+    }
+    setAiBusy(true);
+    try {
+      const response = await questionService.aiScan(editingItem.id);
+      setAiFindings(response.data?.findings || []);
+      toast.success("AI scan completed. Draft fixes are ready for preview.");
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "AI scan failed.");
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  function previewAIFix() {
+    const fixes = aiFindings.flatMap((finding) => finding.suggestedFixes || []);
+    if (!fixes.length) {
+      toast.info("No AI fix suggestions available.");
+      return;
+    }
+    setFormState((current) => {
+      const next = { ...current };
+      fixes.forEach((fix) => {
+        if (fix.field && fix.newValue !== undefined) next[fix.field] = fix.newValue;
+      });
+      return next;
+    });
+    toast.success("AI suggestions loaded into the form. Review, then save changes.");
+  }
 
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-slate-50 shadow-sm">
@@ -151,6 +188,27 @@ function QuestionLivePreview({ formState, lookups }) {
       </div>
 
       <div className="space-y-3 p-3">
+        {editingItem?.id ? (
+          <div className="rounded-2xl border border-blue-100 bg-blue-50 p-3">
+            <div className="flex flex-wrap gap-2">
+              <button className={cn(ui.buttonBase, ui.buttonSecondary, "px-3 py-2 text-xs")} type="button" disabled={aiBusy} onClick={runAIScan}>
+                {aiBusy ? "AI Scanning..." : "AI Scan"}
+              </button>
+              <button className={cn(ui.buttonBase, ui.buttonPrimary, "px-3 py-2 text-xs")} type="button" disabled={aiBusy || !aiFindings.length} onClick={previewAIFix}>
+                AI Fix
+              </button>
+            </div>
+            {aiFindings.length ? (
+              <div className="mt-3 space-y-1 text-xs text-slate-700">
+                {aiFindings.slice(0, 5).map((finding) => (
+                  <div key={finding.id || finding._id}>
+                    {finding.auditStatus === "PASS" ? "✓" : "⚠"} {finding.description || finding.auditStatus}
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <span className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-black text-emerald-700">
@@ -367,7 +425,7 @@ export function QuestionsPage() {
       canEdit={canEditQuestions}
       canDelete={canDeleteQuestions}
       canBulkDelete={canDeleteQuestions}
-      renderFormPreview={({ formState, lookups }) => <QuestionLivePreview formState={formState} lookups={lookups} />}
+      renderFormPreview={({ formState, setFormState, lookups, editingItem }) => <QuestionLivePreview formState={formState} setFormState={setFormState} lookups={lookups} editingItem={editingItem} />}
       headerActions={canBulkUploadQuestions ? (
         <>
           <Link className={cn(ui.buttonBase, ui.buttonSecondary)} to="/questions/katex-audit">

@@ -56,4 +56,8 @@ export const questionService = {
     });
     return response.data;
   },
+  async aiScan(questionId) {
+    const response = await http.post(`/admin/questions/katex-audit/ai-scan/${questionId}`);
+    return response.data;
+  },
 };

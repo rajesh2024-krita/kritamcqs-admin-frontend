@@ -741,7 +741,7 @@ export function EntityManagerPage({
                 ))}
               </div>
               <div className="xl:sticky xl:top-0 xl:self-start">
-                {renderFormPreview({ formState, lookups, editingItem })}
+                {renderFormPreview({ formState, setFormState, lookups, editingItem })}
               </div>
             </div>
           ) : (

@@ -41,8 +41,20 @@ export const katexAuditService = {
     const response = await http.get("/admin/questions/katex-audit/ai-findings", { params: { page: 1, limit: 20, ...params } });
     return response.data;
   },
-  async aiFix(findingIds) {
-    const response = await http.post("/admin/questions/katex-audit/ai-fix", { findingIds });
+  async approveFindings(findingIds) {
+    const response = await http.post("/admin/questions/katex-audit/ai-findings/approve", { findingIds });
+    return response.data;
+  },
+  async rejectFindings(findingIds) {
+    const response = await http.post("/admin/questions/katex-audit/ai-findings/reject", { findingIds });
+    return response.data;
+  },
+  async editFinding(findingId, payload) {
+    const response = await http.put(`/admin/questions/katex-audit/ai-findings/${findingId}`, payload);
+    return response.data;
+  },
+  async applyApprovedFixes(findingIds) {
+    const response = await http.post("/admin/questions/katex-audit/ai-fix/apply-approved", { findingIds });
     return response.data;
   },
   async aiFixHistory(params = {}) {

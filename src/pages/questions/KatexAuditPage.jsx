@@ -12,6 +12,7 @@ import { cn, ui } from "../../ui";
 
 const STATUS_OPTIONS = ["", "PASS", "WARNING", "FAILED"];
 const ISSUE_TYPES = ["", "formula", "answer", "explanation", "ocr", "katex", "grammar", "option", "science"];
+const AI_STATUSES = ["", "PASS", "KATEX_ISSUE", "MINOR_ISSUE", "ANSWER_MISMATCH", "EXPLANATION_MISMATCH", "QUESTION_ERROR", "CRITICAL"];
 const PAGE_SIZES = [10, 25, 50, 100, 250, 500];
 
 async function listLookup(service, params = {}) {
@@ -67,7 +68,7 @@ export function KatexAuditPage() {
   const [aiJob, setAiJob] = useState(null);
   const [findings, setFindings] = useState([]);
   const [findingsMeta, setFindingsMeta] = useState(null);
-  const [findingFilter, setFindingFilter] = useState({ page: 1, limit: 20, issueType: "" });
+  const [findingFilter, setFindingFilter] = useState({ page: 1, limit: 20, issueType: "", auditStatus: "", status: "pending" });
   const [selectedFindings, setSelectedFindings] = useState([]);
   const [historyRows, setHistoryRows] = useState([]);
   const [historyMeta, setHistoryMeta] = useState(null);
@@ -128,7 +129,7 @@ export function KatexAuditPage() {
 
   useEffect(() => {
     if (activeTab === "findings") void loadFindings(findingFilter);
-  }, [activeTab, findingFilter.page, findingFilter.issueType]);
+  }, [activeTab, findingFilter.page, findingFilter.issueType, findingFilter.auditStatus, findingFilter.status]);
 
   useEffect(() => {
     if (activeTab === "history") void loadHistory({ page: historyMeta?.page || 1, limit: 20 });
@@ -215,13 +216,44 @@ export function KatexAuditPage() {
     }
     setBusy(true);
     try {
-      const response = await katexAuditService.aiFix(selectedFindings);
-      toast.success(`Applied ${response.data?.applied || 0} AI fixes.`);
+      const response = await katexAuditService.approveFindings(selectedFindings);
+      toast.success(`Approved ${response.data?.approved || 0} AI fixes.`);
       await loadFindings(findingFilter);
       await loadHistory();
       await loadData(filters);
     } catch (error) {
       toast.error(error?.response?.data?.message || "AI fix failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function applyApprovedFixes() {
+    if (!selectedFindings.length) {
+      toast.info("Select approved AI findings first.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const response = await katexAuditService.applyApprovedFixes(selectedFindings);
+      toast.success(`Applied ${response.data?.applied || 0} approved fixes.`);
+      await loadFindings(findingFilter);
+      await loadHistory();
+      await loadData(filters);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Apply approved fixes failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function rejectAIFixes() {
+    if (!selectedFindings.length) return;
+    setBusy(true);
+    try {
+      const response = await katexAuditService.rejectFindings(selectedFindings);
+      toast.success(`Rejected ${response.data?.rejected || 0} AI fixes.`);
+      await loadFindings(findingFilter);
     } finally {
       setBusy(false);
     }
@@ -334,7 +366,7 @@ export function KatexAuditPage() {
       <div className="flex flex-wrap gap-2">
         {[
           ["audit", "KaTeX Audit"],
-          ["findings", "AI Findings"],
+          ["findings", "Question Draft Queue"],
           ["history", "AI Fix History"],
         ].map(([key, label]) => (
           <button key={key} type="button" className={cn(ui.buttonBase, activeTab === key ? ui.buttonPrimary : ui.buttonSecondary)} onClick={() => setActiveTab(key)}>
@@ -426,19 +458,32 @@ export function KatexAuditPage() {
       {activeTab === "findings" ? (
         <div className={ui.panel}>
           <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-            <select className={cn(ui.input, "max-w-[240px]")} value={findingFilter.issueType} onChange={(event) => setFindingFilter((current) => ({ ...current, page: 1, issueType: event.target.value }))}>
+            <select className={cn(ui.input, "max-w-[220px]")} value={findingFilter.issueType} onChange={(event) => setFindingFilter((current) => ({ ...current, page: 1, issueType: event.target.value }))}>
               {ISSUE_TYPES.map((type) => <option key={type || "all"} value={type}>{type ? `${type[0].toUpperCase()}${type.slice(1)} Issues` : "All AI Issues"}</option>)}
             </select>
-            <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy || !selectedFindings.length} onClick={applyAIFixes} type="button">AI Fix Selected</button>
+            <select className={cn(ui.input, "max-w-[240px]")} value={findingFilter.auditStatus} onChange={(event) => setFindingFilter((current) => ({ ...current, page: 1, auditStatus: event.target.value }))}>
+              {AI_STATUSES.map((status) => <option key={status || "all"} value={status}>{status || "All AI Statuses"}</option>)}
+            </select>
+            <select className={cn(ui.input, "max-w-[180px]")} value={findingFilter.status} onChange={(event) => setFindingFilter((current) => ({ ...current, page: 1, status: event.target.value }))}>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+              <option value="applied">Applied</option>
+            </select>
+            <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={busy || !selectedFindings.length} onClick={applyAIFixes} type="button">Approve Selected</button>
+            <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy || !selectedFindings.length} onClick={applyApprovedFixes} type="button">Apply Approved Fixes</button>
+            <button className={cn(ui.buttonBase, ui.buttonGhost)} disabled={busy || !selectedFindings.length} onClick={rejectAIFixes} type="button">Reject Selected</button>
           </div>
           <div className={ui.tableScroll}>
             <table className={ui.table}>
-              <thead><tr><th className={ui.tableHead}><input type="checkbox" checked={findings.length > 0 && selectedFindings.length === findings.length} onChange={toggleAllFindings} /></th><th className={ui.tableHead}>Question ID</th><th className={ui.tableHead}>Issue Type</th><th className={ui.tableHead}>Severity</th><th className={ui.tableHead}>Description</th><th className={ui.tableHead}>Suggested Fix</th></tr></thead>
+              <thead><tr><th className={ui.tableHead}><input type="checkbox" checked={findings.length > 0 && selectedFindings.length === findings.length} onChange={toggleAllFindings} /></th><th className={ui.tableHead}>Question ID</th><th className={ui.tableHead}>Audit Status</th><th className={ui.tableHead}>Confidence</th><th className={ui.tableHead}>Issue Type</th><th className={ui.tableHead}>Severity</th><th className={ui.tableHead}>Description</th><th className={ui.tableHead}>Suggested Fix</th></tr></thead>
               <tbody>
                 {findings.map((item) => (
                   <tr key={recordId(item)}>
                     <td className={ui.tableCell}><input type="checkbox" checked={selectedFindings.includes(recordId(item))} onChange={() => toggleFinding(recordId(item))} /></td>
                     <td className={ui.tableCell}><span className="font-mono text-xs">{relationId(item.questionId)}</span></td>
+                    <td className={ui.tableCell}>{item.auditStatus}</td>
+                    <td className={ui.tableCell}>{item.confidence || 0}%</td>
                     <td className={ui.tableCell}>{item.issueType}</td>
                     <td className={ui.tableCell}>{item.severity}</td>
                     <td className={ui.tableCell}>{item.description}</td>
@@ -451,7 +496,7 @@ export function KatexAuditPage() {
                     </td>
                   </tr>
                 ))}
-                {!findings.length ? <tr><td className={ui.tableCell} colSpan={6}>No AI findings yet. Select questions and run AI Scan Selected.</td></tr> : null}
+                {!findings.length ? <tr><td className={ui.tableCell} colSpan={8}>No AI draft queue rows yet. Select questions and run AI Scan Selected.</td></tr> : null}
               </tbody>
             </table>
           </div>
