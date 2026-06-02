@@ -133,6 +133,22 @@ function QuestionLivePreview({ formState, setFormState, lookups, editingItem }) 
   ];
   const showOptions = formState.responseType !== "numeric";
 
+  function buildAIQuestionData() {
+    return {
+      question: formState.question || "",
+      optionA: formState.optionA || "",
+      optionB: formState.optionB || "",
+      optionC: formState.optionC || "",
+      optionD: formState.optionD || "",
+      correctOption: formState.correctOption || "",
+      correctOptions: formState.correctOptions || [],
+      numericAnswer: formState.numericAnswer || "",
+      difficulty: formState.difficulty || difficulty?.name || "",
+      responseType: formState.responseType || "single",
+      explanation: formState.explanation || "",
+    };
+  }
+
   async function runAIScan() {
     if (!editingItem?.id) {
       toast.info("Save the question before running AI scan.");
@@ -140,9 +156,10 @@ function QuestionLivePreview({ formState, setFormState, lookups, editingItem }) 
     }
     setAiBusy(true);
     try {
-      const response = await questionService.aiScan(editingItem.id);
+      const response = await questionService.aiScan(editingItem.id, buildAIQuestionData());
       setAiFindings(response.data?.findings || []);
-      toast.success("AI scan completed. Draft fixes are ready for preview.");
+      const count = response.data?.findings?.length || 0;
+      toast.success(count ? "AI scan found issues and moved them to Draft." : "AI scan passed. No formula issues found.");
     } catch (error) {
       toast.error(error?.response?.data?.message || "AI scan failed.");
     } finally {
@@ -163,7 +180,7 @@ function QuestionLivePreview({ formState, setFormState, lookups, editingItem }) 
       });
       return next;
     });
-    toast.success("AI suggestions loaded into the form. Review, then save changes.");
+    toast.success("AI corrected draft loaded into preview. Review it live, then save changes.");
   }
 
   return (
@@ -202,7 +219,7 @@ function QuestionLivePreview({ formState, setFormState, lookups, editingItem }) 
               <div className="mt-3 space-y-1 text-xs text-slate-700">
                 {aiFindings.slice(0, 5).map((finding) => (
                   <div key={finding.id || finding._id}>
-                    {finding.auditStatus === "PASS" ? "✓" : "⚠"} {finding.description || finding.auditStatus}
+                    {finding.auditStatus === "PASS" ? "PASS" : "ISSUE"}: {finding.description || finding.auditStatus}
                   </div>
                 ))}
               </div>
