@@ -15,6 +15,7 @@ import {
 import { EntityManagerPage } from "../common/EntityManagerPage";
 import { EntityFormWrapper } from "../../components/forms/EntityFormWrapper";
 import { MathText } from "../../components/common/MathText";
+import { MatchingQuestionTable } from "../../components/question/MatchingQuestionTable";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { getModulePermission, isEmployee } from "../../config/adminPermissions";
@@ -237,9 +238,15 @@ function QuestionLivePreview({ formState, setFormState, lookups, editingItem }) 
             <span className="rounded-full bg-slate-100 px-2 py-1">{subject?.name || "Subject"}</span>
             <span className="rounded-full bg-slate-100 px-2 py-1">{topic?.name || "Topic"}</span>
           </div>
-          <MathText className="text-sm font-black leading-6 text-slate-950">
-            {formState.question || "Question preview will appear here as you type."}
-          </MathText>
+          <MatchingQuestionTable
+            question={{
+              ...formState,
+              questionType: questionType?.key || questionType?.name || formState.questionType,
+              questionTypeLabel: questionType?.name || questionType?.label || formState.questionTypeLabel,
+            }}
+            text={formState.question || "Question preview will appear here as you type."}
+            textClassName="text-sm font-black leading-6 text-slate-950"
+          />
           <QuestionImage src={formState.questionImageUrl} alt="Question preview" />
         </div>
 
