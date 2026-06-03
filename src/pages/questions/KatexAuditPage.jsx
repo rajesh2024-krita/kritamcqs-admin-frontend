@@ -5,6 +5,7 @@ import { chapterService } from "../../api/chapterService";
 import { topicService } from "../../api/topicService";
 import { questionTypeService } from "../../api/questionTypeService";
 import { MathText } from "../../components/common/MathText";
+import { MatchingQuestionTable } from "../../components/question/MatchingQuestionTable";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { Pagination } from "../../components/tables/Pagination";
 import { useToast } from "../../context/ToastContext";
@@ -666,7 +667,15 @@ export function KatexAuditPage() {
         const renderBlock = (label, value, changed = false) => (
           <div className={cn("rounded-sm border p-3", changed ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-white")}>
             <div className="mb-2 text-xs font-black uppercase text-slate-500">{label}</div>
-            <MathText className="text-sm text-slate-800">{value || "-"}</MathText>
+            {label === "Explanation" ? (
+              <MatchingQuestionTable
+                question={previewItem.originalQuestion}
+                text={value || "-"}
+                textClassName="text-sm text-slate-800"
+              />
+            ) : (
+              <MathText className="text-sm text-slate-800">{value || "-"}</MathText>
+            )}
           </div>
         );
         return (

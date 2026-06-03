@@ -274,9 +274,15 @@ function QuestionLivePreview({ formState, setFormState, lookups, editingItem }) 
             <span className="rounded-full bg-slate-100 px-2 py-1">{questionType?.name || formState.responseType || "Question Type"}</span>
           </div>
           <div className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Explanation</div>
-          <MathText className="mt-2 text-sm font-semibold leading-6 text-slate-950">
-            {formState.explanation || "Explanation preview will appear here."}
-          </MathText>
+          <MatchingQuestionTable
+            question={{
+              ...formState,
+              questionType: questionType?.key || questionType?.name || formState.questionType,
+              questionTypeLabel: questionType?.name || questionType?.label || formState.questionTypeLabel,
+            }}
+            text={formState.explanation || "Explanation preview will appear here."}
+            textClassName="mt-2 text-sm font-semibold leading-6 text-slate-950"
+          />
           <QuestionImage src={formState.explanationImageUrl} alt="Explanation preview" />
         </div>
 
