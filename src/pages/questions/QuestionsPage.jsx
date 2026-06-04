@@ -536,6 +536,15 @@ export function QuestionsPage() {
           ],
         },
         {
+          name: "exact",
+          label: "Exact PYQ",
+          placeholder: "All Exact Status",
+          options: () => [
+            { label: "Exact PYQ", value: "true" },
+            { label: "Not Exact", value: "false" },
+          ],
+        },
+        {
           name: "questionTypeId",
           label: "Question Type",
           placeholder: "All Types",
