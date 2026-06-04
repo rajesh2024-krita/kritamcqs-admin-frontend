@@ -134,6 +134,9 @@ const defaultForm = {
   questionIds: [],
   markingOverrideEnabled: false,
   markingSchemeVersion: "v1",
+  selectionMix: null,
+  generationConfig: null,
+  includedQuestionIds: [],
 };
 
 const defaultAutoGenerateForm = {
@@ -149,6 +152,10 @@ const defaultAutoGenerateForm = {
   premiumValidityDays: 1,
   autoDailyQuestionRearrangement: true,
   autoDailyQuestionGeneration: true,
+  unusedQuestionPercentage: 100,
+  incorrectQuestionPercentage: 0,
+  usedQuestionPercentage: 0,
+  includedQuestionIdsText: "",
 };
 
 const defaultGenerationSchedule = {
@@ -162,6 +169,10 @@ const defaultGenerationSchedule = {
   chapterIds: [],
   difficulty: "mixed",
   questionCount: 0,
+  unusedQuestionPercentage: 100,
+  incorrectQuestionPercentage: 0,
+  usedQuestionPercentage: 0,
+  includedQuestionIdsText: "",
   titlePrefix: "Premium Auto Mock",
 };
 
@@ -192,6 +203,9 @@ function buildFormFromItem(item) {
     questionIds: item.questionIds || [],
     markingOverrideEnabled: Boolean(item.markingOverrideEnabled),
     markingSchemeVersion: item.markingSchemeVersion || "v1",
+    selectionMix: item.selectionMix || item.generationConfig?.selectionMix || null,
+    generationConfig: item.generationConfig || null,
+    includedQuestionIds: Array.isArray(item.includedQuestionIds) ? item.includedQuestionIds : [],
   };
 }
 
@@ -381,7 +395,11 @@ export function MockTestsPage({ freeOnly = false } = {}) {
       setSubjects(subjectsResponse.data || []);
       setChapters(chaptersResponse.data || []);
       setPatternBlueprints(patternBlueprintsResponse.data || []);
-      setGenerationSchedule({ ...defaultGenerationSchedule, ...(scheduleResponse.data || {}) });
+      setGenerationSchedule({
+        ...defaultGenerationSchedule,
+        ...(scheduleResponse.data || {}),
+        includedQuestionIdsText: (scheduleResponse.data?.includedQuestionIds || []).join(", "),
+      });
       setGenerationLogs(logsResponse.data || []);
       const nextMarkingSettings = {
         predictionMinimumMockTests: markingSettingsResponse.data?.predictionMinimumMockTests || defaultMarkingSettings.predictionMinimumMockTests,
@@ -630,8 +648,19 @@ export function MockTestsPage({ freeOnly = false } = {}) {
         ...generationSchedule,
         monthlyDay: Number(generationSchedule.monthlyDay || 1),
         questionCount: Number(generationSchedule.questionCount || 0),
+        unusedQuestionPercentage: Number(generationSchedule.unusedQuestionPercentage || 0),
+        incorrectQuestionPercentage: Number(generationSchedule.incorrectQuestionPercentage || 0),
+        usedQuestionPercentage: Number(generationSchedule.usedQuestionPercentage || 0),
+        includedQuestionIds: String(generationSchedule.includedQuestionIdsText || "")
+          .split(/[\s,]+/)
+          .map((item) => item.trim())
+          .filter(Boolean),
       });
-      setGenerationSchedule({ ...defaultGenerationSchedule, ...(response.data || {}) });
+      setGenerationSchedule({
+        ...defaultGenerationSchedule,
+        ...(response.data || {}),
+        includedQuestionIdsText: (response.data?.includedQuestionIds || []).join(", "),
+      });
       toast.success("Automatic generation schedule saved");
     } catch (error) {
       toast.error(error.message);
@@ -662,6 +691,13 @@ export function MockTestsPage({ freeOnly = false } = {}) {
         isPremiumOnly: false,
         difficulty: autoForm.difficulty === "mixed" ? "" : autoForm.difficulty,
         title: String(autoForm.title || "").trim() || undefined,
+        unusedQuestionPercentage: Number(autoForm.unusedQuestionPercentage || 0),
+        incorrectQuestionPercentage: Number(autoForm.incorrectQuestionPercentage || 0),
+        usedQuestionPercentage: Number(autoForm.usedQuestionPercentage || 0),
+        includedQuestionIds: String(autoForm.includedQuestionIdsText || "")
+          .split(/[\s,]+/)
+          .map((item) => item.trim())
+          .filter(Boolean),
         markingSchemeVersion: getDefaultSchemeForExam(markingSettings, autoForm.examType).version,
       };
       const response = await mockTestService.autoGenerate(payload);
@@ -843,6 +879,9 @@ export function MockTestsPage({ freeOnly = false } = {}) {
         freeAccessDurationUnit: formState.freeAccessDurationUnit || "days",
         availableDaysOfMonth: formState.availabilityMode === "day_wise" ? parsedDays : [],
         availableWeekdays: formState.availabilityMode === "week_wise" ? formState.availableWeekdays : [],
+        selectionMix: formState.selectionMix || undefined,
+        generationConfig: formState.generationConfig || undefined,
+        includedQuestionIds: Array.isArray(formState.includedQuestionIds) ? formState.includedQuestionIds : [],
         instructions: formState.instructions
           .split("\n")
           .map((item) => item.trim())
@@ -996,8 +1035,24 @@ export function MockTestsPage({ freeOnly = false } = {}) {
                 <input className={ui.input} type="number" min="0" max="300" value={generationSchedule.questionCount} onChange={(event) => setGenerationSchedule((current) => ({ ...current, questionCount: event.target.value }))} placeholder="0 uses blueprint" />
               </label>
               <label className={ui.field}>
+                <span>Unused %</span>
+                <input className={ui.input} type="number" min="0" max="100" value={generationSchedule.unusedQuestionPercentage} onChange={(event) => setGenerationSchedule((current) => ({ ...current, unusedQuestionPercentage: event.target.value }))} />
+              </label>
+              <label className={ui.field}>
+                <span>Incorrect %</span>
+                <input className={ui.input} type="number" min="0" max="100" value={generationSchedule.incorrectQuestionPercentage} onChange={(event) => setGenerationSchedule((current) => ({ ...current, incorrectQuestionPercentage: event.target.value }))} />
+              </label>
+              <label className={ui.field}>
+                <span>Used %</span>
+                <input className={ui.input} type="number" min="0" max="100" value={generationSchedule.usedQuestionPercentage} onChange={(event) => setGenerationSchedule((current) => ({ ...current, usedQuestionPercentage: event.target.value }))} />
+              </label>
+              <label className={ui.field}>
                 <span>Title Prefix</span>
                 <input className={ui.input} value={generationSchedule.titlePrefix} onChange={(event) => setGenerationSchedule((current) => ({ ...current, titlePrefix: event.target.value }))} />
+              </label>
+              <label className={cn(ui.field, "xl:col-span-2")}>
+                <span>Specific old question IDs</span>
+                <textarea className={ui.input} rows={2} value={generationSchedule.includedQuestionIdsText} onChange={(event) => setGenerationSchedule((current) => ({ ...current, includedQuestionIdsText: event.target.value }))} placeholder="Comma or space separated question IDs" />
               </label>
             </div>
 
@@ -1127,6 +1182,22 @@ export function MockTestsPage({ freeOnly = false } = {}) {
             {!freeOnly ? (
               <div className="pt-8"><ToggleSwitch checked={autoForm.autoDailyQuestionGeneration} onChange={(value) => setAutoForm((current) => ({ ...current, autoDailyQuestionGeneration: value }))} label="Daily generate" /></div>
             ) : null}
+            <label className={ui.field}>
+              <span>Unused %</span>
+              <input className={ui.input} type="number" min="0" max="100" value={autoForm.unusedQuestionPercentage} onChange={(event) => setAutoForm((current) => ({ ...current, unusedQuestionPercentage: event.target.value }))} />
+            </label>
+            <label className={ui.field}>
+              <span>Incorrect %</span>
+              <input className={ui.input} type="number" min="0" max="100" value={autoForm.incorrectQuestionPercentage} onChange={(event) => setAutoForm((current) => ({ ...current, incorrectQuestionPercentage: event.target.value }))} />
+            </label>
+            <label className={ui.field}>
+              <span>Used %</span>
+              <input className={ui.input} type="number" min="0" max="100" value={autoForm.usedQuestionPercentage} onChange={(event) => setAutoForm((current) => ({ ...current, usedQuestionPercentage: event.target.value }))} />
+            </label>
+            <label className={cn(ui.field, "xl:col-span-2")}>
+              <span>Specific old question IDs</span>
+              <textarea className={ui.input} rows={2} value={autoForm.includedQuestionIdsText} onChange={(event) => setAutoForm((current) => ({ ...current, includedQuestionIdsText: event.target.value }))} placeholder="Comma or space separated question IDs" />
+            </label>
             <div className="flex items-end">
               <button className={cn(ui.buttonBase, ui.buttonPrimary, "w-full")} type="button" disabled={autoGenerating} onClick={() => void handleAutoGenerate()}>
                 {autoGenerating ? "Generating..." : "Generate Mock Test"}
