@@ -9,10 +9,15 @@ const BARE_MATH_FRAGMENT_PATTERN =
 const CHEMISTRY_FRAGMENT_PATTERN =
   /(?:\\ce\{[^{}]+\}|(?:\d*[A-Z][a-z]?\d*){2,}(?:\^\{?[0-9]*[+-]\}?|[+-])?(?:\s*(?:->|<-|<=>|=>|=|⇌|→|←|\+)\s*(?:\d*[A-Z][a-z]?\d*){2,}(?:\^\{?[0-9]*[+-]\}?|[+-])?)+|(?:\d*[A-Z][a-z]?\d*){2,}(?:\^\{?[0-9]*[+-]\}?|[+-])?)/g;
 const HTML_PATTERN = /<\/?[a-z][\s\S]*>/i;
-const SECTION_LABEL_PATTERN = /^(explanation|key concept|concept|important notes?|notes?|formula|final answer|answer|solution|reason|steps?|characteristics?|advantages?|examples?|reaction|reactions?)\s*[:\-]\s*(.*)$/i;
+const SECTION_LABEL_PATTERN = /^(explanation|key concept|concept|important notes?|notes?|formula|final answer|answer|solution|steps?|characteristics?|advantages?|examples?|reaction|reactions?|conclusion)\s*[:\-]\s*(.*)$/i;
 const BULLET_LINE_PATTERN = /^\s*(?:[-*•]|[A-Za-z]\)|[A-Za-z]\.)\s+(.+)$/;
 const NUMBERED_LINE_PATTERN = /^\s*(\d+)[).]\s+(.+)$/;
 const INLINE_SECTION_PATTERN = /\b(Explanation|Key Concept|Important Notes?|Formula|Final Answer|Answer|Solution|Reason|Steps?|Characteristics?|Advantages?|Examples?|Reactions?)\s*[:\-]\s*/g;
+const ASSERTION_REASON_LINE_PATTERN = /^(assertion\s*(?:\(?a\)?)?|reason\s*(?:\(?r\)?)?)\s*[:\-]\s*(.*)$/i;
+const LIST_LINE_PATTERN = /^\s*(?:(?:\d+)[).]|\(\d+\)|\[\d+\]|(?:[ivxlcdm]+|[IVXLCDM]+)[).]|\((?:[ivxlcdm]+|[IVXLCDM]+)\)|[A-Za-z][).]|\([A-Za-z]\)|[-*]|\u2022|\u2192|\u2713|\u2605)\s+(.+)$/;
+const ORDERED_LIST_LINE_PATTERN = /^\s*(?:(?:\d+)[).]|\(\d+\)|\[\d+\]|(?:[ivxlcdm]+|[IVXLCDM]+)[).]|\((?:[ivxlcdm]+|[IVXLCDM]+)\)|[A-Za-z][).]|\([A-Za-z]\))\s+/;
+const INLINE_ASSERTION_REASON_PATTERN = /\b(Assertion\s*(?:\(?A\)?)?|Reason\s*(?:\(?R\)?)?)\s*[:\-]\s*/gi;
+const INLINE_LIST_MARKER_PATTERN = /\s+(?=(?:\d+[).]|\(\d+\)|\[\d+\]|(?:[ivxlcdm]+|[IVXLCDM]+)[).]|\((?:[ivxlcdm]+|[IVXLCDM]+)\)|[A-Za-z][).]|\([A-Za-z]\)|[-*]|\u2022|\u2192|\u2713|\u2605)\s+)/g;
 const GREEK_SYMBOLS = {
   α: "\\alpha",
   β: "\\beta",
@@ -157,7 +162,18 @@ function normalizeStructuredText(value) {
 }
 
 function exposeInlineSections(value) {
-  return value.replace(INLINE_SECTION_PATTERN, (_match, label, offset) => `${offset === 0 ? "" : "\n\n"}${label}: `);
+  return value
+    .replace(INLINE_ASSERTION_REASON_PATTERN, (_match, label, offset) => {
+      const normalized = /^reason/i.test(label) ? "Reason (R)" : "Assertion (A)";
+      return `${offset === 0 ? "" : "\n\n"}${normalized}: `;
+    })
+    .replace(INLINE_SECTION_PATTERN, (_match, label, offset) => `${offset === 0 ? "" : "\n\n"}${label}: `);
+}
+
+function exposeInlineListMarkers(value) {
+  const matches = value.match(INLINE_LIST_MARKER_PATTERN) ?? [];
+  if (matches.length < 2) return value;
+  return value.replace(INLINE_LIST_MARKER_PATTERN, "\n");
 }
 
 function isStandaloneFormulaLine(value) {
@@ -174,15 +190,43 @@ function pushParagraph(blocks, lines) {
   lines.length = 0;
 }
 
+function parseTableRow(line) {
+  if (!line.includes("|")) return null;
+  const cells = line
+    .trim()
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+  if (cells.length < 2) return null;
+  if (cells.every((cell) => /^:?-{2,}:?$/.test(cell))) return [];
+  return cells;
+}
+
+function getOrderedListStyle(line) {
+  const marker = line.trim().match(/^(\(?[A-Za-z]+\)?|[A-Za-z]+[).]|\(?[ivxlcdmIVXLCDM]+\)?|\d+[).]|\(\d+\)|\[\d+\])/);
+  const value = (marker?.[1] ?? "").replace(/[()[\].]/g, "");
+  if (/^[ivxlcdm]+$/.test(value)) return "lower-roman";
+  if (/^[IVXLCDM]+$/.test(value)) return "upper-roman";
+  if (/^[a-z]$/.test(value)) return "lower-alpha";
+  if (/^[A-Z]$/.test(value)) return "upper-alpha";
+  return "decimal";
+}
+
 function parseStructuredBlocks(input) {
-  const normalized = exposeInlineSections(normalizeStructuredText(input));
+  const normalized = exposeInlineListMarkers(exposeInlineSections(normalizeStructuredText(input)));
   if (!normalized) return [];
   const blocks = [];
   const paragraphLines = [];
   let list = null;
+  let tableRows = [];
   const flushList = () => {
     if (list?.items?.length) blocks.push({ type: list.type, items: list.items });
     list = null;
+  };
+  const flushTable = () => {
+    if (tableRows.length) blocks.push({ type: "table", rows: tableRows });
+    tableRows = [];
   };
 
   normalized.split("\n").forEach((rawLine) => {
@@ -190,6 +234,27 @@ function parseStructuredBlocks(input) {
     if (!line) {
       pushParagraph(blocks, paragraphLines);
       flushList();
+      flushTable();
+      return;
+    }
+    const tableRow = parseTableRow(line);
+    if (tableRow) {
+      pushParagraph(blocks, paragraphLines);
+      flushList();
+      if (tableRow.length) tableRows.push(tableRow);
+      return;
+    }
+    flushTable();
+
+    const assertionReason = line.match(ASSERTION_REASON_LINE_PATTERN);
+    if (assertionReason) {
+      pushParagraph(blocks, paragraphLines);
+      flushList();
+      blocks.push({
+        type: "labeled",
+        label: /^reason/i.test(assertionReason[1]) ? "Reason (R)" : "Assertion (A)",
+        text: assertionReason[2].trim(),
+      });
       return;
     }
     const section = line.match(SECTION_LABEL_PATTERN);
@@ -203,20 +268,14 @@ function parseStructuredBlocks(input) {
       }
       return;
     }
-    const numbered = line.match(NUMBERED_LINE_PATTERN);
-    if (numbered) {
+    const listLine = line.match(LIST_LINE_PATTERN);
+    if (listLine) {
       pushParagraph(blocks, paragraphLines);
-      if (list?.type !== "ol") flushList();
-      list ??= { type: "ol", items: [] };
-      list.items.push(numbered[2].trim());
-      return;
-    }
-    const bullet = line.match(BULLET_LINE_PATTERN);
-    if (bullet) {
-      pushParagraph(blocks, paragraphLines);
-      if (list?.type !== "ul") flushList();
-      list ??= { type: "ul", items: [] };
-      list.items.push(bullet[1].trim());
+      const listType = ORDERED_LIST_LINE_PATTERN.test(line) ? "ol" : "ul";
+      const listStyle = listType === "ol" ? getOrderedListStyle(line) : undefined;
+      if (list?.type !== listType || (listType === "ol" && list?.style !== listStyle)) flushList();
+      list ??= { type: listType, items: [], style: listStyle };
+      list.items.push(listLine[1].trim());
       return;
     }
     if (isStandaloneFormulaLine(line)) {
@@ -231,6 +290,7 @@ function parseStructuredBlocks(input) {
 
   pushParagraph(blocks, paragraphLines);
   flushList();
+  flushTable();
   return blocks;
 }
 
@@ -261,14 +321,47 @@ export function MathText({ children, className = "", inline = false }) {
       <Root className={`math-text math-text-structured ${inline ? "math-text-inline" : "math-text-block"} ${className}`}>
         {blocks.map((block, index) => {
           if (block.type === "section") return <div key={index} className="math-text-section">{block.text}</div>;
+          if (block.type === "labeled") {
+            return (
+              <div key={index} className="math-text-labeled">
+                <div className="math-text-label">{block.label}:</div>
+                {block.text ? <div className="math-text-line">{renderSegments(parseMathText(block.text), `${index}-`)}</div> : null}
+              </div>
+            );
+          }
           if (block.type === "ul" || block.type === "ol") {
             const ListRoot = block.type;
             return (
-              <ListRoot key={index} className="math-text-list">
+              <ListRoot key={index} className="math-text-list" style={block.type === "ol" ? { listStyleType: block.style ?? "decimal" } : undefined}>
                 {block.items.map((item, itemIndex) => (
                   <li key={itemIndex}>{renderSegments(parseMathText(item), `${index}-${itemIndex}-`)}</li>
                 ))}
               </ListRoot>
+            );
+          }
+          if (block.type === "table") {
+            const [header, ...body] = block.rows;
+            return (
+              <div key={index} className="math-text-table-wrap">
+                <table className="math-text-table">
+                  <thead>
+                    <tr>
+                      {header.map((cell, cellIndex) => (
+                        <th key={cellIndex}>{renderSegments(parseMathText(cell), `${index}-h-${cellIndex}-`)}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {body.map((row, rowIndex) => (
+                      <tr key={rowIndex}>
+                        {row.map((cell, cellIndex) => (
+                          <td key={cellIndex}>{renderSegments(parseMathText(cell), `${index}-${rowIndex}-${cellIndex}-`)}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             );
           }
           return (
