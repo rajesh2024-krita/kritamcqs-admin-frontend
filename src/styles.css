@@ -1,14 +1,86 @@
 @import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
 
-.math-text .katex-display {
+.math-text {
+  max-width: 100%;
+  white-space: normal;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.65;
+  text-align: left;
+}
+
+.math-text-block {
+  display: block;
+}
+
+.math-text-inline {
+  display: inline;
+}
+
+.math-text-structured {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.math-text-line {
+  min-width: 0;
+}
+
+.math-text-line-formula {
+  border-radius: 0.75rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 0.55rem 0.7rem;
   overflow-x: auto;
-  overflow-y: hidden;
+}
+
+.math-text-section {
+  margin-top: 0.2rem;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+.math-text-list {
+  margin: 0;
+  padding-left: 1.2rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.math-text-list li {
+  padding-left: 0.15rem;
+  line-height: 1.65;
+}
+
+.math-text-formula {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.math-text-formula-inline {
+  display: inline;
+  vertical-align: baseline;
+}
+
+.math-text-formula-block,
+.math-text .katex-display {
+  display: block;
+  max-width: 100%;
+  margin: 0.5rem 0;
+  overflow-x: auto;
+  overflow-y: visible;
   padding: 0.25rem 0;
 }
 
 .math-text .katex {
   max-width: 100%;
+  font-size: min(1em, 4vw);
   white-space: normal;
 }
 
