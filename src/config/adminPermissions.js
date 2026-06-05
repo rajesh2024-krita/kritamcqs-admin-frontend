@@ -9,6 +9,7 @@ export const MODULES = [
   { key: "topics", label: "Topics", path: "/topics" },
   { key: "years", label: "Years", path: "/years" },
   { key: "question-types", label: "Question Types", path: "/question-types" },
+  { key: "list-styles", label: "List Styles", path: "/list-styles" },
   { key: "questions", label: "Questions", path: "/questions", extraActions: [{ key: "bulkUpload", label: "Bulk Upload" }] },
   { key: "katex-audit", label: "AI Academic Audit", path: "/questions/katex-audit" },
   { key: "mock-tests", label: "Mock Tests", path: "/mock-tests" },

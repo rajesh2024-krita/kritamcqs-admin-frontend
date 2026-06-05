@@ -26,6 +26,7 @@ const ENTITY_TITLE_MODULES = {
   Topics: "topics",
   Years: "years",
   "Question Types": "question-types",
+  "List Styles": "list-styles",
   Questions: "questions",
   Users: "users",
   Coupons: "coupons",
@@ -241,6 +242,14 @@ export function EntityManagerPage({
     const payload = {};
     fields.forEach((field) => {
       const rawValue = formState[field.name];
+      if (field.name === "levels" && typeof rawValue === "string") {
+        try {
+          payload[field.name] = rawValue.trim() ? JSON.parse(rawValue) : [];
+        } catch {
+          payload[field.name] = rawValue;
+        }
+        return;
+      }
       if (typeof rawValue === "string") {
         const trimmed = rawValue.trim();
         payload[field.name] = field.type === "datetime-local" && trimmed ? new Date(trimmed).toISOString() : trimmed;

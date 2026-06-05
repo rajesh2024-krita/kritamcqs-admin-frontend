@@ -1,6 +1,6 @@
 import katex from "katex";
 import "katex/contrib/mhchem";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const DELIMITER_PATTERN = /(\$\$[\s\S]+?\$\$|\$[^$\n]+?\$|\\\[[\s\S]+?\\\]|\\\([\s\S]+?\\\))/g;
 const BARE_MATH_PATTERN = /\\(?:frac|sqrt|sum|int|lim|log|sin|cos|tan|theta|alpha|beta|gamma|Delta|pi|cdot|times|leq|geq|neq)|[αβγδθλμπσφωΔΩ]|(?:[A-Za-z0-9)}]\s*[_^]\s*\{?[A-Za-z0-9+\-=]+\}?)|(?:^[A-Za-z0-9\\_^{},+\-*/().\s]+=[A-Za-z0-9\\_^{},+\-*/().\s]+$)|\\ce\{[^{}]+\}/;
@@ -33,6 +33,30 @@ const GREEK_SYMBOLS = {
   Δ: "\\Delta",
   Ω: "\\Omega",
 };
+
+let listStyleCache = null;
+let listStylePromise = null;
+
+function getApiBaseUrl() {
+  return String(import.meta.env.VITE_API_BASE_URL || (import.meta.env.PROD ? "https://adminapi.kritamcqs.com/api" : "http://localhost:3001/api")).replace(/\/+$/, "");
+}
+
+async function fetchListStyles() {
+  if (listStyleCache) return listStyleCache;
+  if (!listStylePromise) {
+    listStylePromise = fetch(`${getApiBaseUrl()}/list-styles`)
+      .then((response) => (response.ok ? response.json() : { data: [] }))
+      .then((payload) => {
+        const rows = Array.isArray(payload?.data) ? payload.data : [];
+        listStyleCache = rows
+          .filter((item) => item?.isActive !== false)
+          .sort((a, b) => Number(a?.sortOrder || 0) - Number(b?.sortOrder || 0) || String(a?.name || "").localeCompare(String(b?.name || "")));
+        return listStyleCache;
+      })
+      .catch(() => []);
+  }
+  return listStylePromise;
+}
 
 function stripDelimiter(value) {
   if (value.startsWith("$$") && value.endsWith("$$")) return { text: value.slice(2, -2), display: true };
@@ -298,6 +322,24 @@ export function MathText({ children, className = "", inline = false }) {
   const value = String(children ?? "");
   const segments = useMemo(() => parseMathText(value), [value]);
   const blocks = useMemo(() => (!inline && !HTML_PATTERN.test(value) ? parseStructuredBlocks(value) : []), [inline, value]);
+  const [listStyles, setListStyles] = useState(() => listStyleCache || []);
+  const defaultOrderedListStyle = useMemo(
+    () =>
+      listStyles.find((style) => style.isDefault && style.category !== "unordered")
+      ?? listStyles.find((style) => style.category !== "unordered"),
+    [listStyles],
+  );
+
+  useEffect(() => {
+    let mounted = true;
+    fetchListStyles().then((styles) => {
+      if (mounted) setListStyles(styles);
+    });
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   if (!value) return null;
 
   const Root = inline ? "span" : "div";
@@ -331,8 +373,15 @@ export function MathText({ children, className = "", inline = false }) {
           }
           if (block.type === "ul" || block.type === "ol") {
             const ListRoot = block.type;
+            const configuredStyle =
+              block.type === "ol" && defaultOrderedListStyle
+                ? {
+                    listStyleType: defaultOrderedListStyle.listStyleType || block.style || "decimal",
+                    paddingLeft: `${defaultOrderedListStyle.levels?.[0]?.indentation || 24}px`,
+                  }
+                : undefined;
             return (
-              <ListRoot key={index} className="math-text-list" style={block.type === "ol" ? { listStyleType: block.style ?? "decimal" } : undefined}>
+              <ListRoot key={index} className="math-text-list" style={block.type === "ol" ? configuredStyle ?? { listStyleType: block.style ?? "decimal" } : undefined}>
                 {block.items.map((item, itemIndex) => (
                   <li key={itemIndex}>{renderSegments(parseMathText(item), `${index}-${itemIndex}-`)}</li>
                 ))}
