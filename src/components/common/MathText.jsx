@@ -14,10 +14,10 @@ const BULLET_LINE_PATTERN = /^\s*(?:[-*•]|[A-Za-z]\)|[A-Za-z]\.)\s+(.+)$/;
 const NUMBERED_LINE_PATTERN = /^\s*(\d+)[).]\s+(.+)$/;
 const INLINE_SECTION_PATTERN = /\b(Explanation|Key Concept|Important Notes?|Formula|Final Answer|Answer|Solution|Reason|Steps?|Characteristics?|Advantages?|Examples?|Reactions?)\s*[:\-]\s*/g;
 const ASSERTION_REASON_LINE_PATTERN = /^(assertion\s*(?:\(?a\)?)?|reason\s*(?:\(?r\)?)?)\s*[:\-]\s*(.*)$/i;
-const LIST_LINE_PATTERN = /^\s*(?:(?:\d+)[).]|\(\d+\)|\[\d+\]|(?:[ivxlcdm]+|[IVXLCDM]+)[).]|\((?:[ivxlcdm]+|[IVXLCDM]+)\)|[A-Za-z][).]|\([A-Za-z]\)|[-*]|\u2022|\u2192|\u2713|\u2605)\s+(.+)$/;
+const LIST_LINE_PATTERN = /^\s*(?:(?:\d+)[).]|\(\d+\)|\[\d+\]|(?:[ivxlcdm]+|[IVXLCDM]+)[).]|\((?:[ivxlcdm]+|[IVXLCDM]+)\)|[A-Za-z][).]|\([A-Za-z]\)|[-*]|\u2022|\u2713|\u2605)\s+(.+)$/;
 const ORDERED_LIST_LINE_PATTERN = /^\s*(?:(?:\d+)[).]|\(\d+\)|\[\d+\]|(?:[ivxlcdm]+|[IVXLCDM]+)[).]|\((?:[ivxlcdm]+|[IVXLCDM]+)\)|[A-Za-z][).]|\([A-Za-z]\))\s+/;
 const INLINE_ASSERTION_REASON_PATTERN = /\b(Assertion\s*(?:\(?A\)?)?|Reason\s*(?:\(?R\)?)?)\s*[:\-]\s*/gi;
-const INLINE_LIST_MARKER_PATTERN = /\s+(?=(?:\d+[).]|\(\d+\)|\[\d+\]|(?:[ivxlcdm]+|[IVXLCDM]+)[).]|\((?:[ivxlcdm]+|[IVXLCDM]+)\)|[A-Za-z][).]|\([A-Za-z]\)|[-*]|\u2022|\u2192|\u2713|\u2605)\s+)/g;
+const INLINE_LIST_MARKER_PATTERN = /\s+(?=(?:\d+[).]|\(\d+\)|\[\d+\]|(?:[ivxlcdm]+|[IVXLCDM]+)[).]|\((?:[ivxlcdm]+|[IVXLCDM]+)\)|[A-Za-z][).]|\([A-Za-z]\)|[-*]|\u2022|\u2713|\u2605)\s+)/g;
 const GREEK_SYMBOLS = {
   α: "\\alpha",
   β: "\\beta",
