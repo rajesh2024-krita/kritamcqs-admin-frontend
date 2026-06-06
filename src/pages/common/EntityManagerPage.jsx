@@ -61,6 +61,8 @@ export function EntityManagerPage({
   canDelete = true,
   canBulkDelete = true,
   renderFormPreview = null,
+  filterStorageKey = "",
+  refreshSignal = 0,
 }) {
   const toast = useToast();
   const { admin } = useAuth();
@@ -75,7 +77,16 @@ export function EntityManagerPage({
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState({ page: 1, limit: 10, ...defaultQuery });
-  const [filterValues, setFilterValues] = useState(() => filters.reduce((acc, filter) => ({ ...acc, [filter.name]: filter.defaultValue || "" }), {}));
+  const getDefaultFilterValues = () => filters.reduce((acc, filter) => ({ ...acc, [filter.name]: filter.defaultValue || "" }), {});
+  const [filterValues, setFilterValues] = useState(() => {
+    const defaults = getDefaultFilterValues();
+    if (!filterStorageKey || typeof window === "undefined") return defaults;
+    try {
+      return { ...defaults, ...JSON.parse(window.localStorage.getItem(filterStorageKey) || "{}") };
+    } catch {
+      return defaults;
+    }
+  });
   const [formState, setFormState] = useState(normalizeInitialValues(fields));
   const [editingItem, setEditingItem] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -86,6 +97,8 @@ export function EntityManagerPage({
   const [owningFields, setOwningFields] = useState({});
   const [selectedFiles, setSelectedFiles] = useState({});
   const [selectedIds, setSelectedIds] = useState([]);
+  const [previewItems, setPreviewItems] = useState([]);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [draggedId, setDraggedId] = useState(null);
 
@@ -115,6 +128,31 @@ export function EntityManagerPage({
     }
   }
 
+  async function loadPreviewItems(seedItems = items) {
+    if (!renderFormPreview) return;
+    setPreviewItems(seedItems);
+    setPreviewLoading(true);
+    try {
+      const activeFilters = getActiveFilters();
+      const pageSize = 500;
+      const firstResponse = await service.list({ ...query, page: 1, limit: pageSize, ...activeFilters, search });
+      const rows = firstResponse?.data || [];
+      const totalPages = Number(firstResponse?.meta?.totalPages || 1);
+      const allRows = [...rows];
+
+      for (let page = 2; page <= totalPages; page += 1) {
+        const response = await service.list({ ...query, page, limit: pageSize, ...activeFilters, search });
+        allRows.push(...(response?.data || []));
+      }
+
+      setPreviewItems(allRows.length ? allRows : seedItems);
+    } catch {
+      setPreviewItems(seedItems);
+    } finally {
+      setPreviewLoading(false);
+    }
+  }
+
   async function loadLookups() {
     try {
       const entries = await Promise.all(
@@ -130,6 +168,15 @@ export function EntityManagerPage({
   useEffect(() => {
     loadItems(query);
   }, [query.page, filterValues]);
+
+  useEffect(() => {
+    if (refreshSignal) loadItems(query);
+  }, [refreshSignal]);
+
+  useEffect(() => {
+    if (!filterStorageKey || typeof window === "undefined") return;
+    window.localStorage.setItem(filterStorageKey, JSON.stringify(filterValues));
+  }, [filterStorageKey, filterValues]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -183,21 +230,36 @@ export function EntityManagerPage({
     setShowForm(true);
   }
 
+  function buildFormStateFromItem(item) {
+    const nextFormState = fields.reduce((acc, field) => {
+      const rawValue = item[field.name];
+      if (field.type === "select" && rawValue && typeof rawValue === "object") {
+        acc[field.name] = rawValue.id || "";
+      } else if (field.type === "datetime-local" && rawValue) {
+        acc[field.name] = new Date(rawValue).toISOString().slice(0, 16);
+      } else {
+        acc[field.name] = rawValue ?? ((field.type === "checkbox" || field.type === "switch") ? false : field.type === "tags" ? [] : "");
+      }
+      return acc;
+    }, {});
+    return mapItemToForm ? mapItemToForm(item, nextFormState) : nextFormState;
+  }
+
   function openEdit(item) {
     setErrors({});
     setEditingItem(item);
-    const nextFormState = fields.reduce((acc, field) => {
-        const rawValue = item[field.name];
-        if (field.type === "select" && rawValue && typeof rawValue === "object") {
-          acc[field.name] = rawValue.id || "";
-        } else if (field.type === "datetime-local" && rawValue) {
-          acc[field.name] = new Date(rawValue).toISOString().slice(0, 16);
-        } else {
-          acc[field.name] = rawValue ?? ((field.type === "checkbox" || field.type === "switch") ? false : field.type === "tags" ? [] : "");
-        }
-        return acc;
-      }, {});
-    setFormState(mapItemToForm ? mapItemToForm(item, nextFormState) : nextFormState);
+    setFormState(buildFormStateFromItem(item));
+    setSelectedFiles({});
+    setUploadingFields({});
+    setOwningFields({});
+    setShowForm(true);
+    void loadPreviewItems();
+  }
+
+  function openPreviewItem(item) {
+    setErrors({});
+    setEditingItem(item);
+    setFormState(buildFormStateFromItem(item));
     setSelectedFiles({});
     setUploadingFields({});
     setOwningFields({});
@@ -376,6 +438,16 @@ export function EntityManagerPage({
     setSelectedIds([]);
     setQuery((current) => ({ ...current, limit, page: 1 }));
     loadItems({ ...query, limit, page: 1 });
+  }
+
+  function resetFilters() {
+    const defaults = getDefaultFilterValues();
+    setFilterValues(defaults);
+    setSelectedIds([]);
+    setQuery((current) => ({ ...current, page: 1 }));
+    if (filterStorageKey && typeof window !== "undefined") {
+      window.localStorage.setItem(filterStorageKey, JSON.stringify(defaults));
+    }
   }
 
   async function handleExport(scope, format) {
@@ -596,7 +668,7 @@ export function EntityManagerPage({
           <SearchBar value={search} onChange={setSearch} placeholder={`Search ${title.toLowerCase()}...`} />
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {filters.map((filter, filterIndex) => (
+          {filters.map((filter) => (
             <label key={filter.name} className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
               {filter.label}
               <select
@@ -604,13 +676,7 @@ export function EntityManagerPage({
                 value={filterValues[filter.name] || ""}
                 onChange={(event) => {
                   const nextValue = event.target.value;
-                  setFilterValues((current) => {
-                    const next = { ...current, [filter.name]: nextValue };
-                    filters.slice(filterIndex + 1).forEach((childFilter) => {
-                      next[childFilter.name] = "";
-                    });
-                    return next;
-                  });
+                  setFilterValues((current) => ({ ...current, [filter.name]: nextValue }));
                   setSelectedIds([]);
                   setQuery((current) => ({ ...current, page: 1 }));
                 }}
@@ -656,6 +722,11 @@ export function EntityManagerPage({
             <RefreshIcon size={16} />
             Refresh Results
           </button>
+          {filters.length ? (
+            <button className={cn(ui.buttonBase, ui.buttonGhost)} type="button" onClick={resetFilters}>
+              Reset Filters
+            </button>
+          ) : null}
         </div>
       </div>
 
@@ -750,7 +821,18 @@ export function EntityManagerPage({
                 ))}
               </div>
               <div className="xl:sticky xl:top-0 xl:self-start">
-                {renderFormPreview({ formState, setFormState, lookups, editingItem })}
+                {renderFormPreview({
+                  formState,
+                  setFormState,
+                  lookups,
+                  editingItem,
+                  navigation: {
+                    items: previewItems,
+                    loading: previewLoading,
+                    currentIndex: previewItems.findIndex((item) => String(item.id) === String(editingItem?.id)),
+                    openItem: openPreviewItem,
+                  },
+                })}
               </div>
             </div>
           ) : (

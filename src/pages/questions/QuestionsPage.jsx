@@ -104,6 +104,17 @@ function lookupById(items = [], id) {
   return items.find((item) => String(item.id || item._id) === String(id)) || null;
 }
 
+function getLookupName(items = [], id, fallback = "") {
+  const item = lookupById(items, id);
+  return item?.name || item?.label || item?.key || fallback || "";
+}
+
+function compactObject(value) {
+  return Object.fromEntries(
+    Object.entries(value).filter(([, entry]) => entry !== "" && entry !== undefined && entry !== null),
+  );
+}
+
 function QuestionImage({ src, alt }) {
   const resolved = resolvePreviewImageSource(src);
   if (!resolved) return null;
@@ -116,7 +127,7 @@ function QuestionImage({ src, alt }) {
   );
 }
 
-function QuestionLivePreview({ formState, setFormState, lookups, editingItem }) {
+function QuestionLivePreview({ formState, setFormState, lookups, editingItem, navigation }) {
   const toast = useToast();
   const [aiBusy, setAiBusy] = useState(false);
   const [aiFindings, setAiFindings] = useState([]);
@@ -133,6 +144,10 @@ function QuestionLivePreview({ formState, setFormState, lookups, editingItem }) 
     ["D", formState.optionD, formState.optionDImageUrl],
   ];
   const showOptions = formState.responseType !== "numeric";
+  const previousQuestion = navigation?.currentIndex > 0 ? navigation.items[navigation.currentIndex - 1] : null;
+  const nextQuestion = navigation?.currentIndex >= 0 && navigation.currentIndex < navigation.items.length - 1
+    ? navigation.items[navigation.currentIndex + 1]
+    : null;
 
   function buildAIQuestionData() {
     return {
@@ -182,6 +197,69 @@ function QuestionLivePreview({ formState, setFormState, lookups, editingItem }) 
       return next;
     });
     toast.success("AI corrected draft loaded into preview. Review it live, then save changes.");
+  }
+
+  function buildQuestionJson() {
+    const options = showOptions
+      ? [formState.optionA, formState.optionB, formState.optionC, formState.optionD]
+      : [];
+    const correctAnswer = showOptions
+      ? (formState.correctOptions?.length ? formState.correctOptions : formState.correctOption || "")
+      : formState.numericAnswer || "";
+
+    return compactObject({
+      id: editingItem?.id,
+      question: formState.question || "",
+      questionImageUrl: formState.questionImageUrl || "",
+      passage: formState.passage || "",
+      options,
+      optionImages: compactObject({
+        A: formState.optionAImageUrl,
+        B: formState.optionBImageUrl,
+        C: formState.optionCImageUrl,
+        D: formState.optionDImageUrl,
+      }),
+      correctAnswer,
+      explanation: formState.explanation || "",
+      explanationImageUrl: formState.explanationImageUrl || "",
+      examType: examType || "",
+      subject: subject?.name || "",
+      subjectId: formState.subjectId || "",
+      chapter: getLookupName(lookups.chapters, formState.chapterId),
+      chapterId: formState.chapterId || "",
+      topic: topic?.name || "",
+      topicId: formState.topicId || "",
+      year: year?.name || "",
+      yearId: formState.yearId || "",
+      difficulty: difficulty?.name || formState.difficulty || "",
+      difficultyId: formState.difficultyId || "",
+      questionType: questionType?.name || questionType?.label || questionType?.key || "",
+      questionTypeId: formState.questionTypeId || "",
+      responseType: formState.responseType || "",
+      questionStatus: formState.questionStatus || "",
+      reviewStatus: formState.reviewStatus || "",
+      isVisibleToUsers: formState.isVisibleToUsers,
+      conceptTags: formState.conceptTags || [],
+      exact: formState.exact,
+      hasDiagram: formState.hasDiagram,
+      isNumerical: formState.isNumerical,
+      createdByName: editingItem?.createdByName,
+      createdByEmail: editingItem?.createdByEmail,
+      createdAt: editingItem?.createdAt,
+      lastModifiedByName: editingItem?.lastModifiedByName,
+      lastModifiedByEmail: editingItem?.lastModifiedByEmail,
+      lastModifiedAt: editingItem?.lastModifiedAt || editingItem?.updatedAt,
+      editCount: editingItem?.editCount,
+    });
+  }
+
+  async function copyQuestionJson() {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(buildQuestionJson(), null, 2));
+      toast.success("Question JSON copied");
+    } catch {
+      toast.error("Unable to copy question JSON.");
+    }
   }
 
   return (
@@ -287,9 +365,29 @@ function QuestionLivePreview({ formState, setFormState, lookups, editingItem }) 
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          <button className="rounded-lg border border-slate-200 bg-white px-2 py-3 text-xs font-bold text-slate-600" type="button">Previous</button>
-          <button className="rounded-lg border border-slate-200 bg-white px-2 py-3 text-xs font-bold text-slate-600" type="button">Skip</button>
-          <button className="rounded-lg bg-blue-600 px-2 py-3 text-xs font-bold text-white" type="button">Next</button>
+          <button
+            className="rounded-lg border border-slate-200 bg-white px-2 py-3 text-xs font-bold text-slate-600 disabled:opacity-50"
+            type="button"
+            disabled={!previousQuestion || navigation?.loading}
+            onClick={() => navigation?.openItem(previousQuestion)}
+          >
+            Previous
+          </button>
+          <button
+            className="rounded-lg border border-slate-200 bg-white px-2 py-3 text-xs font-bold text-slate-600"
+            type="button"
+            onClick={copyQuestionJson}
+          >
+            Copy JSON
+          </button>
+          <button
+            className="rounded-lg bg-blue-600 px-2 py-3 text-xs font-bold text-white disabled:opacity-50"
+            type="button"
+            disabled={!nextQuestion || navigation?.loading}
+            onClick={() => navigation?.openItem(nextQuestion)}
+          >
+            Next
+          </button>
         </div>
       </div>
     </div>
@@ -447,15 +545,24 @@ export function QuestionsPage() {
   return (
     <>
     <EntityManagerPage
-      key={refreshKey}
       title="Questions"
       description="Create and maintain the NEET/JEE question bank."
       service={questionService}
+      filterStorageKey="admin.questions.filters"
+      refreshSignal={refreshKey}
       canCreate={canCreateQuestions}
       canEdit={canEditQuestions}
       canDelete={canDeleteQuestions}
       canBulkDelete={canDeleteQuestions}
-      renderFormPreview={({ formState, setFormState, lookups, editingItem }) => <QuestionLivePreview formState={formState} setFormState={setFormState} lookups={lookups} editingItem={editingItem} />}
+      renderFormPreview={({ formState, setFormState, lookups, editingItem, navigation }) => (
+        <QuestionLivePreview
+          formState={formState}
+          setFormState={setFormState}
+          lookups={lookups}
+          editingItem={editingItem}
+          navigation={navigation}
+        />
+      )}
       headerActions={canBulkUploadQuestions ? (
         <>
           <Link className={cn(ui.buttonBase, ui.buttonSecondary)} to="/questions/katex-audit">
@@ -505,10 +612,18 @@ export function QuestionsPage() {
       ]}
       filters={[
         {
+          name: "examType",
+          label: "Exam Type",
+          placeholder: "All Exam Types",
+          options: (lookups) => (lookups.examTypes || []).map((item) => ({ label: item.name || item.label || item.key, value: item.name || item.key || item.label })),
+        },
+        {
           name: "subjectId",
           label: "Subject",
           placeholder: "All Subjects",
-          options: (lookups) => (lookups.subjects || []).map((item) => ({ label: formatSubjectLabel(item), value: item.id })),
+          options: (lookups, filters) => (lookups.subjects || [])
+            .filter((item) => !filters.examType || String(item.examType || "").toUpperCase() === String(filters.examType || "").toUpperCase())
+            .map((item) => ({ label: formatSubjectLabel(item), value: item.id })),
         },
         {
           name: "chapterId",
