@@ -795,7 +795,7 @@ export function QuestionsPage() {
         { name: "questionStatus", label: "Question Status", type: "select", options: [{ label: "Complete", value: "complete" }, { label: "Incomplete Question", value: "incomplete" }], defaultValue: "complete" },
         { name: "reviewStatus", label: "Review Status", type: "select", options: [{ label: "Ready", value: "ready" }, { label: "Needs Review", value: "needs_review" }], defaultValue: "ready" },
         { name: "isVisibleToUsers", label: "Visible To App Users", type: "checkbox", defaultValue: true },
-        { name: "question", label: "Question Text", required: true, type: "textarea", full: true },
+        { name: "question", label: "Question Text", required: true, type: "textarea", full: true, preserveWhitespace: true },
         {
           name: "questionImageUrl",
           label: "Question Image",
@@ -804,8 +804,8 @@ export function QuestionsPage() {
           ownUrl: (url) => questionService.ownAssetUrl(url),
           full: true,
         },
-        { name: "passage", label: "Passage", type: "textarea", full: true },
-        { name: "optionA", label: "Option A", required: true, visible: (form) => form.responseType !== "numeric" },
+        { name: "passage", label: "Passage", type: "textarea", full: true, preserveWhitespace: true },
+        { name: "optionA", label: "Option A", required: true, visible: (form) => form.responseType !== "numeric", preserveWhitespace: true },
         {
           name: "optionAImageUrl",
           label: "Option A Image",
@@ -814,7 +814,7 @@ export function QuestionsPage() {
           ownUrl: (url) => questionService.ownAssetUrl(url),
           visible: (form) => form.responseType !== "numeric",
         },
-        { name: "optionB", label: "Option B", required: true, visible: (form) => form.responseType !== "numeric" },
+        { name: "optionB", label: "Option B", required: true, visible: (form) => form.responseType !== "numeric", preserveWhitespace: true },
         {
           name: "optionBImageUrl",
           label: "Option B Image",
@@ -823,7 +823,7 @@ export function QuestionsPage() {
           ownUrl: (url) => questionService.ownAssetUrl(url),
           visible: (form) => form.responseType !== "numeric",
         },
-        { name: "optionC", label: "Option C", required: true, visible: (form) => form.responseType !== "numeric" },
+        { name: "optionC", label: "Option C", required: true, visible: (form) => form.responseType !== "numeric", preserveWhitespace: true },
         {
           name: "optionCImageUrl",
           label: "Option C Image",
@@ -832,7 +832,7 @@ export function QuestionsPage() {
           ownUrl: (url) => questionService.ownAssetUrl(url),
           visible: (form) => form.responseType !== "numeric",
         },
-        { name: "optionD", label: "Option D", required: true, visible: (form) => form.responseType !== "numeric" },
+        { name: "optionD", label: "Option D", required: true, visible: (form) => form.responseType !== "numeric", preserveWhitespace: true },
         {
           name: "optionDImageUrl",
           label: "Option D Image",
@@ -842,7 +842,7 @@ export function QuestionsPage() {
           visible: (form) => form.responseType !== "numeric",
         },
         { name: "correctOption", label: "Correct Option", required: true, type: "select", visible: (form) => form.responseType !== "numeric", options: [{ label: "A", value: "A" }, { label: "B", value: "B" }, { label: "C", value: "C" }, { label: "D", value: "D" }] },
-        { name: "explanation", label: "Explanation", type: "textarea", full: true },
+        { name: "explanation", label: "Explanation", type: "textarea", full: true, preserveWhitespace: true },
         {
           name: "explanationImageUrl",
           label: "Explanation Image",

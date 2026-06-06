@@ -17,7 +17,7 @@ const ASSERTION_REASON_LINE_PATTERN = /^(assertion\s*(?:\(?a\)?)?|reason\s*(?:\(
 const LIST_LINE_PATTERN = /^\s*(?:(?:\d+)[).]|\(\d+\)|\[\d+\]|(?:[ivxlcdm]+|[IVXLCDM]+)[).]|\((?:[ivxlcdm]+|[IVXLCDM]+)\)|[A-Za-z][).]|\([A-Za-z]\)|[-*]|\u2022|\u2713|\u2605)\s+(.+)$/;
 const ORDERED_LIST_LINE_PATTERN = /^\s*(?:(?:\d+)[).]|\(\d+\)|\[\d+\]|(?:[ivxlcdm]+|[IVXLCDM]+)[).]|\((?:[ivxlcdm]+|[IVXLCDM]+)\)|[A-Za-z][).]|\([A-Za-z]\))\s+/;
 const INLINE_ASSERTION_REASON_PATTERN = /\b(Assertion\s*(?:\(?A\)?)?|Reason\s*(?:\(?R\)?)?)\s*[:\-]\s*/gi;
-const INLINE_LIST_MARKER_PATTERN = /\s+(?=(?:\d+[).]|\(\d+\)|\[\d+\]|[-*]|\u2022|\u2713|\u2605)\s+)/g;
+const INLINE_LIST_MARKER_PATTERN = /\s+(?=(?:\d+[).]|\(\d+\)|\[\d+\]|[-*]|\u2022|\u2713|\u2605)\s+[A-Z])/g;
 const GREEK_SYMBOLS = {
   α: "\\alpha",
   β: "\\beta",
@@ -200,6 +200,13 @@ function exposeInlineListMarkers(value) {
   return value.replace(INLINE_LIST_MARKER_PATTERN, "\n");
 }
 
+function startsLikeListItem(value) {
+  const text = String(value || "").trim();
+  if (!text) return false;
+  const firstLetter = text.match(/[A-Za-z]/)?.[0] || "";
+  return !firstLetter || firstLetter === firstLetter.toUpperCase();
+}
+
 function isStandaloneFormulaLine(value) {
   const trimmed = value.trim();
   if (!trimmed) return false;
@@ -293,7 +300,7 @@ function parseStructuredBlocks(input) {
       return;
     }
     const listLine = line.match(LIST_LINE_PATTERN);
-    if (listLine) {
+    if (listLine && startsLikeListItem(listLine[1])) {
       pushParagraph(blocks, paragraphLines);
       const listType = ORDERED_LIST_LINE_PATTERN.test(line) ? "ol" : "ul";
       const listStyle = listType === "ol" ? getOrderedListStyle(line) : undefined;

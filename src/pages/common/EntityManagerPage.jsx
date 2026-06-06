@@ -315,7 +315,7 @@ export function EntityManagerPage({
         return;
       }
       if (typeof rawValue === "string") {
-        const trimmed = rawValue.trim();
+        const trimmed = field.preserveWhitespace ? rawValue : rawValue.trim();
         payload[field.name] = field.type === "datetime-local" && trimmed ? new Date(trimmed).toISOString() : trimmed;
       } else {
         payload[field.name] = rawValue;
