@@ -41,6 +41,31 @@ function matchesQuestionType(questionType, form) {
   return questionTypeExam === examType;
 }
 
+function normalizeQuestionExamType(value) {
+  const normalized = String(value || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  if (normalized === "JEE" || normalized === "JEE_MAIN" || normalized === "JEE_ADVANCED") return "JEE";
+  if (normalized === "NEET") return "NEET";
+  return normalized;
+}
+
+function examTypeOptions(examTypes = []) {
+  const seen = new Set();
+  return examTypes
+    .map((item) => {
+      const value = normalizeQuestionExamType(item.name || item.key || item.label);
+      return { label: item.name || item.label || item.key, value };
+    })
+    .filter((item) => {
+      if (!item.value || seen.has(item.value)) return false;
+      seen.add(item.value);
+      return true;
+    });
+}
+
 async function listAllRecords(service, params = {}, pageSize = 500) {
   const allRows = [];
   let page = 1;
@@ -550,6 +575,8 @@ export function QuestionsPage() {
       service={questionService}
       filterStorageKey="admin.questions.filters"
       refreshSignal={refreshKey}
+      searchPlaceholder="Search by question text, passage, or tags..."
+      closeEditFormOnSave={false}
       canCreate={canCreateQuestions}
       canEdit={canEditQuestions}
       canDelete={canDeleteQuestions}
@@ -615,14 +642,30 @@ export function QuestionsPage() {
           name: "examType",
           label: "Exam Type",
           placeholder: "All Exam Types",
-          options: (lookups) => (lookups.examTypes || []).map((item) => ({ label: item.name || item.label || item.key, value: item.name || item.key || item.label })),
+          options: (lookups) => examTypeOptions(lookups.examTypes || []),
+        },
+        {
+          name: "questionId",
+          label: "Question ID",
+          placeholder: "Exact ID",
+          type: "text",
+        },
+        {
+          name: "lastModifiedFrom",
+          label: "Modified From",
+          type: "date",
+        },
+        {
+          name: "lastModifiedTo",
+          label: "Modified To",
+          type: "date",
         },
         {
           name: "subjectId",
           label: "Subject",
           placeholder: "All Subjects",
           options: (lookups, filters) => (lookups.subjects || [])
-            .filter((item) => !filters.examType || String(item.examType || "").toUpperCase() === String(filters.examType || "").toUpperCase())
+            .filter((item) => !filters.examType || normalizeQuestionExamType(item.examType) === normalizeQuestionExamType(filters.examType))
             .map((item) => ({ label: formatSubjectLabel(item), value: item.id })),
         },
         {
@@ -672,7 +715,7 @@ export function QuestionsPage() {
           label: "Exam Type",
           required: true,
           type: "select",
-          options: (_form, lookups) => (lookups.examTypes || []).map((item) => ({ label: item.name || item.label || item.key, value: item.name || item.key || item.label })),
+          options: (_form, lookups) => examTypeOptions(lookups.examTypes || []),
         },
         {
           name: "subjectId",

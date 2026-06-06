@@ -63,6 +63,8 @@ export function EntityManagerPage({
   renderFormPreview = null,
   filterStorageKey = "",
   refreshSignal = 0,
+  searchPlaceholder = "",
+  closeEditFormOnSave = true,
 }) {
   const toast = useToast();
   const { admin } = useAuth();
@@ -329,14 +331,20 @@ export function EntityManagerPage({
     try {
       const payload = buildPayload();
       if (editingItem) {
-        await service.update(editingItem.id, payload);
+        const response = await service.update(editingItem.id, payload);
+        const updatedItem = response?.data || response;
+        if (updatedItem?.id || updatedItem?._id) {
+          setEditingItem(updatedItem);
+          setFormState(buildFormStateFromItem(updatedItem));
+        }
         toast.success(`${title} updated`);
+        if (closeEditFormOnSave) setShowForm(false);
       } else {
         await service.create(payload);
         toast.success(`${title} created`);
+        setShowForm(false);
       }
 
-      setShowForm(false);
       loadItems({ ...query, page: 1 });
       loadLookups();
     } catch (error) {
@@ -665,27 +673,42 @@ export function EntityManagerPage({
       <div className="flex flex-col gap-4 rounded-sm border border-white/60 bg-white/85 p-5 shadow-xl shadow-slate-200/60 backdrop-blur-xl lg:flex-row lg:items-end lg:justify-between">
         <div>
           <div className="mb-2 text-[11px] font-black uppercase tracking-[0.28em] text-blue-700">Workspace Filters</div>
-          <SearchBar value={search} onChange={setSearch} placeholder={`Search ${title.toLowerCase()}...`} />
+          <SearchBar value={search} onChange={setSearch} placeholder={searchPlaceholder || `Search ${title.toLowerCase()}...`} />
         </div>
         <div className="flex flex-wrap items-center gap-3">
           {filters.map((filter) => (
             <label key={filter.name} className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
               {filter.label}
-              <select
-                className={ui.input}
-                value={filterValues[filter.name] || ""}
-                onChange={(event) => {
-                  const nextValue = event.target.value;
-                  setFilterValues((current) => ({ ...current, [filter.name]: nextValue }));
-                  setSelectedIds([]);
-                  setQuery((current) => ({ ...current, page: 1 }));
-                }}
-              >
-                <option value="">{filter.placeholder || "All"}</option>
-                {(typeof filter.options === "function" ? filter.options(lookups, filterValues) : filter.options || []).map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
-                ))}
-              </select>
+              {filter.type === "text" || filter.type === "date" ? (
+                <input
+                  className={ui.input}
+                  type={filter.type}
+                  value={filterValues[filter.name] || ""}
+                  placeholder={filter.placeholder}
+                  onChange={(event) => {
+                    const nextValue = event.target.value;
+                    setFilterValues((current) => ({ ...current, [filter.name]: nextValue }));
+                    setSelectedIds([]);
+                    setQuery((current) => ({ ...current, page: 1 }));
+                  }}
+                />
+              ) : (
+                <select
+                  className={ui.input}
+                  value={filterValues[filter.name] || ""}
+                  onChange={(event) => {
+                    const nextValue = event.target.value;
+                    setFilterValues((current) => ({ ...current, [filter.name]: nextValue }));
+                    setSelectedIds([]);
+                    setQuery((current) => ({ ...current, page: 1 }));
+                  }}
+                >
+                  <option value="">{filter.placeholder || "All"}</option>
+                  {(typeof filter.options === "function" ? filter.options(lookups, filterValues) : filter.options || []).map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              )}
             </label>
           ))}
           {effectiveCanDelete && effectiveCanBulkDelete && selectedIds.length > 0 ? (
@@ -810,17 +833,19 @@ export function EntityManagerPage({
           onCancel={() => setShowForm(false)}
           onSubmit={handleSubmit}
           submitLabel={editingItem ? "Save Changes" : "Create"}
+          modalClassName={renderFormPreview ? "overflow-hidden" : ""}
+          formClassName={renderFormPreview ? "min-h-0" : ""}
         >
           {renderFormPreview ? (
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="grid min-h-0 grid-cols-1 gap-6 xl:h-[calc(90vh-190px)] xl:grid-cols-[minmax(0,1fr)_360px] xl:overflow-hidden">
+              <div className="grid min-h-0 grid-cols-1 gap-4 overflow-y-auto pr-1 md:grid-cols-2">
                 {visibleFields.map((field) => (
                   <Field key={field.name} label={field.label} error={errors[field.name]} className={field.full ? ui.fieldFull : ""}>
                     {renderInput(field)}
                   </Field>
                 ))}
               </div>
-              <div className="xl:sticky xl:top-0 xl:self-start">
+              <div className="min-h-0 overflow-y-auto xl:self-start">
                 {renderFormPreview({
                   formState,
                   setFormState,
