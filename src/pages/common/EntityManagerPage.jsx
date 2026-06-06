@@ -556,9 +556,12 @@ export function EntityManagerPage({
       return (
         <SelectDropdown
           value={value}
-          onChange={(nextValue) => setFormState((current) => ({ ...current, [field.name]: nextValue }))}
+          onChange={(nextValue) => setFormState((current) => (
+            field.onChange ? field.onChange(nextValue, current, lookups) : { ...current, [field.name]: nextValue }
+          ))}
           options={getOptions(field)}
           placeholder={field.placeholder}
+          disabled={field.disabled}
         />
       );
     }

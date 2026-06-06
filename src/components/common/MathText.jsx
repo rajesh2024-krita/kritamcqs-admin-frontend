@@ -17,7 +17,7 @@ const ASSERTION_REASON_LINE_PATTERN = /^(assertion\s*(?:\(?a\)?)?|reason\s*(?:\(
 const LIST_LINE_PATTERN = /^\s*(?:(?:\d+)[).]|\(\d+\)|\[\d+\]|(?:[ivxlcdm]+|[IVXLCDM]+)[).]|\((?:[ivxlcdm]+|[IVXLCDM]+)\)|[A-Za-z][).]|\([A-Za-z]\)|[-*]|\u2022|\u2713|\u2605)\s+(.+)$/;
 const ORDERED_LIST_LINE_PATTERN = /^\s*(?:(?:\d+)[).]|\(\d+\)|\[\d+\]|(?:[ivxlcdm]+|[IVXLCDM]+)[).]|\((?:[ivxlcdm]+|[IVXLCDM]+)\)|[A-Za-z][).]|\([A-Za-z]\))\s+/;
 const INLINE_ASSERTION_REASON_PATTERN = /\b(Assertion\s*(?:\(?A\)?)?|Reason\s*(?:\(?R\)?)?)\s*[:\-]\s*/gi;
-const INLINE_LIST_MARKER_PATTERN = /\s+(?=(?:\d+[).]|\(\d+\)|\[\d+\]|(?:[ivxlcdm]+|[IVXLCDM]+)[).]|\((?:[ivxlcdm]+|[IVXLCDM]+)\)|[A-Za-z][).]|\([A-Za-z]\)|[-*]|\u2022|\u2713|\u2605)\s+)/g;
+const INLINE_LIST_MARKER_PATTERN = /\s+(?=(?:\d+[).]|\(\d+\)|\[\d+\]|[-*]|\u2022|\u2713|\u2605)\s+)/g;
 const GREEK_SYMBOLS = {
   α: "\\alpha",
   β: "\\beta",

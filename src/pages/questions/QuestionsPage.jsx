@@ -134,6 +134,24 @@ function getLookupName(items = [], id, fallback = "") {
   return item?.name || item?.label || item?.key || fallback || "";
 }
 
+function formatDisplayVariant(value) {
+  return String(value || "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+    .trim();
+}
+
+function syncQuestionTypeSelection(nextValue, current, lookups) {
+  const questionType = lookupById(lookups.questionTypes, nextValue);
+  const responseType = questionType?.responseType || current.responseType || "single";
+  return {
+    ...current,
+    questionTypeId: nextValue,
+    responseType,
+    isNumerical: responseType === "numeric",
+  };
+}
+
 function compactObject(value) {
   return Object.fromEntries(
     Object.entries(value).filter(([, entry]) => entry !== "" && entry !== undefined && entry !== null),
@@ -162,6 +180,8 @@ function QuestionLivePreview({ formState, setFormState, lookups, editingItem, na
   const difficulty = lookupById(lookups.difficulties, formState.difficultyId);
   const questionType = lookupById(lookups.questionTypes, formState.questionTypeId);
   const examType = formState.examType || subject?.examType || deriveExamType(formState.examMode, formState.exam);
+  const displayVariant = questionType?.displayVariant || formState.displayVariant || "";
+  const displayVariantLabel = formatDisplayVariant(displayVariant);
   const optionRows = [
     ["A", formState.optionA, formState.optionAImageUrl],
     ["B", formState.optionB, formState.optionBImageUrl],
@@ -260,6 +280,7 @@ function QuestionLivePreview({ formState, setFormState, lookups, editingItem, na
       difficultyId: formState.difficultyId || "",
       questionType: questionType?.name || questionType?.label || questionType?.key || "",
       questionTypeId: formState.questionTypeId || "",
+      displayVariant,
       responseType: formState.responseType || "",
       questionStatus: formState.questionStatus || "",
       reviewStatus: formState.reviewStatus || "",
@@ -340,12 +361,15 @@ function QuestionLivePreview({ formState, setFormState, lookups, editingItem, na
             <span className="rounded-full bg-emerald-50 px-2 py-1">Exam Type: {examType || "-"}</span>
             <span className="rounded-full bg-slate-100 px-2 py-1">{subject?.name || "Subject"}</span>
             <span className="rounded-full bg-slate-100 px-2 py-1">{topic?.name || "Topic"}</span>
+            {displayVariantLabel ? <span className="rounded-full bg-slate-100 px-2 py-1">Display: {displayVariantLabel}</span> : null}
+            <span className="rounded-full bg-slate-100 px-2 py-1">Answer: {formState.responseType || "single"}</span>
           </div>
           <MatchingQuestionTable
             question={{
               ...formState,
               questionType: questionType?.key || questionType?.name || formState.questionType,
               questionTypeLabel: questionType?.name || questionType?.label || formState.questionTypeLabel,
+              displayVariant,
             }}
             text={formState.question || "Question preview will appear here as you type."}
             textClassName="text-sm font-black leading-6 text-slate-950"
@@ -358,7 +382,7 @@ function QuestionLivePreview({ formState, setFormState, lookups, editingItem, na
             <div className="grid grid-cols-[24px_minmax(0,1fr)] gap-2 text-sm text-slate-950">
               <span className="font-medium">{label}.</span>
               <div>
-                <MathText className="font-semibold leading-6">{text || `Option ${label}`}</MathText>
+                <MathText className="font-semibold leading-6" inline>{text || `Option ${label}`}</MathText>
                 <QuestionImage src={image} alt={`Option ${label} preview`} />
               </div>
             </div>
@@ -375,6 +399,8 @@ function QuestionLivePreview({ formState, setFormState, lookups, editingItem, na
             <span className="rounded-full bg-blue-50 px-2 py-1 text-blue-700">Answer: {showOptions ? (formState.correctOption || formState.correctOptions?.join(", ") || "-") : "Numeric"}</span>
             <span className="rounded-full bg-slate-100 px-2 py-1">{difficulty?.name || formState.difficulty || "Difficulty"}</span>
             <span className="rounded-full bg-slate-100 px-2 py-1">{questionType?.name || formState.responseType || "Question Type"}</span>
+            {displayVariantLabel ? <span className="rounded-full bg-slate-100 px-2 py-1">Display: {displayVariantLabel}</span> : null}
+            <span className="rounded-full bg-slate-100 px-2 py-1">Response: {formState.responseType || "single"}</span>
           </div>
           <div className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">Explanation</div>
           <MatchingQuestionTable
@@ -382,6 +408,7 @@ function QuestionLivePreview({ formState, setFormState, lookups, editingItem, na
               ...formState,
               questionType: questionType?.key || questionType?.name || formState.questionType,
               questionTypeLabel: questionType?.name || questionType?.label || formState.questionTypeLabel,
+              displayVariant,
             }}
             text={formState.explanation || "Explanation preview will appear here."}
             textClassName="mt-2 text-sm font-semibold leading-6 text-slate-950"
@@ -745,10 +772,15 @@ export function QuestionsPage() {
           label: "Question Type",
           required: true,
           type: "select",
+          onChange: syncQuestionTypeSelection,
           options: (form, lookups) => (lookups.questionTypes || [])
             .filter((item) => matchesQuestionType(item, form))
             .map((item) => ({
-              label: `${item.name}${item.responseType ? ` (${item.responseType})` : ""}`,
+              label: [
+                item.name || item.label || item.key,
+                item.displayVariant ? `Display: ${formatDisplayVariant(item.displayVariant)}` : "",
+                item.responseType ? `Answer: ${item.responseType}` : "",
+              ].filter(Boolean).join(" - "),
               value: item.id,
             })),
         },
@@ -759,7 +791,7 @@ export function QuestionsPage() {
           type: "select",
           options: (_form, lookups) => (lookups.difficulties || []).map((item) => ({ label: item.name, value: item.id })),
         },
-        { name: "responseType", label: "Response Type", required: true, type: "select", options: [{ label: "Single", value: "single" }, { label: "Multiple", value: "multiple" }, { label: "Numeric", value: "numeric" }], defaultValue: "single" },
+        { name: "responseType", label: "Answer Response Type", required: true, type: "select", options: [{ label: "Single Correct", value: "single" }, { label: "Multiple Correct", value: "multiple" }, { label: "Numeric Answer", value: "numeric" }], defaultValue: "single" },
         { name: "questionStatus", label: "Question Status", type: "select", options: [{ label: "Complete", value: "complete" }, { label: "Incomplete Question", value: "incomplete" }], defaultValue: "complete" },
         { name: "reviewStatus", label: "Review Status", type: "select", options: [{ label: "Ready", value: "ready" }, { label: "Needs Review", value: "needs_review" }], defaultValue: "ready" },
         { name: "isVisibleToUsers", label: "Visible To App Users", type: "checkbox", defaultValue: true },
@@ -925,7 +957,7 @@ export function QuestionsPage() {
     {bulkOpen ? (
       <EntityFormWrapper
         title={bulkMode === "update" ? "Questions Bulk Update" : "Questions Bulk Upload"}
-        subtitle={bulkMode === "update" ? "Upload a Question ID file and update only supplied values in batches." : "Upload, validate, create missing fields, approve, and process questions in batches."}
+        subtitle={bulkMode === "update" ? "Upload a file with Question ID or exact Question text, then update only supplied values in batches." : "Upload, validate, create missing fields, approve, and process questions in batches."}
         onCancel={() => setBulkOpen(false)}
         onSubmit={(event) => event.preventDefault()}
         submitLabel="Close"
@@ -942,7 +974,7 @@ export function QuestionsPage() {
                 checked={bulkCreateMissingQuestions}
                 onChange={(event) => setBulkCreateMissingQuestions(event.target.checked)}
               />
-              Create new questions when Question ID is not found
+              Create new questions when Question ID or Question text is not found
             </label>
           ) : null}
           <div className="grid gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500 md:grid-cols-4">

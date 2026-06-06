@@ -25,6 +25,7 @@ function isMatchingQuestion(question, text) {
   const typeText = [
     question?.questionType,
     question?.questionTypeLabel,
+    question?.displayVariant,
     question?.responseType,
     text,
   ].join(" ").toLowerCase();
