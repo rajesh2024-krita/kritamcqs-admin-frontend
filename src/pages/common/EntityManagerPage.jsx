@@ -837,15 +837,15 @@ export function EntityManagerPage({
           formClassName={renderFormPreview ? "min-h-0" : ""}
         >
           {renderFormPreview ? (
-            <div className="grid min-h-0 grid-cols-1 gap-6 xl:h-[calc(90vh-190px)] xl:grid-cols-[minmax(0,1fr)_360px] xl:overflow-hidden">
-              <div className="grid min-h-0 grid-cols-1 gap-4 overflow-y-auto pr-1 md:grid-cols-2">
+            <div className="grid h-[calc(90vh-190px)] min-h-0 grid-cols-1 gap-6 overflow-hidden xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="grid min-h-0 grid-cols-1 content-start gap-4 overflow-y-auto pr-1 md:grid-cols-2">
                 {visibleFields.map((field) => (
                   <Field key={field.name} label={field.label} error={errors[field.name]} className={field.full ? ui.fieldFull : ""}>
                     {renderInput(field)}
                   </Field>
                 ))}
               </div>
-              <div className="min-h-0 overflow-y-auto xl:self-start">
+              <div className="min-h-0 overflow-y-auto pr-1">
                 {renderFormPreview({
                   formState,
                   setFormState,
