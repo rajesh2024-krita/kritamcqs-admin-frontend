@@ -31,6 +31,7 @@ const typeOptions = [
   { value: "broadcast", label: "Broadcast" },
   { value: "expiry", label: "Expiry" },
   { value: "helpdesk", label: "Helpdesk" },
+  { value: "contact", label: "Contact" },
   { value: "admin_notification", label: "Admin Notification" },
 ];
 
