@@ -1,6 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { Bell } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { contactService } from "../../api/contactService";
 import { ToastViewport } from "../common/ToastViewport";
 import {
   BookIcon,
@@ -50,6 +52,7 @@ const navItems = [
   { label: "Payment Gateway", to: "/payment-gateway", section: "Operations", icon: ShieldIcon, moduleKey: "payment-gateway" },
   { label: "Invoices", to: "/invoices", section: "Operations", icon: FileStackIcon, moduleKey: "invoices" },
   { label: "Notifications", to: "/notifications", section: "Operations", icon: HelpIcon, moduleKey: "notifications" },
+  { label: "Contact Messages", to: "/contact-messages", section: "Operations", icon: MailIcon, moduleKey: "contact-messages" },
   { label: "Help Desk", to: "/support-tickets", section: "Operations", icon: HelpIcon, moduleKey: "support-tickets" },
   { label: "Coupons", to: "/coupons", section: "Operations", icon: TagIcon, moduleKey: "coupons" },
   { label: "Session", to: "/sessions", section: "Operations", icon: DashboardIcon, moduleKey: "sessions" },
@@ -65,6 +68,8 @@ const navItems = [
 export function AdminLayout() {
   const { admin, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [unreadContacts, setUnreadContacts] = useState(0);
+  const previousUnreadRef = useRef(null);
   const location = useLocation();
   const isEmployee = isEmployeeAdmin(admin);
   const visibleNavItems = navItems.filter((item) => {
@@ -83,6 +88,55 @@ export function AdminLayout() {
   useEffect(() => {
     setMenuOpen(false);
   }, [location.pathname]);
+
+  function playNotificationSound() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return;
+    const audioContext = new AudioContext();
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    oscillator.type = "sine";
+    oscillator.frequency.value = 880;
+    gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.08, audioContext.currentTime + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.22);
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.24);
+    window.setTimeout(() => void audioContext.close().catch(() => undefined), 400);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadUnreadCount() {
+      try {
+        const response = await contactService.unreadCount();
+        const nextCount = Number(response.data?.count || 0);
+        if (cancelled) return;
+        const previous = previousUnreadRef.current;
+        setUnreadContacts(nextCount);
+        if (previous !== null && nextCount > previous) {
+          try {
+            playNotificationSound();
+          } catch {
+            // Some browsers require a user gesture before audio can play.
+          }
+        }
+        previousUnreadRef.current = nextCount;
+      } catch {
+        // Keep the header quiet if the inbox count cannot be fetched.
+      }
+    }
+
+    void loadUnreadCount();
+    const id = window.setInterval(loadUnreadCount, 30000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
+  }, []);
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-100">
@@ -149,6 +203,21 @@ export function AdminLayout() {
               </div>
             </div>
             <div className="flex flex-wrap justify-start gap-3 sm:justify-end">
+              <NavLink
+                to="/contact-messages"
+                className={({ isActive }) =>
+                  `relative inline-flex h-11 w-11 items-center justify-center rounded-xl border shadow-sm transition ${isActive ? "border-sky-200 bg-sky-50 text-sky-700" : "border-slate-200/70 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"}`
+                }
+                aria-label="Contact message notifications"
+                title="Contact message notifications"
+              >
+                <Bell size={18} />
+                {unreadContacts > 0 ? (
+                  <span className="absolute -right-1.5 -top-1.5 min-w-5 rounded-full bg-rose-600 px-1.5 py-0.5 text-center text-[10px] font-black leading-none text-white shadow-sm">
+                    {unreadContacts > 99 ? "99+" : unreadContacts}
+                  </span>
+                ) : null}
+              </NavLink>
               <div className="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Live Workspace</div>
               <div className="flex items-center gap-3 rounded-xl border border-slate-200/70 bg-white px-3 py-2 shadow-sm">
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-sm font-black text-white">{(admin?.name || "A").slice(0, 1).toUpperCase()}</div>

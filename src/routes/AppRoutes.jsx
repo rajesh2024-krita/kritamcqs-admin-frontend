@@ -30,6 +30,7 @@ import { MockTestsPage } from "../pages/mockTests/MockTestsPage";
 import { RevisionManagementPage } from "../pages/settings/RevisionManagementPage";
 import { DailyTestManagementPage } from "../pages/settings/DailyTestManagementPage";
 import { SupportTicketsPage } from "../pages/SupportTicketsPage";
+import { ContactMessagesPage } from "../pages/ContactMessagesPage";
 import { NotificationsPage } from "../pages/NotificationsPage";
 import { EmailTemplatesPage } from "../pages/EmailTemplatesPage";
 import { EmailTemplateCatalogPage } from "../pages/EmailTemplateCatalogPage";
@@ -121,6 +122,7 @@ export function AppRoutes() {
         <Route path="mistake-management" element={<ModuleAccess moduleKey="mistake-management"><MistakeManagementPage /></ModuleAccess>} />
         <Route path="revision-management" element={<ModuleAccess moduleKey="revision-management"><RevisionManagementPage /></ModuleAccess>} />
         <Route path="notifications" element={<ModuleAccess moduleKey="notifications"><NotificationsPage /></ModuleAccess>} />
+        <Route path="contact-messages" element={<ModuleAccess moduleKey="contact-messages"><ContactMessagesPage /></ModuleAccess>} />
         <Route path="support-tickets" element={<ModuleAccess moduleKey="support-tickets"><SupportTicketsPage /></ModuleAccess>} />
         <Route path="settings" element={<ModuleAccess moduleKey="settings"><SettingsPage /></ModuleAccess>} />
         <Route path="auth-settings" element={<ModuleAccess moduleKey="auth-settings"><AuthSettingsPage /></ModuleAccess>} />
