@@ -45,6 +45,8 @@ const defaultForm = {
   linkUrl: "",
 };
 
+const playStoreUrl = "https://play.google.com/store/apps/details?id=app.kritamcqs.androidapp";
+
 function normalizeText(value) {
   return String(value || "").trim().toLowerCase();
 }
@@ -155,6 +157,22 @@ export function NotificationsPage() {
           <div className={ui.eyebrow}>Broadcast</div>
           <h2 className="text-xl font-black tracking-tight text-slate-900">Send Notifications</h2>
           <p className={ui.muted}>Send app notifications, emails, or both. Delivery status is stored per user.</p>
+          <button
+            type="button"
+            className={cn(ui.buttonBase, ui.buttonSecondary, "mt-3")}
+            onClick={() =>
+              setForm((current) => ({
+                ...current,
+                title: "Update KritaMCQs",
+                body: "A new app update is available. Tap Update to open Play Store.",
+                type: "update",
+                targetGroup: "all",
+                deliveryMode: "notification",
+                linkUrl: playStoreUrl,
+              }))}
+          >
+            Prepare App Update Notification
+          </button>
         </div>
 
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

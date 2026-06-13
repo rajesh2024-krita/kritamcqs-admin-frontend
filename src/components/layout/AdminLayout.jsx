@@ -51,7 +51,7 @@ const navItems = [
   { label: "Plan Config", to: "/subscription-plans", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscription-plans" },
   { label: "Page Builder", to: "/subscription-page-builder", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscription-page-builder" },
   { label: "Dashboard Carousel", to: "/dashboard-carousel", section: "Operations", icon: OverviewIcon, moduleKey: "dashboard-carousel" },
-  { label: "Global Preview", to: "/global-preview", section: "Operations", icon: OverviewIcon, moduleKey: "global-preview" },
+  { label: "App Usage", to: "/app-usage", section: "Operations", icon: DashboardIcon, moduleKey: "app-usage" },
   { label: "Payment Gateway", to: "/payment-gateway", section: "Operations", icon: ShieldIcon, moduleKey: "payment-gateway" },
   { label: "Invoices", to: "/invoices", section: "Operations", icon: FileStackIcon, moduleKey: "invoices" },
   { label: "Notifications", to: "/notifications", section: "Operations", icon: HelpIcon, moduleKey: "notifications" },

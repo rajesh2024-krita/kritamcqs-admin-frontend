@@ -84,13 +84,25 @@ export function SubscriptionTemplatePreview({ template, plans = [] }) {
 }
 
 export function ExplanationPreview({ sample = {}, template }) {
+  const explanationText = sample.explanation || "The explanation shown here uses the same preview surface that the app can render.";
+  const steps = String(explanationText)
+    .split(/(?=Step\s+\d+\s*:)/i)
+    .map((step) => step.trim())
+    .filter(Boolean);
+
   return (
     <div className="space-y-4 bg-slate-50 p-4">
-      <div className="rounded-xl border border-slate-200 bg-white p-4">
-        <div className="text-xs font-black uppercase tracking-[0.18em] text-sky-700">Explanation</div>
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Explanation</div>
         <h3 className="mt-2 text-lg font-black text-slate-950">{sample.question || "Sample question preview"}</h3>
-        <div className="mt-4 rounded-xl bg-emerald-50 p-3 text-sm font-bold text-emerald-800">Correct answer: {sample.answer || "A"}</div>
-        <p className="mt-4 text-sm leading-6 text-slate-700">{sample.explanation || "The explanation shown here uses the same preview surface that the app can render."}</p>
+        <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-900">
+          <p className="font-black">Correct answer: {sample.answer || "A"}</p>
+          <div className="mt-2 space-y-1 leading-6">
+            {(steps.length ? steps : [explanationText]).map((step, index) => (
+              <p key={`${step}-${index}`}>{step}</p>
+            ))}
+          </div>
+        </div>
       </div>
       {template?.layout && Object.keys(template.layout).length ? (
         <pre className="rounded-xl bg-slate-900 p-4 text-xs text-slate-100">{JSON.stringify(template.layout, null, 2)}</pre>

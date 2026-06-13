@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { chapterService } from "../../api/chapterService";
 import { subjectService } from "../../api/subjectService";
+import { uploadService } from "../../api/uploadService";
 import { useToast } from "../../context/ToastContext";
 import { ToggleSwitch } from "../../components/forms/ToggleSwitch";
 import { cn, ui } from "../../ui";
@@ -209,8 +210,8 @@ export function ChaptersPage() {
         fields={[
           { name: "subjectId", label: "Subject", required: true, type: "select", options: (_form, lookups) => (lookups.subjects || []).map((subject) => ({ label: formatSubjectLabel(subject), value: subject.id })) },
           { name: "name", label: "Chapter Name", required: true },
-          { name: "iconUrl", label: "Icon URL", full: true },
-          { name: "imageUrl", label: "Image URL", full: true },
+          { name: "iconUrl", label: "Chapter Icon", type: "image-upload", upload: (file) => uploadService.appImage(file, "chapter-icons"), full: true },
+          { name: "imageUrl", label: "Chapter Image", type: "image-upload", upload: (file) => uploadService.appImage(file, "chapter-images"), full: true },
           { name: "isLockedForFreeUsers", label: "Lock for Free Users", type: "switch", defaultValue: false },
         ]}
         columns={[

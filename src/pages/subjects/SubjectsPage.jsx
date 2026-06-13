@@ -1,5 +1,6 @@
 import { examTypeService } from "../../api/examTypeService";
 import { subjectService } from "../../api/subjectService";
+import { uploadService } from "../../api/uploadService";
 import { EntityManagerPage } from "../common/EntityManagerPage";
 
 export function SubjectsPage() {
@@ -21,8 +22,8 @@ export function SubjectsPage() {
         },
         { name: "name", label: "Subject", required: true },
         { name: "icon", label: "Icon" },
-        { name: "iconUrl", label: "Icon URL", full: true },
-        { name: "imageUrl", label: "Image URL", full: true },
+        { name: "iconUrl", label: "Subject Icon", type: "image-upload", upload: (file) => uploadService.appImage(file, "subject-icons"), full: true },
+        { name: "imageUrl", label: "Subject Image", type: "image-upload", upload: (file) => uploadService.appImage(file, "subject-images"), full: true },
         { name: "color", label: "Color" },
       ]}
       columns={[
