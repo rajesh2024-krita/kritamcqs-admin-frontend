@@ -209,11 +209,15 @@ export function ChaptersPage() {
         fields={[
           { name: "subjectId", label: "Subject", required: true, type: "select", options: (_form, lookups) => (lookups.subjects || []).map((subject) => ({ label: formatSubjectLabel(subject), value: subject.id })) },
           { name: "name", label: "Chapter Name", required: true },
+          { name: "iconUrl", label: "Icon URL", full: true },
+          { name: "imageUrl", label: "Image URL", full: true },
           { name: "isLockedForFreeUsers", label: "Lock for Free Users", type: "switch", defaultValue: false },
         ]}
         columns={[
           { key: "name", label: "Name" },
           { key: "subjectId", label: "Subject", render: (row) => formatSubjectLabel(row.subjectId) },
+          { key: "iconUrl", label: "Icon URL" },
+          { key: "imageUrl", label: "Image URL" },
           { key: "examType", label: "Exam Type", render: (row) => row.subjectId?.examType || "-" },
           {
             key: "isLockedForFreeUsers",

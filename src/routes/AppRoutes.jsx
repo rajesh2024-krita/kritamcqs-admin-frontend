@@ -37,6 +37,9 @@ import { EmailTemplateCatalogPage } from "../pages/EmailTemplateCatalogPage";
 import { WeakAreaManagementPage } from "../pages/WeakAreaManagementPage";
 import { MistakeManagementPage } from "../pages/MistakeManagementPage";
 import { FreeQuestionsPage } from "../pages/FreeQuestionsPage";
+import { DashboardCarouselPage } from "../pages/DashboardCarouselPage";
+import { SubscriptionPageBuilderPage } from "../pages/SubscriptionPageBuilderPage";
+import { GlobalPreviewPage } from "../pages/GlobalPreviewPage";
 import { EmployeesPage } from "../pages/employees/EmployeesPage";
 import { AuditLogsPage } from "../pages/audit/AuditLogsPage";
 import { AIConfigurationPage } from "../pages/settings/AIConfigurationPage";
@@ -110,6 +113,9 @@ export function AppRoutes() {
         <Route path="users" element={<ModuleAccess moduleKey="users"><UsersPage /></ModuleAccess>} />
         <Route path="subscriptions" element={<ModuleAccess moduleKey="subscriptions"><SubscriptionsPage /></ModuleAccess>} />
         <Route path="subscription-plans" element={<ModuleAccess moduleKey="subscription-plans"><SubscriptionPlansPage /></ModuleAccess>} />
+        <Route path="subscription-page-builder" element={<ModuleAccess moduleKey="subscription-page-builder"><SubscriptionPageBuilderPage /></ModuleAccess>} />
+        <Route path="dashboard-carousel" element={<ModuleAccess moduleKey="dashboard-carousel"><DashboardCarouselPage /></ModuleAccess>} />
+        <Route path="global-preview" element={<ModuleAccess moduleKey="global-preview"><GlobalPreviewPage /></ModuleAccess>} />
         <Route path="payment-gateway" element={<ModuleAccess moduleKey="payment-gateway"><PaymentGatewaySettingsPage /></ModuleAccess>} />
         <Route path="invoices" element={<ModuleAccess moduleKey="invoices"><InvoiceSystemPage /></ModuleAccess>} />
         <Route path="invoice-system" element={<Navigate to="/invoices" replace />} />

@@ -16,6 +16,10 @@ const defaultSettings = {
   hard_percentage: 30,
   enabled: true,
   allow_both_exams_same_day: false,
+  subject_distribution: {
+    NEET: { Biology: 0, Chemistry: 0, Physics: 0 },
+    JEE: { Mathematics: 0, Chemistry: 0, Physics: 0 },
+  },
   adaptive_mode_enabled: true,
   repeat_lookback_sessions: 5,
   max_repeated_questions: 2,
@@ -49,6 +53,7 @@ export function DailyTestManagementPage() {
         hard_percentage: settingsResponse.data?.hard_percentage ?? 30,
         enabled: Boolean(settingsResponse.data?.enabled ?? true),
         allow_both_exams_same_day: Boolean(settingsResponse.data?.allowBothExamsSameDay ?? settingsResponse.data?.allow_both_exams_same_day ?? false),
+        subject_distribution: settingsResponse.data?.subjectDistribution ?? settingsResponse.data?.subject_distribution ?? defaultSettings.subject_distribution,
         adaptive_mode_enabled: Boolean(settingsResponse.data?.adaptive_mode_enabled ?? true),
         repeat_lookback_sessions: settingsResponse.data?.repeat_lookback_sessions ?? 5,
         max_repeated_questions: settingsResponse.data?.max_repeated_questions ?? 2,
@@ -94,6 +99,13 @@ export function DailyTestManagementPage() {
         return;
       }
     }
+    for (const [exam, group] of Object.entries(settings.subject_distribution || {})) {
+      const total = Object.values(group || {}).reduce((sum, value) => sum + Number(value || 0), 0);
+      if (total > 0 && total !== Number(settings.total_questions || 0)) {
+        toast.error(`${exam} subject-wise question counts must equal Total Daily Test Questions`);
+        return;
+      }
+    }
 
     setSaving(true);
     try {
@@ -108,6 +120,18 @@ export function DailyTestManagementPage() {
         hard_percentage: Number(settings.hard_percentage || 30),
         enabled: Boolean(settings.enabled),
         allowBothExamsSameDay: Boolean(settings.allow_both_exams_same_day),
+        subjectDistribution: {
+          NEET: {
+            Biology: Number(settings.subject_distribution?.NEET?.Biology || 0),
+            Chemistry: Number(settings.subject_distribution?.NEET?.Chemistry || 0),
+            Physics: Number(settings.subject_distribution?.NEET?.Physics || 0),
+          },
+          JEE: {
+            Mathematics: Number(settings.subject_distribution?.JEE?.Mathematics || 0),
+            Chemistry: Number(settings.subject_distribution?.JEE?.Chemistry || 0),
+            Physics: Number(settings.subject_distribution?.JEE?.Physics || 0),
+          },
+        },
         adaptive_mode_enabled: Boolean(settings.adaptive_mode_enabled),
         repeat_lookback_sessions: Number(settings.repeat_lookback_sessions || 5),
         max_repeated_questions: Number(settings.max_repeated_questions || 2),
@@ -146,6 +170,7 @@ export function DailyTestManagementPage() {
           hard_percentage: response.data?.hard_percentage ?? payload.hard_percentage,
           enabled: Boolean(response.data?.enabled ?? payload.enabled),
           allow_both_exams_same_day: Boolean(response.data?.allowBothExamsSameDay ?? response.data?.allow_both_exams_same_day ?? payload.allowBothExamsSameDay),
+          subject_distribution: response.data?.subjectDistribution ?? response.data?.subject_distribution ?? payload.subjectDistribution,
           adaptive_mode_enabled: Boolean(response.data?.adaptive_mode_enabled ?? payload.adaptive_mode_enabled),
           repeat_lookback_sessions: response.data?.repeat_lookback_sessions ?? payload.repeat_lookback_sessions,
           max_repeated_questions: response.data?.max_repeated_questions ?? payload.max_repeated_questions,
@@ -265,6 +290,54 @@ export function DailyTestManagementPage() {
               onChange={(event) => setSettings((current) => ({ ...current, revision_questions: Number(event.target.value || 0) }))}
             />
           </label>
+        </div>
+
+        <div className="mt-6">
+          <h4 className="text-lg font-bold text-slate-900">Subject Distribution</h4>
+          <p className="mb-3 text-sm text-slate-500">Optional exact subject split. Leave all counts as 0 to keep adaptive subject balancing.</p>
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            {[
+              { exam: "NEET", subjects: ["Biology", "Chemistry", "Physics"] },
+              { exam: "JEE", subjects: ["Mathematics", "Chemistry", "Physics"] },
+            ].map((group) => {
+              const total = group.subjects.reduce((sum, subject) => sum + Number(settings.subject_distribution?.[group.exam]?.[subject] || 0), 0);
+              return (
+                <div key={group.exam} className="rounded-sm border border-slate-200 bg-white p-4">
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <p className="text-sm font-black uppercase tracking-wide text-slate-800">{group.exam}</p>
+                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${total > 0 && total !== Number(settings.total_questions || 0) ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>
+                      {total}/{settings.total_questions}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    {group.subjects.map((subject) => (
+                      <label key={subject} className={ui.field}>
+                        <span>{subject}</span>
+                        <input
+                          className={ui.input}
+                          type="number"
+                          min={0}
+                          max={200}
+                          value={settings.subject_distribution?.[group.exam]?.[subject] ?? 0}
+                          onChange={(event) =>
+                            setSettings((current) => ({
+                              ...current,
+                              subject_distribution: {
+                                ...(current.subject_distribution || {}),
+                                [group.exam]: {
+                                  ...(current.subject_distribution?.[group.exam] || {}),
+                                  [subject]: Number(event.target.value || 0),
+                                },
+                              },
+                            }))}
+                        />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         <div className="mt-6">

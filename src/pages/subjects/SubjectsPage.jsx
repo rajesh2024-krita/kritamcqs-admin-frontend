@@ -21,12 +21,16 @@ export function SubjectsPage() {
         },
         { name: "name", label: "Subject", required: true },
         { name: "icon", label: "Icon" },
+        { name: "iconUrl", label: "Icon URL", full: true },
+        { name: "imageUrl", label: "Image URL", full: true },
         { name: "color", label: "Color" },
       ]}
       columns={[
         { key: "name", label: "Name" },
         { key: "examType", label: "Exam Type" },
         { key: "icon", label: "Icon" },
+        { key: "iconUrl", label: "Icon URL" },
+        { key: "imageUrl", label: "Image URL" },
         { key: "color", label: "Color" },
       ]}
     />
