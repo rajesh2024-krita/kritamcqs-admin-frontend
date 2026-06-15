@@ -12,6 +12,13 @@ const defaultContent = {
     contact: "#contact",
     whatsapp: "https://wa.me/917010313880",
   },
+  ctas: {
+    navbar: {
+      label: "Download App",
+      href: "https://play.google.com/store/apps/details?id=app.kritamcqs.androidapp",
+      linkKey: "googlePlay",
+    },
+  },
   brand: { logo: "" },
   hero: {
     badge: "Silicon Mobile App of the Year 2026",
@@ -20,10 +27,27 @@ const defaultContent = {
     kicker: "Not just another MCQ app.",
     description: "Krita continuously identifies your weak areas, tracks mistakes, creates revision plans, predicts your score, and helps improve your NEET & JEE performance.",
     primaryCta: "Download on Google Play",
+    primaryCtaHref: "https://play.google.com/store/apps/details?id=app.kritamcqs.androidapp",
+    primaryCtaLinkKey: "googlePlay",
     secondaryCta: "View Dashboard",
+    secondaryCtaHref: "#dashboard",
+    secondaryCtaLinkKey: "",
     benefits: ["Weak Area Detection", "Mistake Book", "Smart Revision", "Daily Adaptive Tests", "Score Prediction", "Previous Year Questions", "Mock Tests"],
   },
   screens: { dashboard: "", weak: "", mistake: "", revision: "", daily: "" },
+  sectionImages: {
+    hero: "",
+    features: "",
+    dashboard: "",
+    howItWorks: "",
+    pricing: "",
+    comparison: "",
+    roadmap: "",
+    faq: "",
+    contact: "",
+    finalCta: "",
+    footer: "",
+  },
   features: {
     title: "Why Students Choose Krita",
     items: [
@@ -37,6 +61,8 @@ const defaultContent = {
     title: "Your Personal Rank Improvement Dashboard",
     subtitle: "Monitor:",
     cta: "Open Dashboard",
+    ctaHref: "https://app.kritamcqs.com/dashboard",
+    ctaLinkKey: "dashboard",
     metrics: ["Accuracy %", "Average Time", "Weak Topics", "Improvement Trend", "Predicted Score", "Daily Progress"],
   },
   howItWorks: {
@@ -116,7 +142,8 @@ const sections = [
   ["advanced", "Advanced"],
 ];
 const screenOptions = ["dashboard", "weak", "mistake", "revision", "daily"];
-const linkKeys = ["googlePlay", "dashboard", "premium", "contact", "whatsapp"];
+const sectionImageOptions = ["hero", "features", "dashboard", "howItWorks", "pricing", "comparison", "roadmap", "faq", "contact", "finalCta", "footer"];
+const linkKeys = ["", "googlePlay", "dashboard", "premium", "contact", "whatsapp"];
 
 function mergeContent(base, override) {
   if (!override || typeof override !== "object" || Array.isArray(override)) return base;
@@ -165,11 +192,11 @@ function emptyFaq() {
 }
 
 function emptyPlan() {
-  return { title: "New Plan", price: "", description: "", cta: "Learn More", linkKey: "googlePlay", premium: false, features: ["Feature"] };
+  return { title: "New Plan", price: "", description: "", cta: "Learn More", href: "", linkKey: "googlePlay", premium: false, features: ["Feature"] };
 }
 
 function emptyButton() {
-  return { label: "New Button", linkKey: "contact", icon: "phone" };
+  return { label: "New Button", href: "", linkKey: "contact", icon: "phone" };
 }
 
 export function WebsiteContentPage() {
@@ -313,6 +340,9 @@ export function WebsiteContentPage() {
               <Field label="Premium Link" path="links.premium" value={getIn(content, "links.premium")} onChange={update} />
               <Field label="Contact Link" path="links.contact" value={getIn(content, "links.contact")} onChange={update} />
               <Field label="WhatsApp Link" path="links.whatsapp" value={getIn(content, "links.whatsapp")} onChange={update} />
+              <Field label="Navbar CTA Text" path="ctas.navbar.label" value={getIn(content, "ctas.navbar.label")} onChange={update} />
+              <Field label="Navbar CTA Link" path="ctas.navbar.href" value={getIn(content, "ctas.navbar.href")} onChange={update} />
+              <SelectPathField label="Navbar CTA Link Key" path="ctas.navbar.linkKey" value={getIn(content, "ctas.navbar.linkKey")} options={linkKeys} onChange={update} />
             </Section>
           )}
 
@@ -324,7 +354,12 @@ export function WebsiteContentPage() {
               <Field label="Kicker" path="hero.kicker" value={getIn(content, "hero.kicker")} onChange={update} />
               <TextareaField label="Description" path="hero.description" value={getIn(content, "hero.description")} onChange={update} />
               <Field label="Primary Button Text" path="hero.primaryCta" value={getIn(content, "hero.primaryCta")} onChange={update} />
+              <Field label="Primary Button Link" path="hero.primaryCtaHref" value={getIn(content, "hero.primaryCtaHref")} onChange={update} />
+              <SelectPathField label="Primary Link Key" path="hero.primaryCtaLinkKey" value={getIn(content, "hero.primaryCtaLinkKey")} options={linkKeys} onChange={update} />
               <Field label="Secondary Button Text" path="hero.secondaryCta" value={getIn(content, "hero.secondaryCta")} onChange={update} />
+              <Field label="Secondary Button Link" path="hero.secondaryCtaHref" value={getIn(content, "hero.secondaryCtaHref")} onChange={update} />
+              <SelectPathField label="Secondary Link Key" path="hero.secondaryCtaLinkKey" value={getIn(content, "hero.secondaryCtaLinkKey")} options={linkKeys} onChange={update} />
+              <ImageField label="Hero Section Image" path="sectionImages.hero" value={getIn(content, "sectionImages.hero")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
               <StringList title="Benefit Chips" items={getIn(content, "hero.benefits", [])} onChange={(items) => update("hero.benefits", items)} />
             </Section>
           )}
@@ -334,12 +369,16 @@ export function WebsiteContentPage() {
               {screenOptions.map((screen) => (
                 <ImageField key={screen} label={`${screen[0].toUpperCase()}${screen.slice(1)} Screen`} path={`screens.${screen}`} value={getIn(content, `screens.${screen}`)} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
               ))}
+              {sectionImageOptions.map((section) => (
+                <ImageField key={section} label={`${section} Section Image`} path={`sectionImages.${section}`} value={getIn(content, `sectionImages.${section}`)} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+              ))}
             </Section>
           )}
 
           {activeSection === "features" && (
             <Section title="Features Section">
               <Field label="Section Title" path="features.title" value={getIn(content, "features.title")} onChange={update} />
+              <ImageField label="Section Image" path="sectionImages.features" value={getIn(content, "sectionImages.features")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
               <FeatureList items={getIn(content, "features.items", [])} onChange={(items) => update("features.items", items)} />
             </Section>
           )}
@@ -349,6 +388,9 @@ export function WebsiteContentPage() {
               <Field label="Title" path="dashboard.title" value={getIn(content, "dashboard.title")} onChange={update} />
               <Field label="Subtitle" path="dashboard.subtitle" value={getIn(content, "dashboard.subtitle")} onChange={update} />
               <Field label="Button Text" path="dashboard.cta" value={getIn(content, "dashboard.cta")} onChange={update} />
+              <Field label="Button Link" path="dashboard.ctaHref" value={getIn(content, "dashboard.ctaHref")} onChange={update} />
+              <SelectPathField label="Button Link Key" path="dashboard.ctaLinkKey" value={getIn(content, "dashboard.ctaLinkKey")} options={linkKeys} onChange={update} />
+              <ImageField label="Section Image" path="sectionImages.dashboard" value={getIn(content, "sectionImages.dashboard")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
               <StringList title="Metrics" items={getIn(content, "dashboard.metrics", [])} onChange={(items) => update("dashboard.metrics", items)} />
             </Section>
           )}
@@ -356,12 +398,14 @@ export function WebsiteContentPage() {
           {activeSection === "howItWorks" && (
             <Section title="How It Works Section">
               <Field label="Section Title" path="howItWorks.title" value={getIn(content, "howItWorks.title")} onChange={update} />
+              <ImageField label="Section Image" path="sectionImages.howItWorks" value={getIn(content, "sectionImages.howItWorks")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
               <StepList items={getIn(content, "howItWorks.steps", [])} onChange={(items) => update("howItWorks.steps", items)} />
             </Section>
           )}
 
           {activeSection === "pricing" && (
             <Section title="Pricing Section">
+              <ImageField label="Section Image" path="sectionImages.pricing" value={getIn(content, "sectionImages.pricing")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
               <PlanList items={getIn(content, "pricing.plans", [])} onChange={(items) => update("pricing.plans", items)} />
             </Section>
           )}
@@ -372,6 +416,7 @@ export function WebsiteContentPage() {
               <Field label="Others Column Title" path="comparison.othersTitle" value={getIn(content, "comparison.othersTitle")} onChange={update} />
               <Field label="Others Item" path="comparison.othersItem" value={getIn(content, "comparison.othersItem")} onChange={update} />
               <Field label="Krita Column Title" path="comparison.kritaTitle" value={getIn(content, "comparison.kritaTitle")} onChange={update} />
+              <ImageField label="Section Image" path="sectionImages.comparison" value={getIn(content, "sectionImages.comparison")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
               <StringList title="Krita Items" items={getIn(content, "comparison.kritaItems", [])} onChange={(items) => update("comparison.kritaItems", items)} />
             </Section>
           )}
@@ -379,6 +424,7 @@ export function WebsiteContentPage() {
           {activeSection === "roadmap" && (
             <Section title="Roadmap Section">
               <Field label="Section Title" path="roadmap.title" value={getIn(content, "roadmap.title")} onChange={update} />
+              <ImageField label="Section Image" path="sectionImages.roadmap" value={getIn(content, "sectionImages.roadmap")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
               <StringList title="Workflow Stages" items={getIn(content, "roadmap.workflow", [])} onChange={(items) => update("roadmap.workflow", items)} />
             </Section>
           )}
@@ -386,6 +432,7 @@ export function WebsiteContentPage() {
           {activeSection === "faq" && (
             <Section title="FAQ Section">
               <Field label="Section Title" path="faq.title" value={getIn(content, "faq.title")} onChange={update} />
+              <ImageField label="Section Image" path="sectionImages.faq" value={getIn(content, "sectionImages.faq")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
               <FaqList items={getIn(content, "faq.items", [])} onChange={(items) => update("faq.items", items)} />
             </Section>
           )}
@@ -397,6 +444,7 @@ export function WebsiteContentPage() {
               <Field label="Email" path="contact.email" value={getIn(content, "contact.email")} onChange={update} />
               <Field label="Phone" path="contact.phone" value={getIn(content, "contact.phone")} onChange={update} />
               <TextareaField label="Address" path="contact.address" value={getIn(content, "contact.address")} onChange={update} />
+              <ImageField label="Section Image" path="sectionImages.contact" value={getIn(content, "sectionImages.contact")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
             </Section>
           )}
 
@@ -404,6 +452,7 @@ export function WebsiteContentPage() {
             <Section title="Final CTA Section">
               <Field label="Eyebrow" path="finalCta.eyebrow" value={getIn(content, "finalCta.eyebrow")} onChange={update} />
               <TextareaField label="Title" path="finalCta.title" value={getIn(content, "finalCta.title")} onChange={update} />
+              <ImageField label="Section Image" path="sectionImages.finalCta" value={getIn(content, "sectionImages.finalCta")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
               <StringList title="Word Tiles" items={getIn(content, "finalCta.words", [])} onChange={(items) => update("finalCta.words", items)} />
               <ButtonList items={getIn(content, "finalCta.buttons", [])} onChange={(items) => update("finalCta.buttons", items)} />
             </Section>
@@ -413,6 +462,7 @@ export function WebsiteContentPage() {
             <Section title="Footer Section">
               <TextareaField label="Description" path="footer.description" value={getIn(content, "footer.description")} onChange={update} />
               <Field label="Copyright" path="footer.copyright" value={getIn(content, "footer.copyright")} onChange={update} />
+              <ImageField label="Section Image" path="sectionImages.footer" value={getIn(content, "sectionImages.footer")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
             </Section>
           )}
 
@@ -560,6 +610,7 @@ function PlanList({ items, onChange }) {
           <InlineField label="Price" value={item.price} onChange={(value) => onChange(updateItem(list, index, { price: value }))} />
           <InlineField label="Description" value={item.description} onChange={(value) => onChange(updateItem(list, index, { description: value }))} textarea />
           <InlineField label="Button Text" value={item.cta} onChange={(value) => onChange(updateItem(list, index, { cta: value }))} />
+          <InlineField label="Button URL" value={item.href} onChange={(value) => onChange(updateItem(list, index, { href: value }))} />
           <SelectField label="Button Link" value={item.linkKey || "googlePlay"} options={linkKeys} onChange={(value) => onChange(updateItem(list, index, { linkKey: value }))} />
           <CheckField label="Premium style" checked={Boolean(item.premium)} onChange={(value) => onChange(updateItem(list, index, { premium: value }))} />
           <StringList title="Plan Features" items={item.features || []} onChange={(features) => onChange(updateItem(list, index, { features }))} />
@@ -576,6 +627,7 @@ function ButtonList({ items, onChange }) {
       {list.map((item, index) => (
         <Card key={index} title={item.label || `Button ${index + 1}`} onRemove={() => onChange(list.filter((_, itemIndex) => itemIndex !== index))}>
           <InlineField label="Label" value={item.label} onChange={(value) => onChange(updateItem(list, index, { label: value }))} />
+          <InlineField label="URL" value={item.href} onChange={(value) => onChange(updateItem(list, index, { href: value }))} />
           <SelectField label="Link" value={item.linkKey || "contact"} options={linkKeys} onChange={(value) => onChange(updateItem(list, index, { linkKey: value }))} />
           <SelectField label="Icon" value={item.icon || "phone"} options={["download", "phone"]} onChange={(value) => onChange(updateItem(list, index, { icon: value }))} />
         </Card>
@@ -638,7 +690,20 @@ function SelectField({ label, value, options, onChange }) {
       {label}
       <select className={ui.input} value={value} onChange={(event) => onChange(event.target.value)}>
         {options.map((option) => (
-          <option key={option} value={option}>{option}</option>
+          <option key={option || "custom"} value={option}>{option || "Custom URL"}</option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function SelectPathField({ label, path, value, options, onChange }) {
+  return (
+    <label className={ui.field}>
+      {label}
+      <select className={ui.input} value={value || ""} onChange={(event) => onChange(path, event.target.value)}>
+        {options.map((option) => (
+          <option key={option || "custom"} value={option}>{option || "Custom URL"}</option>
         ))}
       </select>
     </label>
