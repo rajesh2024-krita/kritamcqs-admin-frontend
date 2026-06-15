@@ -19,6 +19,12 @@ function resolveImageSource(value) {
   return base ? `${base}${raw}` : raw;
 }
 
+function imageFocusStyle(item) {
+  const x = Math.min(100, Math.max(0, Number(item?.imagePositionX ?? 50)));
+  const y = Math.min(100, Math.max(0, Number(item?.imagePositionY ?? 50)));
+  return { objectPosition: `${x}% ${y}%` };
+}
+
 export function DashboardCarouselPage() {
   const toast = useToast();
   const [items, setItems] = useState([]);
@@ -60,10 +66,12 @@ export function DashboardCarouselPage() {
       const startOrder = orderedItems.length;
       for (const [index, file] of uploaded.entries()) {
         await dashboardCarouselService.create({
-          title: file.originalName?.replace(/\.[^.]+$/, "") || `Banner ${startOrder + index + 1}`,
+          title: "",
           subtitle: "",
           imageUrl: file.url,
           redirectLink: "",
+          imagePositionX: 50,
+          imagePositionY: 50,
           displayOrder: (startOrder + index + 1) * 10,
           enabled: true,
         });
@@ -167,7 +175,7 @@ export function DashboardCarouselPage() {
           {orderedItems.map((item, index) => (
             <div key={item.id} className="grid gap-4 rounded-xl border border-slate-200 bg-slate-50 p-4 lg:grid-cols-[180px_minmax(0,1fr)_auto]">
               <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
-                {item.imageUrl ? <img src={resolveImageSource(item.imageUrl)} alt="" className="h-28 w-full object-cover" /> : <div className="flex h-28 items-center justify-center text-sm text-slate-500">No image</div>}
+                {item.imageUrl ? <img src={resolveImageSource(item.imageUrl)} alt="" className="aspect-[16/7] w-full object-cover" style={imageFocusStyle(item)} /> : <div className="flex h-28 items-center justify-center text-sm text-slate-500">No image</div>}
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="md:col-span-2 flex items-center gap-2">
@@ -177,9 +185,17 @@ export function DashboardCarouselPage() {
                     Enabled
                   </label>
                 </div>
-                <label className={ui.field}><span>Title</span><input className={ui.input} value={item.title || ""} onChange={(event) => updateLocal(item.id, { title: event.target.value })} /></label>
+                <label className={ui.field}><span>Title <small className="font-semibold text-slate-400">(optional)</small></span><input className={ui.input} value={item.title || ""} onChange={(event) => updateLocal(item.id, { title: event.target.value })} /></label>
                 <label className={ui.field}><span>Redirect Link</span><input className={ui.input} value={item.redirectLink || ""} onChange={(event) => updateLocal(item.id, { redirectLink: event.target.value })} /></label>
                 <label className={cn(ui.field, "md:col-span-2")}><span>Subtitle</span><input className={ui.input} value={item.subtitle || ""} onChange={(event) => updateLocal(item.id, { subtitle: event.target.value })} /></label>
+                <label className={ui.field}>
+                  <span>Crop Left/Right</span>
+                  <input className="w-full accent-sky-600" type="range" min="0" max="100" value={Number(item.imagePositionX ?? 50)} onChange={(event) => updateLocal(item.id, { imagePositionX: Number(event.target.value) })} />
+                </label>
+                <label className={ui.field}>
+                  <span>Crop Up/Down</span>
+                  <input className="w-full accent-sky-600" type="range" min="0" max="100" value={Number(item.imagePositionY ?? 50)} onChange={(event) => updateLocal(item.id, { imagePositionY: Number(event.target.value) })} />
+                </label>
               </div>
               <div className="flex flex-row gap-2 lg:flex-col">
                 <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary, "px-3")} onClick={() => moveItem(index, -1)} title="Move up"><ArrowUp size={16} /></button>
