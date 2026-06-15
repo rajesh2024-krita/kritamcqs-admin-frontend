@@ -10,7 +10,13 @@ function resolveImageSource(value) {
   const raw = String(value || "").trim();
   if (!raw) return "";
   if (/^https?:\/\//i.test(raw) || raw.startsWith("data:")) return raw;
-  return raw;
+  if (!raw.startsWith("/")) return raw;
+  if (raw.startsWith("/uploads/")) {
+    const appBase = String(import.meta.env.VITE_APP_FRONTEND_BASE_URL || "").replace(/\/+$/, "");
+    if (appBase) return `${appBase}${raw}`;
+  }
+  const base = String(import.meta.env.VITE_API_BASE_URL || "").replace(/\/+$/, "").replace(/\/api$/, "");
+  return base ? `${base}${raw}` : raw;
 }
 
 export function DashboardCarouselPage() {
