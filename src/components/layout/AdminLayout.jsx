@@ -52,6 +52,7 @@ const navItems = [
   { label: "Page Builder", to: "/subscription-page-builder", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscription-page-builder" },
   { label: "Dashboard Carousel", to: "/dashboard-carousel", section: "Operations", icon: OverviewIcon, moduleKey: "dashboard-carousel" },
   { label: "App Usage", to: "/app-usage", section: "Operations", icon: DashboardIcon, moduleKey: "app-usage" },
+  { label: "Website Content", to: "/website-content", section: "Operations", icon: SettingsIcon, mainOnly: true },
   { label: "Payment Gateway", to: "/payment-gateway", section: "Operations", icon: ShieldIcon, moduleKey: "payment-gateway" },
   { label: "Invoices", to: "/invoices", section: "Operations", icon: FileStackIcon, moduleKey: "invoices" },
   { label: "Notifications", to: "/notifications", section: "Operations", icon: HelpIcon, moduleKey: "notifications" },

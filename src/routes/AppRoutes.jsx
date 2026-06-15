@@ -40,6 +40,7 @@ import { FreeQuestionsPage } from "../pages/FreeQuestionsPage";
 import { DashboardCarouselPage } from "../pages/DashboardCarouselPage";
 import { SubscriptionPageBuilderPage } from "../pages/SubscriptionPageBuilderPage";
 import { AppUsageAnalyticsPage } from "../pages/AppUsageAnalyticsPage";
+import { WebsiteContentPage } from "../pages/WebsiteContentPage";
 import { EmployeesPage } from "../pages/employees/EmployeesPage";
 import { AuditLogsPage } from "../pages/audit/AuditLogsPage";
 import { AIConfigurationPage } from "../pages/settings/AIConfigurationPage";
@@ -116,6 +117,7 @@ export function AppRoutes() {
         <Route path="subscription-page-builder" element={<ModuleAccess moduleKey="subscription-page-builder"><SubscriptionPageBuilderPage /></ModuleAccess>} />
         <Route path="dashboard-carousel" element={<ModuleAccess moduleKey="dashboard-carousel"><DashboardCarouselPage /></ModuleAccess>} />
         <Route path="app-usage" element={<ModuleAccess moduleKey="app-usage"><AppUsageAnalyticsPage /></ModuleAccess>} />
+        <Route path="website-content" element={<MainAdminOnly><WebsiteContentPage /></MainAdminOnly>} />
         <Route path="payment-gateway" element={<ModuleAccess moduleKey="payment-gateway"><PaymentGatewaySettingsPage /></ModuleAccess>} />
         <Route path="invoices" element={<ModuleAccess moduleKey="invoices"><InvoiceSystemPage /></ModuleAccess>} />
         <Route path="invoice-system" element={<Navigate to="/invoices" replace />} />
