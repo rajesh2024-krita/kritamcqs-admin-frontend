@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { Image, Plus, RefreshCw, Save, Trash2, Upload } from "lucide-react";
-import { useLocation } from "react-router-dom";
 import { uploadService } from "../api/uploadService";
 import { websiteContentService } from "../api/websiteContentService";
 import { cn, ui } from "../ui";
@@ -82,15 +81,6 @@ const defaultContent = {
       { title: "Premium Plan", price: "Rs.499 / 6 Months", strikeOutAmount: "Rs.3,999", description: "Unlock complete exam preparation.", cta: "Upgrade to Premium", linkKey: "premium", premium: true, features: ["5000+ MCQs", "10 Years PYQs", "Subject Practice", "Weak Analytics", "Mistake Book", "Score Prediction", "Premium Mocks", "Detailed Explanations"] },
     ],
   },
-  offerTimer: {
-    enabled: false,
-    title: "",
-    subtitle: "",
-    description: "",
-    image: "",
-    startAt: "",
-    endAt: "",
-  },
   comparison: {
     title: "What Makes Krita Different?",
     othersTitle: "Others",
@@ -143,7 +133,6 @@ const sections = [
   ["dashboard", "Dashboard"],
   ["howItWorks", "How It Works"],
   ["pricing", "Pricing"],
-  ["offerTimer", "Offer Timer"],
   ["comparison", "Comparison"],
   ["roadmap", "Roadmap"],
   ["faq", "FAQ"],
@@ -211,9 +200,8 @@ function emptyButton() {
 }
 
 export function WebsiteContentPage() {
-  const location = useLocation();
   const [content, setContent] = useState(defaultContent);
-  const [activeSection, setActiveSection] = useState(location.pathname.includes("offer-timer") ? "offerTimer" : "general");
+  const [activeSection, setActiveSection] = useState("general");
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
   const [uploadingPath, setUploadingPath] = useState("");
@@ -419,19 +407,6 @@ export function WebsiteContentPage() {
             <Section title="Pricing Section">
               <ImageField label="Section Image" path="sectionImages.pricing" value={getIn(content, "sectionImages.pricing")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
               <PlanList items={getIn(content, "pricing.plans", [])} onChange={(items) => update("pricing.plans", items)} />
-            </Section>
-          )}
-
-          {activeSection === "offerTimer" && (
-            <Section title="Offer Timer Management">
-              <CheckField label="Enable Offer Timer" checked={Boolean(getIn(content, "offerTimer.enabled", false))} onChange={(value) => update("offerTimer.enabled", value)} />
-              <div />
-              <Field label="Offer Title" path="offerTimer.title" value={getIn(content, "offerTimer.title")} onChange={update} />
-              <Field label="Offer Subtitle" path="offerTimer.subtitle" value={getIn(content, "offerTimer.subtitle")} onChange={update} />
-              <TextareaField label="Offer Description" path="offerTimer.description" value={getIn(content, "offerTimer.description")} onChange={update} />
-              <ImageField label="Offer Image" path="offerTimer.image" value={getIn(content, "offerTimer.image")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
-              <Field label="Start Date & Time" path="offerTimer.startAt" value={getIn(content, "offerTimer.startAt")} onChange={update} type="datetime-local" />
-              <Field label="End Date & Time" path="offerTimer.endAt" value={getIn(content, "offerTimer.endAt")} onChange={update} type="datetime-local" />
             </Section>
           )}
 
