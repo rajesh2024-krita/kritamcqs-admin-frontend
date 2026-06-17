@@ -170,6 +170,9 @@ export function NotificationManagementPage() {
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState("");
+  const [checking, setChecking] = useState("");
+  const [testEmail, setTestEmail] = useState("");
+  const [testType, setTestType] = useState("dailyTest");
 
   useEffect(() => {
     notificationManagementService.get()
@@ -222,6 +225,45 @@ export function NotificationManagementPage() {
     }
   }
 
+  function summarizeResult(data) {
+    const parts = [];
+    Object.values(data || {}).forEach((item) => {
+      if (!item) return;
+      parts.push(`${item.kind}: ${item.created || 0} created, ${item.skipped || 0} already sent, ${item.emailSent || 0} email sent`);
+    });
+    return parts.join(" | ") || "Reminder check completed.";
+  }
+
+  async function runReminderCheck(type = "all") {
+    setChecking(type);
+    setMessage("");
+    try {
+      const response = await notificationManagementService.runReminders({ type, force: true });
+      setMessage(summarizeResult(response.data));
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setChecking("");
+    }
+  }
+
+  async function testUserReminder() {
+    if (!testEmail.trim()) {
+      setMessage("Enter a user email to send a test reminder.");
+      return;
+    }
+    setChecking("testUser");
+    setMessage("");
+    try {
+      const response = await notificationManagementService.testUser({ email: testEmail, type: testType });
+      setMessage(summarizeResult(response.data));
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setChecking("");
+    }
+  }
+
   if (status === "loading") {
     return <div className={ui.compactPanel}>Loading notification management...</div>;
   }
@@ -242,6 +284,45 @@ export function NotificationManagementPage() {
         </div>
         {message ? <div className="mt-4 rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-800">{message}</div> : null}
         {uploading ? <div className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-slate-500"><Bell size={15} /> Uploading image...</div> : null}
+      </section>
+
+      <section className={ui.compactPanel}>
+        <div className="mb-4">
+          <div className={ui.eyebrow}>Run / Test</div>
+          <h2 className="text-xl font-black tracking-tight text-slate-900">Reminder Delivery Check</h2>
+          <p className={ui.muted}>Run the daily reminder processor for all eligible users or test one user by email.</p>
+        </div>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+          <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={Boolean(checking)} onClick={() => runReminderCheck("dailyTest")}>
+            {checking === "dailyTest" ? "Checking..." : "Run Daily Test Reminder"}
+          </button>
+          <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={Boolean(checking)} onClick={() => runReminderCheck("weakAreas")}>
+            {checking === "weakAreas" ? "Checking..." : "Run Weak Areas Reminder"}
+          </button>
+          <button type="button" className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={Boolean(checking)} onClick={() => runReminderCheck("all")}>
+            {checking === "all" ? "Checking..." : "Run All Reminders"}
+          </button>
+          <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] text-emerald-700">Automatic daily checks active</div>
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_220px_auto]">
+          <label className={ui.field}>
+            <span>User Email</span>
+            <input className={ui.input} value={testEmail} onChange={(event) => setTestEmail(event.target.value)} placeholder="student@example.com" />
+          </label>
+          <label className={ui.field}>
+            <span>Reminder Type</span>
+            <select className={ui.input} value={testType} onChange={(event) => setTestType(event.target.value)}>
+              <option value="dailyTest">Daily Test</option>
+              <option value="weakAreas">Weak Areas</option>
+            </select>
+          </label>
+          <div className="flex items-end">
+            <button type="button" className={cn(ui.buttonBase, ui.buttonPrimary, "w-full")} disabled={Boolean(checking)} onClick={testUserReminder}>
+              {checking === "testUser" ? "Sending..." : "Send User Email Test"}
+            </button>
+          </div>
+        </div>
       </section>
 
       <ReminderCard id="dailyTest" title="Daily Test Reminder" subtitle="Incomplete Daily Test Users" form={form.dailyTest} onPatch={patch} onUpload={uploadImage} />
