@@ -20,13 +20,23 @@ const emptyForm = {
   widgetStyle: {
     shape: "circle",
     size: 88,
+    width: 88,
+    height: 88,
+    borderRadius: 999,
     backgroundColor: "#f97316",
     textColor: "#ffffff",
     borderColor: "#ffffff",
     borderWidth: 1,
     shadow: "strong",
     icon: "",
+    iconImage: "",
+    fontSize: 15,
+    fontWeight: "900",
+    countdownFormat: "HH:MM:SS",
     showClose: true,
+    closeButtonColor: "#020617",
+    closeButtonTextColor: "#ffffff",
+    draggable: true,
     defaultPosition: "bottomRight",
     offsetX: 16,
     offsetY: 96,
@@ -53,8 +63,10 @@ const audienceOptions = [
 ];
 const shapeOptions = [
   { label: "Circle", value: "circle" },
-  { label: "Rounded", value: "rounded" },
+  { label: "Rounded Square", value: "rounded" },
   { label: "Square", value: "square" },
+  { label: "Pill Shape", value: "pill" },
+  { label: "Custom Radius", value: "custom" },
 ];
 const shadowOptions = [
   { label: "None", value: "none" },
@@ -67,6 +79,19 @@ const positionOptions = [
   { label: "Bottom Left", value: "bottomLeft" },
   { label: "Top Right", value: "topRight" },
   { label: "Top Left", value: "topLeft" },
+];
+const countdownFormatOptions = [
+  { label: "HH:MM:SS", value: "HH:MM:SS" },
+  { label: "MM:SS", value: "MM:SS" },
+  { label: "Compact", value: "compact" },
+  { label: "Offer Label", value: "label" },
+];
+const fontWeightOptions = [
+  { label: "Medium", value: "500" },
+  { label: "Semi Bold", value: "600" },
+  { label: "Bold", value: "700" },
+  { label: "Extra Bold", value: "800" },
+  { label: "Black", value: "900" },
 ];
 const layoutOptions = [
   { label: "Banner Image", value: "banner" },
@@ -85,6 +110,38 @@ function toDateTimeInput(value) {
 function assetUrl(value) {
   if (!value || !String(value).startsWith("/uploads/")) return value;
   return `${API_BASE_URL.replace(/\/api\/?$/, "")}${value}`;
+}
+
+function shadowValue(value) {
+  if (value === "none") return "none";
+  if (value === "soft") return "0 10px 24px rgba(15, 23, 42, 0.16)";
+  if (value === "medium") return "0 16px 34px rgba(15, 23, 42, 0.22)";
+  return "0 20px 44px rgba(249, 115, 22, 0.36)";
+}
+
+function widgetRadius(style, width, height) {
+  if (style.shape === "circle") return Math.min(width, height) / 2;
+  if (style.shape === "pill") return 999;
+  if (style.shape === "custom") return Number(style.borderRadius || 0);
+  if (style.shape === "square") return 0;
+  return 28;
+}
+
+function getWidgetPreviewStyle(style) {
+  const legacySize = Number(style.size || 88);
+  const width = Number(style.width || legacySize);
+  const height = Number(style.height || legacySize);
+  return {
+    width,
+    height,
+    borderRadius: widgetRadius(style, width, height),
+    background: style.backgroundColor,
+    color: style.textColor,
+    border: `${Number(style.borderWidth || 0)}px solid ${style.borderColor}`,
+    boxShadow: shadowValue(style.shadow),
+    fontSize: Number(style.fontSize || 15),
+    fontWeight: Number(style.fontWeight || 900),
+  };
 }
 
 export function OfferTimerManagementPage() {
@@ -168,7 +225,27 @@ export function OfferTimerManagementPage() {
     }
   }
 
+  async function uploadWidgetIcon(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setMessage("");
+    try {
+      const response = await uploadService.appImage(file, "offer-timer");
+      patchNested("widgetStyle", "iconImage", response.data?.url || response.data?.path || response.url || "");
+      setMessage("Widget icon uploaded.");
+    } catch (error) {
+      setStatus("error");
+      setMessage(error.message || "Unable to upload widget icon.");
+    } finally {
+      setUploading(false);
+      event.target.value = "";
+    }
+  }
+
   const preview = assetUrl(form.image);
+  const widgetIconPreview = assetUrl(form.widgetStyle.iconImage);
+  const widgetPreviewStyle = getWidgetPreviewStyle(form.widgetStyle);
 
   return (
     <div className="space-y-5">
@@ -253,20 +330,68 @@ export function OfferTimerManagementPage() {
       </section>
 
       <section className={ui.panel}>
-        <h2 className="mb-5 text-xl font-black tracking-tight text-slate-950">Floating Widget UI</h2>
+        <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h2 className="text-xl font-black tracking-tight text-slate-950">Floating Widget UI</h2>
+            <p className="mt-1 text-sm text-slate-500">Design changes appear instantly in the preview and sync to apps after saving.</p>
+          </div>
+          <div className="flex min-h-44 min-w-[240px] items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <div className="relative" style={{ width: widgetPreviewStyle.width, height: widgetPreviewStyle.height }}>
+              {form.widgetStyle.showClose ? (
+                <span
+                  className="absolute -right-1 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full text-xs font-black shadow-lg"
+                  style={{ backgroundColor: form.widgetStyle.closeButtonColor, color: form.widgetStyle.closeButtonTextColor }}
+                >
+                  x
+                </span>
+              ) : null}
+              <div className="flex h-full w-full select-none flex-col items-center justify-center gap-1 text-center font-mono leading-tight" style={widgetPreviewStyle}>
+                {widgetIconPreview ? <img src={widgetIconPreview} alt="" className="h-6 w-6 object-contain" /> : null}
+                {form.widgetStyle.icon ? <span className="font-sans text-xs font-black leading-none">{form.widgetStyle.icon}</span> : null}
+                <span>{form.widgetStyle.countdownFormat === "label" ? "OFFER" : form.widgetStyle.countdownFormat === "compact" ? "1h 25m" : form.widgetStyle.countdownFormat === "MM:SS" ? "85:30" : "01:25:30"}</span>
+              </div>
+            </div>
+          </div>
+        </div>
         <div className="grid gap-5 lg:grid-cols-2">
           <SelectField label="Shape" value={form.widgetStyle.shape} options={shapeOptions} onChange={(value) => patchNested("widgetStyle", "shape", value)} />
-          <Field label="Size (px)" type="number" value={form.widgetStyle.size} onChange={(value) => patchNested("widgetStyle", "size", value)} />
+          <Field label="Shape Size (Legacy px)" type="number" value={form.widgetStyle.size} onChange={(value) => patchNested("widgetStyle", "size", value)} />
+          <Field label="Widget Width (px)" type="number" value={form.widgetStyle.width} onChange={(value) => patchNested("widgetStyle", "width", value)} />
+          <Field label="Widget Height (px)" type="number" value={form.widgetStyle.height} onChange={(value) => patchNested("widgetStyle", "height", value)} />
+          <Field label="Custom Border Radius (px)" type="number" value={form.widgetStyle.borderRadius} onChange={(value) => patchNested("widgetStyle", "borderRadius", value)} />
           <Field label="Background Color" type="color" value={form.widgetStyle.backgroundColor} onChange={(value) => patchNested("widgetStyle", "backgroundColor", value)} />
-          <Field label="Countdown Text Color" type="color" value={form.widgetStyle.textColor} onChange={(value) => patchNested("widgetStyle", "textColor", value)} />
+          <Field label="Font Color" type="color" value={form.widgetStyle.textColor} onChange={(value) => patchNested("widgetStyle", "textColor", value)} />
+          <Field label="Font Size (px)" type="number" value={form.widgetStyle.fontSize} onChange={(value) => patchNested("widgetStyle", "fontSize", value)} />
+          <SelectField label="Font Weight" value={form.widgetStyle.fontWeight} options={fontWeightOptions} onChange={(value) => patchNested("widgetStyle", "fontWeight", value)} />
+          <SelectField label="Countdown Format" value={form.widgetStyle.countdownFormat} options={countdownFormatOptions} onChange={(value) => patchNested("widgetStyle", "countdownFormat", value)} />
           <Field label="Border Color" type="color" value={form.widgetStyle.borderColor} onChange={(value) => patchNested("widgetStyle", "borderColor", value)} />
           <Field label="Border Width (px)" type="number" value={form.widgetStyle.borderWidth} onChange={(value) => patchNested("widgetStyle", "borderWidth", value)} />
           <SelectField label="Shadow" value={form.widgetStyle.shadow} options={shadowOptions} onChange={(value) => patchNested("widgetStyle", "shadow", value)} />
           <Field label="Icon / Short Text" value={form.widgetStyle.icon} onChange={(value) => patchNested("widgetStyle", "icon", value)} placeholder="%" />
+          <div className={cn(ui.field, "lg:col-span-2")}>
+            Custom Icon / Image
+            <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center">
+              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white">
+                {widgetIconPreview ? <img src={widgetIconPreview} alt="" className="h-full w-full object-contain" /> : <Image size={20} className="text-slate-400" />}
+              </div>
+              <input className={ui.input} value={form.widgetStyle.iconImage || ""} onChange={(event) => patchNested("widgetStyle", "iconImage", event.target.value)} placeholder="/uploads/offer-timer/icon.webp" />
+              <label className={cn(ui.buttonBase, ui.buttonSecondary, "cursor-pointer whitespace-nowrap")}>
+                <Upload size={16} />
+                Upload Icon
+                <input type="file" accept="image/*" className="hidden" onChange={uploadWidgetIcon} disabled={uploading} />
+              </label>
+            </div>
+          </div>
           <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
             <input type="checkbox" className={ui.checkbox} checked={Boolean(form.widgetStyle.showClose)} onChange={(event) => patchNested("widgetStyle", "showClose", event.target.checked)} />
             Show Close Button
           </label>
+          <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
+            <input type="checkbox" className={ui.checkbox} checked={Boolean(form.widgetStyle.draggable)} onChange={(event) => patchNested("widgetStyle", "draggable", event.target.checked)} />
+            Enable Dragging
+          </label>
+          <Field label="Close Button Color" type="color" value={form.widgetStyle.closeButtonColor} onChange={(value) => patchNested("widgetStyle", "closeButtonColor", value)} />
+          <Field label="Close Button Text Color" type="color" value={form.widgetStyle.closeButtonTextColor} onChange={(value) => patchNested("widgetStyle", "closeButtonTextColor", value)} />
           <SelectField label="Default Position" value={form.widgetStyle.defaultPosition} options={positionOptions} onChange={(value) => patchNested("widgetStyle", "defaultPosition", value)} />
           <Field label="Horizontal Offset (px)" type="number" value={form.widgetStyle.offsetX} onChange={(value) => patchNested("widgetStyle", "offsetX", value)} />
           <Field label="Vertical Offset (px)" type="number" value={form.widgetStyle.offsetY} onChange={(value) => patchNested("widgetStyle", "offsetY", value)} />

@@ -21,9 +21,21 @@ const targetOptions = [
   { value: "all", label: "All users" },
   { value: "premium", label: "Premium users" },
   { value: "non_premium", label: "Non-premium users" },
+  { value: "new_registered", label: "New registered users" },
+  { value: "selected", label: "Selected users" },
   { value: "highest_premium", label: "Highest premium users" },
   { value: "middle_premium", label: "Middle-level premium users" },
   { value: "lowest_premium", label: "Lowest premium users" },
+];
+const targetScreenOptions = [
+  { value: "", label: "Custom / None" },
+  { value: "/dashboard", label: "Dashboard" },
+  { value: "/daily-test", label: "Daily Test" },
+  { value: "/weak-areas", label: "Weak Areas" },
+  { value: "/subscription", label: "Premium / Subscription" },
+  { value: "/notifications", label: "Notifications" },
+  { value: "/mock-tests", label: "Mock Tests" },
+  { value: "/revision", label: "Revision" },
 ];
 
 const deliveryOptions = [
@@ -43,6 +55,7 @@ const defaultForm = {
   templateKey: "",
   variables: "{}",
   linkUrl: "",
+  selectedUsers: "",
 };
 
 const playStoreUrl = "https://play.google.com/store/apps/details?id=app.kritamcqs.androidapp";
@@ -210,6 +223,12 @@ export function NotificationsPage() {
             <input className={ui.input} placeholder="/subscription" value={form.linkUrl} onChange={(event) => setForm((current) => ({ ...current, linkUrl: event.target.value }))} />
           </label>
           <label className={ui.field}>
+            <span>Target Screen</span>
+            <select className={ui.input} value={targetScreenOptions.some((item) => item.value === form.linkUrl) ? form.linkUrl : ""} onChange={(event) => setForm((current) => ({ ...current, linkUrl: event.target.value || current.linkUrl }))}>
+              {targetScreenOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+          </label>
+          <label className={ui.field}>
             <span>Attachment</span>
             <input
               className={ui.input}
@@ -222,6 +241,12 @@ export function NotificationsPage() {
             <span>Message</span>
             <textarea className={cn(ui.input, "min-h-28")} value={form.body} onChange={(event) => setForm((current) => ({ ...current, body: event.target.value }))} />
           </label>
+          {form.targetGroup === "selected" ? (
+            <label className={cn(ui.field, "lg:col-span-3")}>
+              <span>Selected Users</span>
+              <textarea className={cn(ui.input, "min-h-24")} value={form.selectedUsers} onChange={(event) => setForm((current) => ({ ...current, selectedUsers: event.target.value }))} placeholder="Paste user emails, mobiles, or IDs separated by comma or new line" />
+            </label>
+          ) : null}
           <label className={cn(ui.field, "lg:col-span-3")}>
             <span>Email Variables (JSON)</span>
             <textarea className={cn(ui.input, "min-h-24")} value={form.variables} onChange={(event) => setForm((current) => ({ ...current, variables: event.target.value }))} />
