@@ -117,6 +117,7 @@ export function AppRoutes() {
         <Route path="subscription-page-builder" element={<ModuleAccess moduleKey="subscription-page-builder"><SubscriptionPageBuilderPage /></ModuleAccess>} />
         <Route path="dashboard-carousel" element={<ModuleAccess moduleKey="dashboard-carousel"><DashboardCarouselPage /></ModuleAccess>} />
         <Route path="app-usage" element={<ModuleAccess moduleKey="app-usage"><AppUsageAnalyticsPage /></ModuleAccess>} />
+        <Route path="offer-timer-management" element={<MainAdminOnly><WebsiteContentPage /></MainAdminOnly>} />
         <Route path="website-content" element={<MainAdminOnly><WebsiteContentPage /></MainAdminOnly>} />
         <Route path="payment-gateway" element={<ModuleAccess moduleKey="payment-gateway"><PaymentGatewaySettingsPage /></ModuleAccess>} />
         <Route path="invoices" element={<ModuleAccess moduleKey="invoices"><InvoiceSystemPage /></ModuleAccess>} />
