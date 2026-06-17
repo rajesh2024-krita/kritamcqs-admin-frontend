@@ -42,6 +42,7 @@ import { SubscriptionPageBuilderPage } from "../pages/SubscriptionPageBuilderPag
 import { AppUsageAnalyticsPage } from "../pages/AppUsageAnalyticsPage";
 import { WebsiteContentPage } from "../pages/WebsiteContentPage";
 import { OfferTimerManagementPage } from "../pages/OfferTimerManagementPage";
+import { NotificationManagementPage } from "../pages/NotificationManagementPage";
 import { EmployeesPage } from "../pages/employees/EmployeesPage";
 import { AuditLogsPage } from "../pages/audit/AuditLogsPage";
 import { AIConfigurationPage } from "../pages/settings/AIConfigurationPage";
@@ -132,6 +133,7 @@ export function AppRoutes() {
         <Route path="mistake-management" element={<ModuleAccess moduleKey="mistake-management"><MistakeManagementPage /></ModuleAccess>} />
         <Route path="revision-management" element={<ModuleAccess moduleKey="revision-management"><RevisionManagementPage /></ModuleAccess>} />
         <Route path="notifications" element={<ModuleAccess moduleKey="notifications"><NotificationsPage /></ModuleAccess>} />
+        <Route path="notification-management" element={<MainAdminOnly><NotificationManagementPage /></MainAdminOnly>} />
         <Route path="contact-messages" element={<ModuleAccess moduleKey="contact-messages"><ContactMessagesPage /></ModuleAccess>} />
         <Route path="support-tickets" element={<ModuleAccess moduleKey="support-tickets"><SupportTicketsPage /></ModuleAccess>} />
         <Route path="settings" element={<ModuleAccess moduleKey="settings"><SettingsPage /></ModuleAccess>} />

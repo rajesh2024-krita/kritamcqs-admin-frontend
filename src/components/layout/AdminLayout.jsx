@@ -57,6 +57,7 @@ const navItems = [
   { label: "Payment Gateway", to: "/payment-gateway", section: "Operations", icon: ShieldIcon, moduleKey: "payment-gateway" },
   { label: "Invoices", to: "/invoices", section: "Operations", icon: FileStackIcon, moduleKey: "invoices" },
   { label: "Notifications", to: "/notifications", section: "Operations", icon: HelpIcon, moduleKey: "notifications" },
+  { label: "Notification Management", to: "/notification-management", section: "Operations", icon: Bell, mainOnly: true },
   { label: "Contact Messages", to: "/contact-messages", section: "Operations", icon: MailIcon, moduleKey: "contact-messages" },
   { label: "Help Desk", to: "/support-tickets", section: "Operations", icon: HelpIcon, moduleKey: "support-tickets" },
   { label: "Coupons", to: "/coupons", section: "Operations", icon: TagIcon, moduleKey: "coupons" },
