@@ -78,7 +78,7 @@ const defaultContent = {
   pricing: {
     plans: [
       { title: "Free Plan", description: "Perfect for daily learning.", cta: "Download Free", linkKey: "googlePlay", features: ["20 Daily MCQs", "15 Revision Questions", "1 Mock Test", "Basic Analysis", "Progress Tracking"] },
-      { title: "Premium Plan", price: "Rs.499 / 6 Months", description: "Unlock complete exam preparation.", cta: "Upgrade to Premium", linkKey: "premium", premium: true, features: ["5000+ MCQs", "10 Years PYQs", "Subject Practice", "Weak Analytics", "Mistake Book", "Score Prediction", "Premium Mocks", "Detailed Explanations"] },
+      { title: "Premium Plan", price: "Rs.499 / 6 Months", strikeOutAmount: "Rs.3,999", description: "Unlock complete exam preparation.", cta: "Upgrade to Premium", linkKey: "premium", premium: true, features: ["5000+ MCQs", "10 Years PYQs", "Subject Practice", "Weak Analytics", "Mistake Book", "Score Prediction", "Premium Mocks", "Detailed Explanations"] },
     ],
   },
   comparison: {
@@ -192,7 +192,7 @@ function emptyFaq() {
 }
 
 function emptyPlan() {
-  return { title: "New Plan", price: "", description: "", cta: "Learn More", href: "", linkKey: "googlePlay", premium: false, features: ["Feature"] };
+  return { title: "New Plan", price: "", strikeOutAmount: "", description: "", cta: "Learn More", href: "", linkKey: "googlePlay", premium: false, features: ["Feature"] };
 }
 
 function emptyButton() {
@@ -608,6 +608,7 @@ function PlanList({ items, onChange }) {
         <Card key={index} title={item.title || `Plan ${index + 1}`} onRemove={() => onChange(list.filter((_, itemIndex) => itemIndex !== index))}>
           <InlineField label="Title" value={item.title} onChange={(value) => onChange(updateItem(list, index, { title: value }))} />
           <InlineField label="Price" value={item.price} onChange={(value) => onChange(updateItem(list, index, { price: value }))} />
+          <InlineField label="Strike Out Amount" value={item.strikeOutAmount || item.originalPrice} onChange={(value) => onChange(updateItem(list, index, { strikeOutAmount: value }))} />
           <InlineField label="Description" value={item.description} onChange={(value) => onChange(updateItem(list, index, { description: value }))} textarea />
           <InlineField label="Button Text" value={item.cta} onChange={(value) => onChange(updateItem(list, index, { cta: value }))} />
           <InlineField label="Button URL" value={item.href} onChange={(value) => onChange(updateItem(list, index, { href: value }))} />
