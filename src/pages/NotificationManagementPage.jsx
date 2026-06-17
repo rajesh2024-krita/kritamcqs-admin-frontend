@@ -22,6 +22,12 @@ const actionOptions = [
   { value: "custom", label: "Custom Link" },
 ];
 
+const deliveryModeOptions = [
+  { value: "app", label: "App Notification Only" },
+  { value: "email", label: "Email Only" },
+  { value: "both", label: "App + Email" },
+];
+
 const emptyReminder = {
   enabled: false,
   title: "",
@@ -30,6 +36,7 @@ const emptyReminder = {
   ctaAction: "notifications",
   ctaLink: "",
   audience: "all",
+  deliveryMode: "app",
   schedules: [{ enabled: true, time: "09:00" }],
 };
 
@@ -114,6 +121,12 @@ function ReminderCard({ id, title, subtitle, form, onPatch, onUpload }) {
           </select>
         </label>
         <label className={ui.field}>
+          <span>Delivery Mode</span>
+          <select className={ui.input} value={form.deliveryMode || "app"} onChange={(event) => patch("deliveryMode", event.target.value)}>
+            {deliveryModeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+          </select>
+        </label>
+        <label className={ui.field}>
           <span>CTA Link</span>
           <input className={ui.input} value={form.ctaLink} onChange={(event) => patch("ctaLink", event.target.value)} placeholder="/daily-test" />
         </label>
@@ -173,6 +186,7 @@ export function NotificationManagementPage() {
   const [checking, setChecking] = useState("");
   const [testEmail, setTestEmail] = useState("");
   const [testType, setTestType] = useState("dailyTest");
+  const [testDeliveryMode, setTestDeliveryMode] = useState("app");
 
   useEffect(() => {
     notificationManagementService.get()
@@ -229,7 +243,7 @@ export function NotificationManagementPage() {
     const parts = [];
     Object.values(data || {}).forEach((item) => {
       if (!item) return;
-      parts.push(`${item.kind}: ${item.created || 0} created, ${item.skipped || 0} already sent, ${item.emailSent || 0} email sent`);
+      parts.push(`${item.kind}: ${item.created || 0} records, ${item.skipped || 0} already sent, ${item.emailSent || 0} email sent`);
     });
     return parts.join(" | ") || "Reminder check completed.";
   }
@@ -238,7 +252,7 @@ export function NotificationManagementPage() {
     setChecking(type);
     setMessage("");
     try {
-      const response = await notificationManagementService.runReminders({ type, force: true });
+      const response = await notificationManagementService.runReminders({ type, force: true, deliveryMode: testDeliveryMode });
       setMessage(summarizeResult(response.data));
     } catch (error) {
       setMessage(error.message);
@@ -255,7 +269,7 @@ export function NotificationManagementPage() {
     setChecking("testUser");
     setMessage("");
     try {
-      const response = await notificationManagementService.testUser({ email: testEmail, type: testType });
+      const response = await notificationManagementService.testUser({ email: testEmail, type: testType, deliveryMode: testDeliveryMode });
       setMessage(summarizeResult(response.data));
     } catch (error) {
       setMessage(error.message);
@@ -293,6 +307,12 @@ export function NotificationManagementPage() {
           <p className={ui.muted}>Run the daily reminder processor for all eligible users or test one user by email.</p>
         </div>
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
+          <label className={ui.field}>
+            <span>Testing Delivery Mode</span>
+            <select className={ui.input} value={testDeliveryMode} onChange={(event) => setTestDeliveryMode(event.target.value)}>
+              {deliveryModeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+          </label>
           <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={Boolean(checking)} onClick={() => runReminderCheck("dailyTest")}>
             {checking === "dailyTest" ? "Checking..." : "Run Daily Test Reminder"}
           </button>
