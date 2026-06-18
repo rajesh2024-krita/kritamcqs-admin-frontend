@@ -43,6 +43,10 @@ import { DashboardCarouselPage } from "../pages/DashboardCarouselPage";
 import { SubscriptionPageBuilderPage } from "../pages/SubscriptionPageBuilderPage";
 import { AppUsageAnalyticsPage } from "../pages/AppUsageAnalyticsPage";
 import { WebsiteContentPage } from "../pages/WebsiteContentPage";
+import { PolicyManagementPage } from "../pages/PolicyManagementPage";
+import { CmsPagesPage } from "../pages/CmsPagesPage";
+import { CmsMenusPage } from "../pages/CmsMenusPage";
+import { WebsiteSettingsBuilderPage } from "../pages/WebsiteSettingsBuilderPage";
 import { OfferTimerManagementPage } from "../pages/OfferTimerManagementPage";
 import { NotificationManagementPage } from "../pages/NotificationManagementPage";
 import { EmployeesPage } from "../pages/employees/EmployeesPage";
@@ -125,6 +129,10 @@ export function AppRoutes() {
         <Route path="app-usage" element={<ModuleAccess moduleKey="app-usage"><AppUsageAnalyticsPage /></ModuleAccess>} />
         <Route path="offer-timer-management" element={<MainAdminOnly><OfferTimerManagementPage /></MainAdminOnly>} />
         <Route path="website-content" element={<MainAdminOnly><WebsiteContentPage /></MainAdminOnly>} />
+        <Route path="policy-pages" element={<ModuleAccess moduleKey="policy-pages"><PolicyManagementPage /></ModuleAccess>} />
+        <Route path="cms-pages" element={<ModuleAccess moduleKey="cms-pages"><CmsPagesPage /></ModuleAccess>} />
+        <Route path="cms-menus" element={<ModuleAccess moduleKey="cms-menu-items"><CmsMenusPage /></ModuleAccess>} />
+        <Route path="website-settings-builder" element={<ModuleAccess moduleKey="website-settings"><WebsiteSettingsBuilderPage /></ModuleAccess>} />
         <Route path="payment-gateway" element={<ModuleAccess moduleKey="payment-gateway"><PaymentGatewaySettingsPage /></ModuleAccess>} />
         <Route path="invoices" element={<ModuleAccess moduleKey="invoices"><InvoiceSystemPage /></ModuleAccess>} />
         <Route path="invoice-system" element={<Navigate to="/invoices" replace />} />

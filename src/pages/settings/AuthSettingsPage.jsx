@@ -25,6 +25,12 @@ export function AuthSettingsPage() {
     sessionTimeoutMinutes: 43200,
     resetOtpEmailSubject: "Krita password reset OTP",
     resetOtpEmailTemplate: "",
+    consentEnabled: true,
+    consentRequiredForLogin: true,
+    consentRequiredForSignup: true,
+    consentText: "I agree to the Terms & Conditions and Privacy Policy.",
+    consentButtonBehavior: "disable_until_checked",
+    consentPolicySlugs: ["terms", "privacy"],
   });
   const [smtp, setSmtp] = useState({ host: "", port: 587, secure: false, user: "", pass: "", fromName: "Krita Admin", fromEmail: "" });
   const [invoiceSettings, setInvoiceSettings] = useState(null);
@@ -109,6 +115,36 @@ export function AuthSettingsPage() {
           <div className="rounded-sm border border-slate-200 bg-slate-50 p-4">
             <ToggleSwitch checked={auth.profileMobileRequired} onChange={(value) => setAuth((current) => ({ ...current, profileMobileRequired: value }))} label="Require Mobile On Profile Completion" />
           </div>
+        </div>
+      </section>
+
+      <section className={ui.panel}>
+        <h3 className="mb-4 text-xl font-bold text-slate-900">Login / Signup Consent</h3>
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-sm border border-slate-200 bg-slate-50 p-4">
+            <ToggleSwitch checked={auth.consentEnabled} onChange={(value) => setAuth((current) => ({ ...current, consentEnabled: value }))} label="Show agreement checkbox" />
+          </div>
+          <div className="rounded-sm border border-slate-200 bg-slate-50 p-4">
+            <ToggleSwitch checked={auth.consentRequiredForLogin} onChange={(value) => setAuth((current) => ({ ...current, consentRequiredForLogin: value }))} label="Require on Login" />
+          </div>
+          <div className="rounded-sm border border-slate-200 bg-slate-50 p-4">
+            <ToggleSwitch checked={auth.consentRequiredForSignup} onChange={(value) => setAuth((current) => ({ ...current, consentRequiredForSignup: value }))} label="Require on Signup" />
+          </div>
+          <label className={ui.field}>
+            <span>Button Behavior</span>
+            <select className={ui.input} value={auth.consentButtonBehavior || "disable_until_checked"} onChange={(event) => setAuth((current) => ({ ...current, consentButtonBehavior: event.target.value }))}>
+              <option value="disable_until_checked">Disable button until checked</option>
+              <option value="show_error_on_submit">Show error on submit</option>
+            </select>
+          </label>
+          <label className={cn(ui.field, "md:col-span-2")}>
+            <span>Agreement Text</span>
+            <textarea className={ui.textarea} value={auth.consentText || ""} onChange={(event) => setAuth((current) => ({ ...current, consentText: event.target.value }))} />
+          </label>
+          <label className={cn(ui.field, "md:col-span-2")}>
+            <span>Policy Page Slugs</span>
+            <input className={ui.input} value={(auth.consentPolicySlugs || []).join(", ")} onChange={(event) => setAuth((current) => ({ ...current, consentPolicySlugs: event.target.value.split(",").map((item) => item.trim()).filter(Boolean) }))} placeholder="terms, privacy, refund" />
+          </label>
         </div>
       </section>
 

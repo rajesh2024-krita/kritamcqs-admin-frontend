@@ -33,6 +33,10 @@ const ENTITY_TITLE_MODULES = {
   "Subscription Plans": "subscription-plans",
   "Subscription Free Cards": "subscription-free-cards",
   "Subscription Stat Cards": "subscription-stat-cards",
+  "Policy Pages": "policy-pages",
+  "CMS Pages": "cms-pages",
+  "CMS Menu Items": "cms-menu-items",
+  "Website Settings": "website-settings",
   "Email Templates": "email-templates",
 };
 
