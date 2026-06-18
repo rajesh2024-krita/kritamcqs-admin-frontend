@@ -49,6 +49,7 @@ const navItems = [
   { label: "Users", to: "/users", section: "Operations", icon: UsersIcon, moduleKey: "users" },
   { label: "Subscriptions", to: "/subscriptions", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscriptions" },
   { label: "Plan Config", to: "/subscription-plans", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscription-plans" },
+  { label: "Free User Cards", to: "/subscription-free-cards", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscription-free-cards" },
   { label: "Subscription Stats", to: "/subscription-stat-cards", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscription-stat-cards" },
   { label: "Page Builder", to: "/subscription-page-builder", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscription-page-builder" },
   { label: "Dashboard Carousel", to: "/dashboard-carousel", section: "Operations", icon: OverviewIcon, moduleKey: "dashboard-carousel" },
