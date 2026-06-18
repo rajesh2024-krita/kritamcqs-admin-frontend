@@ -11,6 +11,7 @@ export function SubscriptionPlansPage() {
         { name: "planId", label: "Plan ID", required: true },
         { name: "name", label: "Plan Name", required: true },
         { name: "price", label: "Price", required: true, type: "number" },
+        { name: "strikeOutAmount", label: "Strike Out Amount", type: "number", defaultValue: 0 },
         { name: "durationMonths", label: "Duration (Months)", required: true, type: "number" },
         { name: "description", label: "Description", full: true },
         { name: "savings", label: "Savings Label" },
@@ -23,6 +24,7 @@ export function SubscriptionPlansPage() {
         { key: "planId", label: "Plan ID" },
         { key: "name", label: "Name" },
         { key: "price", label: "Price", render: (row) => `Rs. ${row.price}` },
+        { key: "strikeOutAmount", label: "Strike Out", render: (row) => Number(row.strikeOutAmount || 0) > 0 ? `Rs. ${row.strikeOutAmount}` : "-" },
         { key: "durationMonths", label: "Duration", render: (row) => `${row.durationMonths} months` },
         { key: "status", label: "Status", render: (row) => row.status || (row.active ? "active" : "inactive") },
       ]}

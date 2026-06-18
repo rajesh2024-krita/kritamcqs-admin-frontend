@@ -71,10 +71,15 @@ export function SubscriptionTemplatePreview({ template, plans = [] }) {
         );
       })}
       <div className="space-y-3">
-        {(plans.length ? plans : [{ name: "1 Month", price: 99, durationMonths: 1, features: ["Premium access"] }]).map((plan) => (
+        {(plans.length ? plans : [{ name: "1 Month", price: 99, strikeOutAmount: 2000, durationMonths: 1, features: ["Premium access"] }]).map((plan) => (
           <div key={plan.id || plan.planId || plan.name} className="rounded-xl border border-blue-100 bg-white p-4 shadow-sm">
             <div className="text-lg font-black text-slate-950">{plan.name}</div>
-            <div className="mt-2 text-3xl font-black text-slate-950">Rs. {plan.price}</div>
+            <div className="mt-2 flex flex-wrap items-end gap-2">
+              {Number(plan.strikeOutAmount || 0) > 0 ? (
+                <span className="text-xl font-extrabold text-slate-400 line-through decoration-red-500 decoration-2">Rs. {plan.strikeOutAmount}</span>
+              ) : null}
+              <span className="text-3xl font-black text-slate-950">Rs. {plan.price}</span>
+            </div>
             <p className="mt-1 text-sm font-semibold text-emerald-700">{plan.durationMonths || plan.duration} month plan</p>
           </div>
         ))}
