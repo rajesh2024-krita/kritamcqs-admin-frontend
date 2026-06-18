@@ -22,6 +22,7 @@ export const MODULES = [
   { key: "users", label: "Users", path: "/users" },
   { key: "subscriptions", label: "Subscriptions", path: "/subscriptions" },
   { key: "subscription-plans", label: "Plan Config", path: "/subscription-plans" },
+  { key: "subscription-stat-cards", label: "Subscription Stats", path: "/subscription-stat-cards" },
   { key: "payment-gateway", label: "Payment Gateway", path: "/payment-gateway" },
   { key: "invoices", label: "Invoices", path: "/invoices" },
   { key: "notifications", label: "Notifications", path: "/notifications" },

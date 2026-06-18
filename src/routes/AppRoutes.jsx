@@ -18,6 +18,7 @@ import { KatexAuditPage } from "../pages/questions/KatexAuditPage";
 import { UsersPage } from "../pages/users/UsersPage";
 import { SubscriptionsPage } from "../pages/SubscriptionsPage";
 import { SubscriptionPlansPage } from "../pages/SubscriptionPlansPage";
+import { SubscriptionStatCardsPage } from "../pages/SubscriptionStatCardsPage";
 import { PaymentGatewaySettingsPage } from "../pages/PaymentGatewaySettingsPage";
 import { InvoiceSystemPage } from "../pages/InvoiceSystemPage";
 import { DifficultiesPage } from "../pages/DifficultiesPage";
@@ -116,6 +117,7 @@ export function AppRoutes() {
         <Route path="users" element={<ModuleAccess moduleKey="users"><UsersPage /></ModuleAccess>} />
         <Route path="subscriptions" element={<ModuleAccess moduleKey="subscriptions"><SubscriptionsPage /></ModuleAccess>} />
         <Route path="subscription-plans" element={<ModuleAccess moduleKey="subscription-plans"><SubscriptionPlansPage /></ModuleAccess>} />
+        <Route path="subscription-stat-cards" element={<ModuleAccess moduleKey="subscription-stat-cards"><SubscriptionStatCardsPage /></ModuleAccess>} />
         <Route path="subscription-page-builder" element={<ModuleAccess moduleKey="subscription-page-builder"><SubscriptionPageBuilderPage /></ModuleAccess>} />
         <Route path="dashboard-carousel" element={<ModuleAccess moduleKey="dashboard-carousel"><DashboardCarouselPage /></ModuleAccess>} />
         <Route path="app-usage" element={<ModuleAccess moduleKey="app-usage"><AppUsageAnalyticsPage /></ModuleAccess>} />
