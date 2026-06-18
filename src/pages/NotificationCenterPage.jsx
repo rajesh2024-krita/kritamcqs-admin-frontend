@@ -58,12 +58,22 @@ function toInputDate(value) {
   return date.toISOString().slice(0, 16);
 }
 
+function selectedUserValues(value = "") {
+  return String(value || "")
+    .split(/[\n,]+/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
 export function NotificationCenterPage() {
   const [tab, setTab] = useState("send");
   const [templates, setTemplates] = useState([]);
   const [history, setHistory] = useState([]);
   const [scheduled, setScheduled] = useState([]);
   const [stats, setStats] = useState(null);
+  const [userSearch, setUserSearch] = useState("");
+  const [userResults, setUserResults] = useState([]);
+  const [userLoading, setUserLoading] = useState(false);
   const [templateForm, setTemplateForm] = useState(emptyTemplate);
   const [editingTemplateId, setEditingTemplateId] = useState("");
   const [sendForm, setSendForm] = useState(emptySend);
@@ -107,6 +117,42 @@ export function NotificationCenterPage() {
     }));
   }, [activeTemplate]);
 
+  useEffect(() => {
+    if (sendForm.targetType !== "selected") return;
+    let cancelled = false;
+    const timeoutId = window.setTimeout(async () => {
+      setUserLoading(true);
+      try {
+        const response = await notificationService.users({ q: userSearch, limit: 12 });
+        if (!cancelled) setUserResults(response.data || []);
+      } catch (error) {
+        if (!cancelled) setMessage(error.message);
+      } finally {
+        if (!cancelled) setUserLoading(false);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [sendForm.targetType, userSearch]);
+
+  const selectedUserList = useMemo(() => selectedUserValues(sendForm.selectedUsers), [sendForm.selectedUsers]);
+  const selectedUserSet = useMemo(() => new Set(selectedUserList), [selectedUserList]);
+
+  function setSelectedUserList(values) {
+    const unique = [...new Set(values.map((item) => String(item || "").trim()).filter(Boolean))];
+    setSendForm((current) => ({ ...current, selectedUsers: unique.join("\n") }));
+  }
+
+  function addSelectedUser(user) {
+    setSelectedUserList([...selectedUserList, user.id || user.email || user.mobile]);
+  }
+
+  function removeSelectedUser(value) {
+    setSelectedUserList(selectedUserList.filter((item) => item !== value));
+  }
+
   async function saveTemplate(event) {
     event.preventDefault();
     setBusy(true);
@@ -127,6 +173,10 @@ export function NotificationCenterPage() {
 
   async function sendNotification(event) {
     event.preventDefault();
+    if (sendForm.targetType === "selected" && selectedUserList.length === 0) {
+      setMessage("Select at least one user before sending a test push.");
+      return;
+    }
     setBusy(true);
     setMessage("");
     try {
@@ -212,7 +262,57 @@ export function NotificationCenterPage() {
             <label className={ui.field}><span>Priority</span><select className={ui.input} value={sendForm.priority} onChange={(event) => setSendForm((current) => ({ ...current, priority: event.target.value }))}><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select></label>
             <label className={ui.field}><span>Action</span><select className={ui.input} value={sendForm.action} onChange={(event) => setSendForm((current) => ({ ...current, action: event.target.value }))}><option value="send">Send Now</option><option value="schedule">Schedule</option><option value="draft">Save Draft</option></select></label>
             {sendForm.action === "schedule" ? <label className={ui.field}><span>Schedule Date</span><input className={ui.input} type="datetime-local" value={sendForm.scheduleDate} onChange={(event) => setSendForm((current) => ({ ...current, scheduleDate: event.target.value }))} required /></label> : null}
-            {sendForm.targetType === "selected" ? <label className={cn(ui.field, "lg:col-span-3")}><span>Selected Users</span><textarea className={ui.textarea} placeholder="Paste user IDs, emails, or mobiles separated by comma/new line" value={sendForm.selectedUsers} onChange={(event) => setSendForm((current) => ({ ...current, selectedUsers: event.target.value }))} /></label> : null}
+            {sendForm.targetType === "selected" ? (
+              <div className="lg:col-span-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+                  <div className="space-y-3">
+                    <label className={ui.field}>
+                      <span>Search Particular User</span>
+                      <input className={ui.input} placeholder="Search name, email, mobile, or user id" value={userSearch} onChange={(event) => setUserSearch(event.target.value)} />
+                    </label>
+                    <div className="max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white">
+                      {userLoading ? <div className="p-4 text-sm font-semibold text-slate-500">Searching...</div> : null}
+                      {!userLoading && !userResults.length ? <div className="p-4 text-sm font-semibold text-slate-500">No users found.</div> : null}
+                      {userResults.map((user) => {
+                        const selected = selectedUserSet.has(user.id);
+                        return (
+                          <button
+                            key={user.id}
+                            type="button"
+                            className={cn("flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0 hover:bg-sky-50", selected ? "bg-sky-50" : "bg-white")}
+                            onClick={() => addSelectedUser(user)}
+                            disabled={selected}
+                          >
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-black text-slate-900">{user.name || user.email || user.mobile || user.id}</span>
+                              <span className="block truncate text-xs text-slate-500">{user.email || "No email"} | {user.mobile || "No mobile"}</span>
+                              <span className="mt-1 block text-xs font-bold uppercase tracking-[0.12em] text-slate-400">{user.examMode || "No mode"} | {user.subscriptionType}</span>
+                            </span>
+                            <span className={cn("shrink-0 rounded-full px-3 py-1 text-xs font-black", user.tokenCount > 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700")}>
+                              {user.tokenCount > 0 ? `${user.tokenCount} token` : "No token"}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <label className={ui.field}>
+                      <span>Selected Users For Test Push</span>
+                      <textarea className={ui.textarea} placeholder="User IDs, emails, or mobiles separated by comma/new line" value={sendForm.selectedUsers} onChange={(event) => setSendForm((current) => ({ ...current, selectedUsers: event.target.value }))} />
+                    </label>
+                    <div className="flex flex-wrap gap-2">
+                      {selectedUserList.map((value) => (
+                        <button key={value} type="button" className="rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-black text-sky-800 shadow-sm" onClick={() => removeSelectedUser(value)}>
+                          {value} x
+                        </button>
+                      ))}
+                    </div>
+                    <p className={ui.muted}>For push testing, select one user with token count greater than 0 and click Send Now.</p>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
           <div className="mt-5 flex justify-end">
             <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy}>{busy ? "Working..." : sendForm.action === "send" ? "Send Now" : sendForm.action === "schedule" ? "Schedule" : "Save Draft"}</button>

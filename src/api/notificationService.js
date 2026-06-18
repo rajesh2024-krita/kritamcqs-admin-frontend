@@ -19,6 +19,10 @@ export const notificationService = {
     const response = await http.get("/admin/notifications/templates");
     return response.data;
   },
+  async users(params = {}) {
+    const response = await http.get("/admin/notifications/users", { params });
+    return response.data;
+  },
   async createTemplate(payload) {
     const response = await http.post("/admin/notifications/templates", payload);
     return response.data;
