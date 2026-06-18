@@ -31,6 +31,7 @@ export const MODULES = [
   { key: "payment-gateway", label: "Payment Gateway", path: "/payment-gateway" },
   { key: "invoices", label: "Invoices", path: "/invoices" },
   { key: "notifications", label: "Notifications", path: "/notifications" },
+  { key: "notification-center", label: "Notification Center", path: "/notification-center" },
   { key: "contact-messages", label: "Contact Messages", path: "/contact-messages" },
   { key: "support-tickets", label: "Help Desk", path: "/support-tickets" },
   { key: "coupons", label: "Coupons", path: "/coupons" },

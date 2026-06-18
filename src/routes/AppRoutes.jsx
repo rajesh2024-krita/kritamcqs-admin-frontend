@@ -34,6 +34,7 @@ import { DailyTestManagementPage } from "../pages/settings/DailyTestManagementPa
 import { SupportTicketsPage } from "../pages/SupportTicketsPage";
 import { ContactMessagesPage } from "../pages/ContactMessagesPage";
 import { NotificationsPage } from "../pages/NotificationsPage";
+import { NotificationCenterPage } from "../pages/NotificationCenterPage";
 import { EmailTemplatesPage } from "../pages/EmailTemplatesPage";
 import { EmailTemplateCatalogPage } from "../pages/EmailTemplateCatalogPage";
 import { WeakAreaManagementPage } from "../pages/WeakAreaManagementPage";
@@ -145,6 +146,7 @@ export function AppRoutes() {
         <Route path="mistake-management" element={<ModuleAccess moduleKey="mistake-management"><MistakeManagementPage /></ModuleAccess>} />
         <Route path="revision-management" element={<ModuleAccess moduleKey="revision-management"><RevisionManagementPage /></ModuleAccess>} />
         <Route path="notifications" element={<ModuleAccess moduleKey="notifications"><NotificationsPage /></ModuleAccess>} />
+        <Route path="notification-center" element={<ModuleAccess moduleKey="notification-center"><NotificationCenterPage /></ModuleAccess>} />
         <Route path="notification-management" element={<MainAdminOnly><NotificationManagementPage /></MainAdminOnly>} />
         <Route path="contact-messages" element={<ModuleAccess moduleKey="contact-messages"><ContactMessagesPage /></ModuleAccess>} />
         <Route path="support-tickets" element={<ModuleAccess moduleKey="support-tickets"><SupportTicketsPage /></ModuleAccess>} />
