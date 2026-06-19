@@ -55,7 +55,8 @@ function toInputDate(value) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return date.toISOString().slice(0, 16);
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60 * 1000);
+  return localDate.toISOString().slice(0, 16);
 }
 
 function selectedUserValues(value = "") {
@@ -177,10 +178,14 @@ export function NotificationCenterPage() {
       setMessage("Select at least one user before sending a test push.");
       return;
     }
+    const payload = {
+      ...sendForm,
+      scheduleDate: sendForm.scheduleDate ? new Date(sendForm.scheduleDate).toISOString() : "",
+    };
     setBusy(true);
     setMessage("");
     try {
-      const response = await notificationService.send(sendForm);
+      const response = await notificationService.send(payload);
       await loadAll();
       setMessage(response.message || "Notification request completed.");
       if (sendForm.action === "send") setSendForm(emptySend);

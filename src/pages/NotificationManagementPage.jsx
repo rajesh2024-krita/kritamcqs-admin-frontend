@@ -24,8 +24,12 @@ const actionOptions = [
 
 const deliveryModeOptions = [
   { value: "app", label: "App Notification Only" },
+  { value: "push", label: "Push Only" },
+  { value: "app_push", label: "App + Push" },
   { value: "email", label: "Email Only" },
   { value: "both", label: "App + Email" },
+  { value: "email_push", label: "Email + Push" },
+  { value: "all", label: "App + Email + Push" },
 ];
 
 const emptyReminder = {
@@ -243,7 +247,7 @@ export function NotificationManagementPage() {
     const parts = [];
     Object.values(data || {}).forEach((item) => {
       if (!item) return;
-      parts.push(`${item.kind}: ${item.created || 0} records, ${item.skipped || 0} already sent, ${item.emailSent || 0} email sent`);
+      parts.push(`${item.kind}: ${item.created || 0} records, ${item.skipped || 0} already sent, ${item.emailSent || 0} email sent, ${item.pushDelivered || 0} push delivered, ${item.pushNoToken || 0} no token`);
     });
     return parts.join(" | ") || "Reminder check completed.";
   }
@@ -339,7 +343,7 @@ export function NotificationManagementPage() {
           </label>
           <div className="flex items-end">
             <button type="button" className={cn(ui.buttonBase, ui.buttonPrimary, "w-full")} disabled={Boolean(checking)} onClick={testUserReminder}>
-              {checking === "testUser" ? "Sending..." : "Send User Email Test"}
+              {checking === "testUser" ? "Sending..." : "Send User Test"}
             </button>
           </div>
         </div>
