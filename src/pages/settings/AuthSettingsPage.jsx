@@ -10,6 +10,7 @@ export function AuthSettingsPage() {
   const [auth, setAuth] = useState({
     emailPasswordEnabled: true,
     googleEnabled: false,
+    appleEnabled: true,
     googleClientId: "",
     googleAndroidClientId: "",
     googleIosClientId: "",
@@ -111,6 +112,9 @@ export function AuthSettingsPage() {
           </div>
           <div className="rounded-sm border border-slate-200 bg-slate-50 p-4">
             <ToggleSwitch checked={auth.googleEnabled} onChange={(value) => setAuth((current) => ({ ...current, googleEnabled: value }))} label="Google Login" />
+          </div>
+          <div className="rounded-sm border border-slate-200 bg-slate-50 p-4">
+            <ToggleSwitch checked={auth.appleEnabled} onChange={(value) => setAuth((current) => ({ ...current, appleEnabled: value }))} label="Apple Login" />
           </div>
           <div className="rounded-sm border border-slate-200 bg-slate-50 p-4">
             <ToggleSwitch checked={auth.profileMobileRequired} onChange={(value) => setAuth((current) => ({ ...current, profileMobileRequired: value }))} label="Require Mobile On Profile Completion" />
