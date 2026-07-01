@@ -10,6 +10,7 @@ export function AuthSettingsPage() {
   const [auth, setAuth] = useState({
     emailPasswordEnabled: true,
     googleEnabled: false,
+    appleEnabled: true,
     googleClientId: "",
     googleAndroidClientId: "",
     googleIosClientId: "",
@@ -18,6 +19,7 @@ export function AuthSettingsPage() {
     googleClientSecret: "",
     googleRedirectUrls: [],
     googleCallbackUrl: "",
+    appleBundleId: "app.kritamcqs.iosapp",
     profileMobileRequired: false,
     resetOtpExpiryMinutes: 10,
     resetOtpMaxAttempts: 5,
@@ -113,7 +115,26 @@ export function AuthSettingsPage() {
             <ToggleSwitch checked={auth.googleEnabled} onChange={(value) => setAuth((current) => ({ ...current, googleEnabled: value }))} label="Google Login" />
           </div>
           <div className="rounded-sm border border-slate-200 bg-slate-50 p-4">
+            <ToggleSwitch checked={auth.appleEnabled} onChange={(value) => setAuth((current) => ({ ...current, appleEnabled: value }))} label="Sign in with Apple" />
+          </div>
+          <div className="rounded-sm border border-slate-200 bg-slate-50 p-4">
             <ToggleSwitch checked={auth.profileMobileRequired} onChange={(value) => setAuth((current) => ({ ...current, profileMobileRequired: value }))} label="Require Mobile On Profile Completion" />
+          </div>
+        </div>
+      </section>
+
+      <section className={ui.panel}>
+        <div className="mb-5">
+          <h3 className="text-xl font-bold text-slate-900">Apple Sign In</h3>
+          <p className={ui.muted}>Used by the native iOS app. The backend verifies Apple identity tokens against this bundle ID.</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <label className={ui.field}>
+            <span>iOS Bundle ID</span>
+            <input className={ui.input} value={auth.appleBundleId || ""} onChange={(event) => setAuth((current) => ({ ...current, appleBundleId: event.target.value }))} placeholder="app.kritamcqs.iosapp" />
+          </label>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            Enable the Sign in with Apple capability for this bundle identifier in Apple Developer and Xcode before App Store submission.
           </div>
         </div>
       </section>
