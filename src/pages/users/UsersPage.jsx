@@ -33,6 +33,27 @@ const defaultForm = {
   isBlocked: false,
 };
 
+const loginProviderOptions = [
+  { value: "", label: "All Providers" },
+  { value: "EMAIL", label: "Email" },
+  { value: "GOOGLE", label: "Google" },
+  { value: "APPLE", label: "Apple" },
+];
+
+const loginProviderLabels = {
+  EMAIL: "Email",
+  GOOGLE: "Google",
+  APPLE: "Apple",
+};
+
+function resolveLoginProvider(user) {
+  const explicit = String(user?.loginProvider || "").toUpperCase();
+  if (explicit) return explicit;
+  if (user?.isAppleLogin || user?.appleUserId || (Array.isArray(user?.authTypes) && user.authTypes.includes("apple"))) return "APPLE";
+  if (user?.googleId || (Array.isArray(user?.authTypes) && user.authTypes.includes("google"))) return "GOOGLE";
+  return "EMAIL";
+}
+
 function toDateTimeLocal(value) {
   return value ? new Date(value).toISOString().slice(0, 16) : "";
 }
@@ -51,6 +72,7 @@ export function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [query, setQuery] = useState({ page: 1, limit: 10 });
+  const [loginProviderFilter, setLoginProviderFilter] = useState("");
   const [selectedUser, setSelectedUser] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [overview, setOverview] = useState(null);
@@ -131,7 +153,7 @@ export function UsersPage() {
   async function loadUsers(nextQuery = query) {
     setLoading(true);
     try {
-      const response = await userService.list({ ...nextQuery, search });
+      const response = await userService.list({ ...nextQuery, search, loginProvider: loginProviderFilter || undefined });
       setUsers(response.data || []);
       setMeta(response.meta);
       setSelectedIds([]);
@@ -172,7 +194,7 @@ export function UsersPage() {
       await loadUsers({ ...query, page: 1 });
     }, 5000);
     return () => window.clearInterval(interval);
-  }, [hasProcessingMigration, query.limit, query.page, search]);
+  }, [hasProcessingMigration, query.limit, query.page, search, loginProviderFilter]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -184,7 +206,7 @@ export function UsersPage() {
     }, 250);
 
     return () => window.clearTimeout(timeout);
-  }, [search]);
+  }, [search, loginProviderFilter]);
 
   function openCreate() {
     setEditingUser(null);
@@ -423,6 +445,17 @@ export function UsersPage() {
             </button>
           ) : null}
           <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+            Provider
+            <select className={ui.input} value={loginProviderFilter} onChange={(event) => {
+              setLoginProviderFilter(event.target.value);
+              setQuery((current) => ({ ...current, page: 1 }));
+            }}>
+              {loginProviderOptions.map((option) => (
+                <option key={option.value || "all"} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
             Rows
             <select className={ui.input} value={query.limit} onChange={handleLimitChange}>
               {[10, 25, 50, 100, 200, 500].map((limit) => (
@@ -577,17 +610,12 @@ export function UsersPage() {
                   ),
                 },
                 {
-                  key: "authTypes",
-                  label: "Auth Type",
+                  key: "loginProvider",
+                  label: "Login Provider",
                   render: (row) => {
-                    const types = Array.isArray(row.authTypes) && row.authTypes.length
-                      ? row.authTypes.filter((type) => type !== "mobile")
-                      : [row.googleId ? "google" : "email"];
-                    const labels = { email: "Email/Password", google: "Google Login" };
+                    const provider = resolveLoginProvider(row);
                     return (
-                      <div className="flex flex-wrap gap-2">
-                        {types.map((type) => <span key={type} className={ui.pill}>{labels[type] || type}</span>)}
-                      </div>
+                      <span className={ui.pill}>{loginProviderLabels[provider] || provider}</span>
                     );
                   },
                 },
