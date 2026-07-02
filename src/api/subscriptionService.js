@@ -5,6 +5,10 @@ export const subscriptionService = {
     const response = await http.get("/admin/subscriptions", { params });
     return response.data;
   },
+  async listApple(params = {}) {
+    const response = await http.get("/admin/apple-subscriptions", { params });
+    return response.data;
+  },
   async listPlans() {
     const response = await http.get("/admin/subscription-plans");
     return response.data;

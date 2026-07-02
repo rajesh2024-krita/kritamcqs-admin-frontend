@@ -29,6 +29,7 @@ function toDateTimeLocal(value) {
 export function SubscriptionsPage() {
   const toast = useToast();
   const [items, setItems] = useState([]);
+  const [platform, setPlatform] = useState("android");
   const [meta, setMeta] = useState(null);
   const [plan, setPlan] = useState(null);
   const [users, setUsers] = useState([]);
@@ -45,8 +46,10 @@ export function SubscriptionsPage() {
     () =>
       items.filter(
         (item) =>
-          ["active", "manual", "completed"].includes(String(item.status).toLowerCase()) &&
-          (!item.endDate || new Date(item.endDate) > new Date()),
+          ["active", "manual", "completed"].includes(
+            String(item.status || item.subscriptionStatus).toLowerCase(),
+          ) &&
+          (!(item.endDate || item.expiryDate) || new Date(item.endDate || item.expiryDate) > new Date()),
       ).length,
     [items],
   );
@@ -54,7 +57,10 @@ export function SubscriptionsPage() {
   async function loadPage(nextQuery = query) {
     setLoading(true);
     try {
-      const response = await subscriptionService.list({ ...nextQuery, search });
+      const response =
+        platform === "apple"
+          ? await subscriptionService.listApple({ ...nextQuery, search })
+          : await subscriptionService.list({ ...nextQuery, search });
       setItems(response.data || []);
       setMeta(response.meta);
     } catch (error) {
@@ -89,7 +95,7 @@ export function SubscriptionsPage() {
 
   useEffect(() => {
     loadPage(query);
-  }, [query.page]);
+  }, [query.page, platform]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -195,7 +201,7 @@ export function SubscriptionsPage() {
             <div className="mb-2 text-[11px] font-black uppercase tracking-[0.28em] text-blue-700">Revenue Operations</div>
             <h1 className="mb-1 text-3xl font-black tracking-tight text-slate-900">Subscriptions</h1>
             <p className="text-slate-500">
-              Manage the live premium plan from the database and review Razorpay-verified subscription history.
+              Review App Store and Razorpay subscription history in separate platform views.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -204,10 +210,36 @@ export function SubscriptionsPage() {
         </div>
       </div>
 
+      <div className="inline-flex w-fit rounded-sm border border-slate-200 bg-white p-1 shadow-sm">
+        {[
+          { id: "android", label: "Android / Razorpay" },
+          { id: "apple", label: "Apple / App Store" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={cn(
+              "rounded-sm px-5 py-2.5 text-sm font-black transition",
+              platform === tab.id
+                ? "bg-blue-600 text-white shadow"
+                : "text-slate-600 hover:bg-slate-100",
+            )}
+            onClick={() => {
+              setItems([]);
+              setMeta(null);
+              setQuery((current) => ({ ...current, page: 1 }));
+              setPlatform(tab.id);
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <div className="rounded-sm border border-white/60 bg-white/85 p-5 shadow-lg shadow-slate-200/50">
           <div className="mb-4 flex items-center justify-between gap-3"><span className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Base Plan Price</span><span className="h-3 w-3 rounded-sm bg-blue-400 shadow-[0_0_0_4px_rgba(96,165,250,0.16)]" /></div>
-          <h2 className="text-4xl font-black tracking-tight text-slate-900">Rs. {plan?.price ?? 0}</h2>
+          <h2 className="text-4xl font-black tracking-tight text-slate-900">Rs. {platform === "apple" ? 499 : plan?.price ?? 0}</h2>
         </div>
         <div className="rounded-sm border border-white/60 bg-white/85 p-5 shadow-lg shadow-slate-200/50">
           <div className="mb-4 flex items-center justify-between gap-3"><span className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Active Plans</span><span className="h-3 w-3 rounded-sm bg-blue-400 shadow-[0_0_0_4px_rgba(96,165,250,0.16)]" /></div>
@@ -215,12 +247,20 @@ export function SubscriptionsPage() {
         </div>
         <div className="rounded-sm border border-white/60 bg-white/85 p-5 shadow-lg shadow-slate-200/50">
           <div className="mb-4 flex items-center justify-between gap-3"><span className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Plan Duration</span><span className="h-3 w-3 rounded-sm bg-blue-400 shadow-[0_0_0_4px_rgba(96,165,250,0.16)]" /></div>
-          <h2 className="text-4xl font-black tracking-tight text-slate-900">{plan?.durationMonths ?? 0}m</h2>
+          <h2 className="text-4xl font-black tracking-tight text-slate-900">{platform === "apple" ? 6 : plan?.durationMonths ?? 0}m</h2>
         </div>
       </div>
 
       <div className="flex flex-col gap-4 rounded-sm border border-white/60 bg-white/85 p-5 shadow-xl shadow-slate-200/60 backdrop-blur-xl lg:flex-row lg:items-end lg:justify-between">
-        <SearchBar value={search} onChange={setSearch} placeholder="Search by learner, coupon, plan, order, payment ref, or status..." />
+        <SearchBar
+          value={search}
+          onChange={setSearch}
+          placeholder={
+            platform === "apple"
+              ? "Search by learner, product, transaction, or status..."
+              : "Search by learner, coupon, plan, order, payment ref, or status..."
+          }
+        />
         <div className="flex flex-wrap items-center gap-3">
           <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => loadPage({ ...query, page: 1 })}>
             <RefreshIcon size={16} />
@@ -230,8 +270,17 @@ export function SubscriptionsPage() {
       </div>
 
       {loading ? <LoadingSpinner label="Loading subscriptions..." /> : null}
-      {!loading && !items.length ? <EmptyState title="No subscriptions found" description="Successful Razorpay purchases will appear here." /> : null}
-      {!loading && items.length ? (
+      {!loading && !items.length ? (
+        <EmptyState
+          title="No subscriptions found"
+          description={
+            platform === "apple"
+              ? "Verified App Store subscriptions will appear here."
+              : "Successful Razorpay purchases will appear here."
+          }
+        />
+      ) : null}
+      {!loading && platform === "android" && items.length ? (
         <>
           <div className="overflow-hidden rounded-sm border border-white/60 bg-white/85 shadow-xl shadow-slate-200/60 backdrop-blur-xl">
             <div className="overflow-x-auto">
@@ -277,6 +326,50 @@ export function SubscriptionsPage() {
                           <span className="text-slate-500">Closed</span>
                         )}
                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <Pagination meta={meta} onChange={(page) => setQuery((current) => ({ ...current, page }))} />
+        </>
+      ) : null}
+
+      {!loading && platform === "apple" && items.length ? (
+        <>
+          <div className="overflow-hidden rounded-sm border border-white/60 bg-white/85 shadow-xl shadow-slate-200/60 backdrop-blur-xl">
+            <div className="overflow-x-auto">
+              <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+                <thead>
+                  <tr>
+                    {["Learner", "Product", "Status", "Auto-renew", "Purchase", "Expiry", "Latest transaction", "Original transaction", "Latest event", "Environment"].map((label) => (
+                      <th key={label} className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">{label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {items.map((item) => (
+                    <tr key={item.id}>
+                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">
+                        <strong className="block font-bold text-slate-900">{item.user?.name || item.user?.mobile || item.userId}</strong>
+                        <div className="text-slate-500">{item.user?.email || item.user?.mobile || "User record unavailable"}</div>
+                      </td>
+                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">
+                        <span className="block font-semibold">Premium Plan – 6 Months</span>
+                        <span className="text-xs text-slate-500">{item.productId}</span>
+                      </td>
+                      <td className="border-b border-slate-100 px-4 py-4 align-top"><span className={ui.pill}>{item.subscriptionStatus}</span></td>
+                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">{item.autoRenewStatus ? "On" : "Off"}</td>
+                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">{formatDate(item.purchaseDate)}</td>
+                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">{formatDate(item.expiryDate)}</td>
+                      <td className="max-w-48 break-all border-b border-slate-100 px-4 py-4 align-top text-xs text-slate-700">{item.transactionId}</td>
+                      <td className="max-w-48 break-all border-b border-slate-100 px-4 py-4 align-top text-xs text-slate-700">{item.originalTransactionId}</td>
+                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">
+                        {item.latestWebhookEvent?.type || "-"}
+                        {item.latestWebhookEvent?.subtype ? <span className="block text-xs text-slate-500">{item.latestWebhookEvent.subtype}</span> : null}
+                      </td>
+                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">{item.environment || "-"}</td>
                     </tr>
                   ))}
                 </tbody>
