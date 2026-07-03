@@ -20,6 +20,7 @@ export function SubscriptionPageBuilderPage() {
   const [templates, setTemplates] = useState([]);
   const [plans, setPlans] = useState([]);
   const [mode, setMode] = useState("mobile");
+  const [previewPlatform, setPreviewPlatform] = useState("android");
   const [template, setTemplate] = useState({
     name: "Default Template",
     slug: "default-template",
@@ -34,7 +35,7 @@ export function SubscriptionPageBuilderPage() {
     try {
       const [templateResponse, planResponse] = await Promise.all([
         subscriptionPageTemplateService.list({ limit: 100, sort: "updatedAt", order: "desc" }),
-        subscriptionPlanService.list({ limit: 100, active: "" }),
+        subscriptionPlanService.list({ limit: 100, active: "", platform: previewPlatform }),
       ]);
       const loadedTemplates = templateResponse.data || [];
       setTemplates(loadedTemplates);
@@ -49,7 +50,7 @@ export function SubscriptionPageBuilderPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [previewPlatform]);
 
   const orderedBlocks = useMemo(() => [...(template.blocks || [])].sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0)), [template.blocks]);
 
@@ -164,11 +165,17 @@ export function SubscriptionPageBuilderPage() {
             <div className={ui.eyebrow}>Live Preview</div>
             <h2 className="text-xl font-black text-slate-950">Responsive Preview</h2>
           </div>
-          <select className={ui.input} value={mode} onChange={(e) => setMode(e.target.value)}>
-            <option value="mobile">Mobile</option>
-            <option value="tablet">Tablet</option>
-            <option value="desktop">Desktop</option>
-          </select>
+          <div className="flex flex-wrap gap-3">
+            <select className={ui.input} value={previewPlatform} onChange={(e) => setPreviewPlatform(e.target.value)}>
+              <option value="ios">iOS plans</option>
+              <option value="android">Android plans</option>
+            </select>
+            <select className={ui.input} value={mode} onChange={(e) => setMode(e.target.value)}>
+              <option value="mobile">Mobile</option>
+              <option value="tablet">Tablet</option>
+              <option value="desktop">Desktop</option>
+            </select>
+          </div>
         </div>
         <div className="mt-5">
           <MobilePreview mode={mode}>

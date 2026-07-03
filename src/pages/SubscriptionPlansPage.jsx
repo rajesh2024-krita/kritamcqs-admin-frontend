@@ -36,8 +36,11 @@ export function SubscriptionPlansPage() {
     () => ({
       ...subscriptionPlanService,
       list: (params = {}) => subscriptionPlanService.list({ ...params, platform }),
+      getById: (id) => subscriptionPlanService.getById(id, { platform }),
       create: (payload) => subscriptionPlanService.create({ ...payload, platform }),
       update: (id, payload) => subscriptionPlanService.update(id, { ...payload, platform }),
+      remove: (id) => subscriptionPlanService.remove(id, { platform }),
+      removeMany: (ids) => subscriptionPlanService.removeMany(ids, { platform }),
     }),
     [platform],
   );

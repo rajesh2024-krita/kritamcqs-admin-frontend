@@ -12,8 +12,8 @@ export function createCrudService(resource) {
       });
       return response.data;
     },
-    async getById(id) {
-      const response = await http.get(`/admin/${resource}/${id}`);
+    async getById(id, params = {}) {
+      const response = await http.get(`/admin/${resource}/${id}`, { params });
       return response.data;
     },
     async create(payload) {
@@ -24,12 +24,12 @@ export function createCrudService(resource) {
       const response = await http.put(`/admin/${resource}/${id}`, payload);
       return response.data;
     },
-    async remove(id) {
-      const response = await http.delete(`/admin/${resource}/${id}`);
+    async remove(id, params = {}) {
+      const response = await http.delete(`/admin/${resource}/${id}`, { params });
       return response.data;
     },
-    async removeMany(ids) {
-      const response = await http.post(`/admin/${resource}/bulk-delete`, { ids });
+    async removeMany(ids, extra = {}) {
+      const response = await http.post(`/admin/${resource}/bulk-delete`, { ids, ...extra });
       return response.data;
     },
     async reorder(items) {
