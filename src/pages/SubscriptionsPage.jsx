@@ -44,6 +44,7 @@ export function SubscriptionsPage() {
 
   const activeCount = useMemo(
     () =>
+      meta?.activeTotal ??
       items.filter(
         (item) =>
           ["active", "manual", "completed"].includes(
@@ -51,7 +52,7 @@ export function SubscriptionsPage() {
           ) &&
           (!(item.endDate || item.expiryDate) || new Date(item.endDate || item.expiryDate) > new Date()),
       ).length,
-    [items],
+    [items, meta],
   );
 
   async function loadPage(nextQuery = query) {
@@ -73,20 +74,23 @@ export function SubscriptionsPage() {
   async function loadLookups() {
     try {
       const [plansResponse, usersResponse] = await Promise.all([
-        subscriptionService.listPlans(),
+        subscriptionService.listPlans(platform === "apple" ? "ios" : "android"),
         userService.list({ limit: 100, sortBy: "createdAt", sortOrder: "desc" }),
       ]);
       setPlan(plansResponse.data?.[0] || null);
       setUsers(usersResponse.data || []);
       if (plansResponse.data?.[0]) {
         const primaryPlan = plansResponse.data[0];
-        setFormState((current) => ({ ...current, planId: current.planId || primaryPlan.id }));
+        setFormState((current) => ({ ...current, planId: primaryPlan.id }));
         setPricing({
           baseAmount: primaryPlan.price,
           discountAmount: 0,
           finalAmount: primaryPlan.price,
           coupon: null,
         });
+      } else {
+        setFormState((current) => ({ ...current, planId: "" }));
+        setPricing({ baseAmount: 0, discountAmount: 0, finalAmount: 0, coupon: null });
       }
     } catch (error) {
       toast.error(error.message);
@@ -110,8 +114,9 @@ export function SubscriptionsPage() {
   }, [search]);
 
   useEffect(() => {
+    setPlan(null);
     loadLookups();
-  }, []);
+  }, [platform]);
 
   function openCreate() {
     setFormState({
@@ -176,7 +181,11 @@ export function SubscriptionsPage() {
 
   async function handleCancelSubscription() {
     try {
-      await subscriptionService.cancel(cancelItem.id, { status: "cancelled" });
+      if (platform === "apple") {
+        await subscriptionService.cancelApple(cancelItem.id, { status: "cancelled" });
+      } else {
+        await subscriptionService.cancel(cancelItem.id, { status: "cancelled" });
+      }
       toast.success("Subscription cancelled");
       setCancelItem(null);
       await loadPage(query);
@@ -213,7 +222,7 @@ export function SubscriptionsPage() {
       <div className="inline-flex w-fit rounded-sm border border-slate-200 bg-white p-1 shadow-sm">
         {[
           { id: "android", label: "Android / Razorpay" },
-          { id: "apple", label: "Apple / App Store" },
+          { id: "apple", label: "iOS / App Store" },
         ].map((tab) => (
           <button
             key={tab.id}
@@ -239,7 +248,7 @@ export function SubscriptionsPage() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <div className="rounded-sm border border-white/60 bg-white/85 p-5 shadow-lg shadow-slate-200/50">
           <div className="mb-4 flex items-center justify-between gap-3"><span className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Base Plan Price</span><span className="h-3 w-3 rounded-sm bg-blue-400 shadow-[0_0_0_4px_rgba(96,165,250,0.16)]" /></div>
-          <h2 className="text-4xl font-black tracking-tight text-slate-900">Rs. {platform === "apple" ? 499 : plan?.price ?? 0}</h2>
+          <h2 className="text-4xl font-black tracking-tight text-slate-900">Rs. {plan?.price ?? 0}</h2>
         </div>
         <div className="rounded-sm border border-white/60 bg-white/85 p-5 shadow-lg shadow-slate-200/50">
           <div className="mb-4 flex items-center justify-between gap-3"><span className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Active Plans</span><span className="h-3 w-3 rounded-sm bg-blue-400 shadow-[0_0_0_4px_rgba(96,165,250,0.16)]" /></div>
@@ -247,7 +256,7 @@ export function SubscriptionsPage() {
         </div>
         <div className="rounded-sm border border-white/60 bg-white/85 p-5 shadow-lg shadow-slate-200/50">
           <div className="mb-4 flex items-center justify-between gap-3"><span className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Plan Duration</span><span className="h-3 w-3 rounded-sm bg-blue-400 shadow-[0_0_0_4px_rgba(96,165,250,0.16)]" /></div>
-          <h2 className="text-4xl font-black tracking-tight text-slate-900">{platform === "apple" ? 6 : plan?.durationMonths ?? 0}m</h2>
+          <h2 className="text-4xl font-black tracking-tight text-slate-900">{plan?.durationMonths ?? 0}m</h2>
         </div>
       </div>
 
@@ -343,7 +352,7 @@ export function SubscriptionsPage() {
               <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
                 <thead>
                   <tr>
-                    {["Learner", "Product", "Status", "Auto-renew", "Purchase", "Expiry", "Latest transaction", "Original transaction", "Latest event", "Environment"].map((label) => (
+                    {["Learner", "Product", "Status", "Auto-renew", "Purchase", "Expiry", "Latest transaction", "Original transaction", "Latest event", "Environment", "Actions"].map((label) => (
                       <th key={label} className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">{label}</th>
                     ))}
                   </tr>
@@ -370,6 +379,17 @@ export function SubscriptionsPage() {
                         {item.latestWebhookEvent?.subtype ? <span className="block text-xs text-slate-500">{item.latestWebhookEvent.subtype}</span> : null}
                       </td>
                       <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">{item.environment || "-"}</td>
+                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">
+                        {["active", "failed", "cancelled"].includes(String(item.subscriptionStatus).toLowerCase()) &&
+                        new Date(item.expiryDate) > new Date() ? (
+                          <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setCancelItem(item)}>
+                            <TrashIcon size={16} />
+                            Cancel
+                          </button>
+                        ) : (
+                          <span className="text-slate-500">Closed</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -455,8 +475,8 @@ export function SubscriptionsPage() {
 
       <ConfirmDeleteModal
         open={Boolean(cancelItem)}
-        title="Cancel subscription"
-        description="This will end the selected subscription immediately and update the learner premium status."
+        title={`Cancel ${platform === "apple" ? "iOS" : "Android"} subscription`}
+        description={`This will end the selected ${platform === "apple" ? "iOS" : "Android"} subscription immediately and update the learner premium status.`}
         onCancel={() => setCancelItem(null)}
         onConfirm={handleCancelSubscription}
       />

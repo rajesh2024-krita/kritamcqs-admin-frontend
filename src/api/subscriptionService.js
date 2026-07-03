@@ -9,8 +9,10 @@ export const subscriptionService = {
     const response = await http.get("/admin/apple-subscriptions", { params });
     return response.data;
   },
-  async listPlans() {
-    const response = await http.get("/admin/subscription-plans");
+  async listPlans(platform) {
+    const response = await http.get("/admin/subscription-plans", {
+      params: platform ? { platform } : {},
+    });
     return response.data;
   },
   async createManual(payload) {
@@ -23,6 +25,10 @@ export const subscriptionService = {
   },
   async cancel(id, payload = {}) {
     const response = await http.post(`/admin/subscriptions/${id}/cancel`, payload);
+    return response.data;
+  },
+  async cancelApple(id, payload = {}) {
+    const response = await http.post(`/admin/apple-subscriptions/${id}/cancel`, payload);
     return response.data;
   },
   async getPaymentGatewaySettings() {
