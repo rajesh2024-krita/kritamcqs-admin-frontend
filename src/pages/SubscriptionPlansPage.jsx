@@ -2,17 +2,33 @@ import { subscriptionPlanService } from "../api/subscriptionPlanService";
 import { EntityManagerPage } from "./common/EntityManagerPage";
 
 export function SubscriptionPlansPage() {
+  const platformOptions = [
+    { label: "Android", value: "android" },
+    { label: "iOS", value: "ios" },
+  ];
+
   return (
     <EntityManagerPage
       title="Subscription Plans"
-      description="Create active or inactive subscription plans shown dynamically in the app."
+      description="Configure separate subscription plans for the Android and iOS apps."
       service={subscriptionPlanService}
       mapItemToForm={(item, formState) => ({
         ...formState,
+        platform: item.platform || "android",
         strikeOutAmount: item.strikeOutAmount ?? item.stikeOutAmount ?? item.strikeoutAmount ?? item.originalPrice ?? item.mrp ?? 0,
       })}
+      filterStorageKey="admin.subscription-plans.filters"
+      filters={[
+        {
+          name: "platform",
+          label: "Platform",
+          placeholder: "All Platforms",
+          options: platformOptions,
+        },
+      ]}
       fields={[
         { name: "planId", label: "Plan ID", required: true },
+        { name: "platform", label: "Platform", type: "select", required: true, defaultValue: "android", options: platformOptions },
         { name: "name", label: "Plan Name", required: true },
         { name: "price", label: "Price", required: true, type: "number" },
         { name: "strikeOutAmount", label: "Strike Out Amount", type: "number", defaultValue: 0 },
@@ -26,6 +42,7 @@ export function SubscriptionPlansPage() {
       ]}
       columns={[
         { key: "planId", label: "Plan ID" },
+        { key: "platform", label: "Platform", render: (row) => row.platform === "ios" ? "iOS" : "Android" },
         { key: "name", label: "Name" },
         { key: "price", label: "Price", render: (row) => `Rs. ${row.price}` },
         { key: "strikeOutAmount", label: "Strike Out", render: (row) => {
