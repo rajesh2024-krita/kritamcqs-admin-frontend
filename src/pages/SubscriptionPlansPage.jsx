@@ -65,6 +65,14 @@ export function SubscriptionPlansPage() {
         })}
         fields={[
           { name: "planId", label: "Plan ID", required: true },
+          ...(platform === "ios"
+            ? [{
+                name: "billingProductId",
+                label: "App Store Product ID",
+                required: true,
+                placeholder: "app.kritamcqs.iosapp.premium.6months",
+              }]
+            : []),
           { name: "name", label: "Plan Name", required: true },
           { name: "price", label: "Price", required: true, type: "number" },
           { name: "strikeOutAmount", label: "Strike Out Amount", type: "number", defaultValue: 0 },
@@ -78,6 +86,7 @@ export function SubscriptionPlansPage() {
         ]}
         columns={[
           { key: "planId", label: "Plan ID" },
+          ...(platform === "ios" ? [{ key: "billingProductId", label: "App Store Product ID" }] : []),
           { key: "name", label: "Name" },
           { key: "price", label: "Price", render: (row) => `Rs. ${row.price}` },
           { key: "strikeOutAmount", label: "Strike Out", render: (row) => {

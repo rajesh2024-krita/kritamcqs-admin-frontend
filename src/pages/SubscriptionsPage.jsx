@@ -356,7 +356,7 @@ export function SubscriptionsPage() {
                         <div className="text-slate-500">{item.user?.email || item.user?.mobile || "User record unavailable"}</div>
                       </td>
                       <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">
-                        <span className="block font-semibold">Premium Plan – 6 Months</span>
+                        <span className="block font-semibold">{item.planName || item.planId || "iOS Subscription"}</span>
                         <span className="text-xs text-slate-500">{item.productId}</span>
                       </td>
                       <td className="border-b border-slate-100 px-4 py-4 align-top"><span className={ui.pill}>{item.subscriptionStatus}</span></td>
