@@ -2,10 +2,26 @@ import { useMemo, useState } from "react";
 import { subscriptionPlanService } from "../api/subscriptionPlanService";
 import { EntityManagerPage } from "./common/EntityManagerPage";
 
-const PLATFORM_TABS = [
-  { label: "iOS", value: "ios" },
-  { label: "Android", value: "android" },
-];
+const PLATFORM_CONFIGS = {
+  ios: {
+    label: "iOS",
+    title: "iOS Subscription Plans",
+    description: "Manage plans available only in the iOS app. Purchases use the mapped App Store Product ID.",
+    planIdLabel: "Internal iOS Plan ID",
+    billingLabel: "App Store Product ID",
+  },
+  android: {
+    label: "Android",
+    title: "Android Subscription Plans",
+    description: "Manage plans available only in the Android app. The Plan ID is used for Razorpay orders and verification.",
+    planIdLabel: "Android / Razorpay Plan ID",
+  },
+};
+
+const PLATFORM_TABS = Object.entries(PLATFORM_CONFIGS).map(([value, config]) => ({
+  value,
+  label: config.label,
+}));
 
 function detectDefaultPlatform() {
   if (typeof navigator === "undefined") return "android";
@@ -15,6 +31,7 @@ function detectDefaultPlatform() {
 
 export function SubscriptionPlansPage() {
   const [platform, setPlatform] = useState(detectDefaultPlatform);
+  const platformConfig = PLATFORM_CONFIGS[platform];
   const scopedService = useMemo(
     () => ({
       ...subscriptionPlanService,
@@ -55,8 +72,8 @@ export function SubscriptionPlansPage() {
 
       <EntityManagerPage
         key={platform}
-        title="Subscription Plans"
-        description={`Configure plans shown only in the ${platform === "ios" ? "iOS" : "Android"} app.`}
+        title={platformConfig.title}
+        description={platformConfig.description}
         service={scopedService}
         defaultQuery={{ platform }}
         mapItemToForm={(item, formState) => ({
@@ -64,11 +81,11 @@ export function SubscriptionPlansPage() {
           strikeOutAmount: item.strikeOutAmount ?? item.stikeOutAmount ?? item.strikeoutAmount ?? item.originalPrice ?? item.mrp ?? 0,
         })}
         fields={[
-          { name: "planId", label: "Plan ID", required: true },
+          { name: "planId", label: platformConfig.planIdLabel, required: true },
           ...(platform === "ios"
             ? [{
                 name: "billingProductId",
-                label: "App Store Product ID",
+                label: platformConfig.billingLabel,
                 required: true,
                 placeholder: "app.kritamcqs.iosapp.premium.6months",
               }]
@@ -80,12 +97,34 @@ export function SubscriptionPlansPage() {
           { name: "description", label: "Description", full: true },
           { name: "savings", label: "Savings Label" },
           { name: "features", label: "Features", type: "tags", full: true },
-          { name: "status", label: "Status", type: "select", options: () => [{ label: "Active", value: "active" }, { label: "Inactive", value: "inactive" }] },
-          { name: "active", label: "Active", type: "checkbox", toggleLabel: "Plan is active", defaultValue: true },
+          {
+            name: "status",
+            label: "Availability",
+            type: "select",
+            required: true,
+            defaultValue: "active",
+            options: () => [
+              { label: "Enabled", value: "active" },
+              { label: "Disabled", value: "inactive" },
+            ],
+          },
           { name: "sortOrder", label: "Sort Order", type: "number", defaultValue: 1 },
         ]}
         columns={[
-          { key: "planId", label: "Plan ID" },
+          {
+            key: "platform",
+            label: "Platform",
+            render: () => (
+              <span className={`inline-flex rounded-full px-3 py-1 text-xs font-black uppercase tracking-wider ${
+                platform === "ios"
+                  ? "bg-slate-900 text-white"
+                  : "bg-emerald-100 text-emerald-800"
+              }`}>
+                {platformConfig.label}
+              </span>
+            ),
+          },
+          { key: "planId", label: platformConfig.planIdLabel },
           ...(platform === "ios" ? [{ key: "billingProductId", label: "App Store Product ID" }] : []),
           { key: "name", label: "Name" },
           { key: "price", label: "Price", render: (row) => `Rs. ${row.price}` },
@@ -94,7 +133,20 @@ export function SubscriptionPlansPage() {
             return Number(value || 0) > 0 ? `Rs. ${value}` : "-";
           } },
           { key: "durationMonths", label: "Duration", render: (row) => `${row.durationMonths} months` },
-          { key: "status", label: "Status", render: (row) => row.status || (row.active ? "active" : "inactive") },
+          {
+            key: "status",
+            label: "Availability",
+            render: (row) => {
+              const enabled = (row.status || (row.active ? "active" : "inactive")) === "active";
+              return (
+                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+                  enabled ? "bg-green-100 text-green-800" : "bg-slate-200 text-slate-700"
+                }`}>
+                  {enabled ? "Enabled" : "Disabled"}
+                </span>
+              );
+            },
+          },
         ]}
       />
     </div>

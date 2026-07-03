@@ -31,6 +31,8 @@ const ENTITY_TITLE_MODULES = {
   Users: "users",
   Coupons: "coupons",
   "Subscription Plans": "subscription-plans",
+  "iOS Subscription Plans": "subscription-plans",
+  "Android Subscription Plans": "subscription-plans",
   "Subscription Free Cards": "subscription-free-cards",
   "Subscription Stat Cards": "subscription-stat-cards",
   "Policy Pages": "policy-pages",
