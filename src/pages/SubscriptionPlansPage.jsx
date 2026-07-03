@@ -81,6 +81,18 @@ export function SubscriptionPlansPage() {
         defaultQuery={{ platform }}
         mapItemToForm={(item, formState) => ({
           ...formState,
+          ...(platform === "ios"
+            ? {
+                billingProductId:
+                  item.billingProductId ||
+                  item.productId ||
+                  item.iosProductId ||
+                  item.appleProductId ||
+                  item.storeProductId ||
+                  item.identifier ||
+                  "",
+              }
+            : {}),
           strikeOutAmount: item.strikeOutAmount ?? item.stikeOutAmount ?? item.strikeoutAmount ?? item.originalPrice ?? item.mrp ?? 0,
         })}
         fields={[
@@ -90,7 +102,7 @@ export function SubscriptionPlansPage() {
                 name: "billingProductId",
                 label: platformConfig.billingLabel,
                 required: true,
-                placeholder: "app.kritamcqs.iosapp.premium.6months",
+                placeholder: "com.company.app.subscription",
               }]
             : []),
           { name: "name", label: "Plan Name", required: true },
