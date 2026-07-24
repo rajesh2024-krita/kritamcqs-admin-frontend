@@ -53,6 +53,8 @@ import { NotificationManagementPage } from "../pages/NotificationManagementPage"
 import { EmployeesPage } from "../pages/employees/EmployeesPage";
 import { AuditLogsPage } from "../pages/audit/AuditLogsPage";
 import { AIConfigurationPage } from "../pages/settings/AIConfigurationPage";
+import { ThirdPartyScriptsPage } from "../pages/ThirdPartyScriptsPage";
+import { SubscriptionReminderPage } from "../pages/SubscriptionReminderPage";
 import { useAuth } from "../context/AuthContext";
 import { canViewModule, firstAllowedModulePath, isEmployee } from "../config/adminPermissions";
 
@@ -126,6 +128,7 @@ export function AppRoutes() {
         <Route path="subscription-free-cards" element={<ModuleAccess moduleKey="subscription-free-cards"><SubscriptionFreeCardsPage /></ModuleAccess>} />
         <Route path="subscription-stat-cards" element={<ModuleAccess moduleKey="subscription-stat-cards"><SubscriptionStatCardsPage /></ModuleAccess>} />
         <Route path="subscription-page-builder" element={<ModuleAccess moduleKey="subscription-page-builder"><SubscriptionPageBuilderPage /></ModuleAccess>} />
+        <Route path="subscription-reminder" element={<MainAdminOnly><SubscriptionReminderPage /></MainAdminOnly>} />
         <Route path="dashboard-carousel" element={<ModuleAccess moduleKey="dashboard-carousel"><DashboardCarouselPage /></ModuleAccess>} />
         <Route path="app-usage" element={<ModuleAccess moduleKey="app-usage"><AppUsageAnalyticsPage /></ModuleAccess>} />
         <Route path="offer-timer-management" element={<MainAdminOnly><OfferTimerManagementPage /></MainAdminOnly>} />
@@ -151,6 +154,7 @@ export function AppRoutes() {
         <Route path="contact-messages" element={<ModuleAccess moduleKey="contact-messages"><ContactMessagesPage /></ModuleAccess>} />
         <Route path="support-tickets" element={<ModuleAccess moduleKey="support-tickets"><SupportTicketsPage /></ModuleAccess>} />
         <Route path="settings" element={<ModuleAccess moduleKey="settings"><SettingsPage /></ModuleAccess>} />
+        <Route path="third-party-scripts" element={<MainAdminOnly><ThirdPartyScriptsPage /></MainAdminOnly>} />
         <Route path="auth-settings" element={<ModuleAccess moduleKey="auth-settings"><AuthSettingsPage /></ModuleAccess>} />
         <Route path="email-templates" element={<ModuleAccess moduleKey="email-templates"><EmailTemplatesPage /></ModuleAccess>} />
         <Route path="email-template-keys" element={<ModuleAccess moduleKey="email-template-keys"><EmailTemplateCatalogPage /></ModuleAccess>} />
