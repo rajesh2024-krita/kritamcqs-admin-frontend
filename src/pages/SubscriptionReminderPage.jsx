@@ -12,6 +12,7 @@ const emptyConfig = {
   reminderName: "",
   status: "enabled",
   channels: "Both",
+  immediateReminderEnabled: true,
   initialDelay: 30,
   repeatInterval: 24,
   delayUnit: "Hours",
@@ -179,7 +180,14 @@ export function SubscriptionReminderPage() {
             <label className={ui.field}><span>Reminder Name</span><input className={ui.input} value={form.reminderName} onChange={(e) => setForm({ ...form, reminderName: e.target.value })} /></label>
             <label className={ui.field}><span>Status</span><select className={ui.input} value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></label>
             <label className={ui.field}><span>Channels</span><select className={ui.input} value={form.channels} onChange={(e) => setForm({ ...form, channels: e.target.value })}><option>Notification</option><option>Email</option><option>Both</option></select></label>
-            <label className={ui.field}><span>Initial Delay</span><input className={ui.input} type="number" value={form.initialDelay} onChange={(e) => setForm({ ...form, initialDelay: e.target.value })} /></label>
+            <label className={ui.field}>
+              <span>Immediate Reminder</span>
+              <select className={ui.input} value={form.immediateReminderEnabled ? "true" : "false"} onChange={(e) => setForm({ ...form, immediateReminderEnabled: e.target.value === "true" })}>
+                <option value="true">Enabled</option>
+                <option value="false">Disabled</option>
+              </select>
+            </label>
+            <label className={ui.field}><span>Delay After First Reminder</span><input className={ui.input} type="number" value={form.initialDelay} onChange={(e) => setForm({ ...form, initialDelay: e.target.value })} /></label>
             <label className={ui.field}><span>Repeat Interval</span><input className={ui.input} type="number" value={form.repeatInterval} onChange={(e) => setForm({ ...form, repeatInterval: e.target.value })} /></label>
             <label className={ui.field}><span>Delay Unit</span><select className={ui.input} value={form.delayUnit} onChange={(e) => setForm({ ...form, delayUnit: e.target.value })}><option>Minutes</option><option>Hours</option><option>Days</option></select></label>
             <label className={ui.field}><span>Maximum Reminder Count</span><input className={ui.input} type="number" value={form.maximumReminderCount} onChange={(e) => setForm({ ...form, maximumReminderCount: e.target.value })} /></label>
@@ -219,10 +227,10 @@ function ConfigurationTable({ items, onEdit, onAction, meta, setQuery }) {
   if (!items.length) return <EmptyState title="No reminder configurations" description="Create a template to start recovery automation." />;
   return (
     <div className={ui.tableWrap}><div className={ui.tableScroll}><table className={ui.table}>
-      <thead><tr><th className={ui.tableHead}>Reminder</th><th className={ui.tableHead}>Channels</th><th className={ui.tableHead}>Delay</th><th className={ui.tableHead}>Platform</th><th className={ui.tableHead}>Status</th><th className={ui.tableHead}>Actions</th></tr></thead>
+      <thead><tr><th className={ui.tableHead}>Reminder</th><th className={ui.tableHead}>Channels</th><th className={ui.tableHead}>Timing</th><th className={ui.tableHead}>Platform</th><th className={ui.tableHead}>Status</th><th className={ui.tableHead}>Actions</th></tr></thead>
       <tbody>{items.map((item) => <tr key={item.id}>
         <td className={ui.tableCell}><div className="font-bold text-slate-900">{item.reminderName}</div><div className="text-xs text-slate-500">Max {item.maximumReminderCount} reminders</div></td>
-        <td className={ui.tableCell}>{item.channels}</td><td className={ui.tableCell}>{item.initialDelay} {item.delayUnit}, repeats {item.repeatInterval}</td><td className={ui.tableCell}>{item.platform}</td>
+        <td className={ui.tableCell}>{item.channels}</td><td className={ui.tableCell}>{item.immediateReminderEnabled !== false ? "Immediate #1" : "Delayed #1"}; next after {item.initialDelay} {item.delayUnit}; repeats {item.repeatInterval}</td><td className={ui.tableCell}>{item.platform}</td>
         <td className={ui.tableCell}><span className={statusBadge(item.status)}>{item.status}</span></td>
         <td className={ui.tableCell}><div className="flex flex-wrap gap-2"><button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => onEdit(item)}>Edit</button><button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => onAction(() => subscriptionReminderService.setConfigurationStatus(item.id, item.status === "enabled" ? "disabled" : "enabled"), "Status updated")}>{item.status === "enabled" ? <Pause size={16} /> : <Play size={16} />}</button><button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => window.confirm("Delete this configuration?") && onAction(() => subscriptionReminderService.deleteConfiguration(item.id), "Configuration deleted")}><Trash2 size={16} /></button></div></td>
       </tr>)}</tbody>
