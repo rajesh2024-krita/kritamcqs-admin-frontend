@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { dashboardService } from "../../api/dashboardService";
+import { microsoftClarityService } from "../../api/microsoftClarityService";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { useToast } from "../../context/ToastContext";
 import { ui } from "../../ui";
@@ -10,6 +11,7 @@ export function DashboardPage() {
   const toast = useToast();
   const [data, setData] = useState(null);
   const [catalog, setCatalog] = useState(null);
+  const [clarity, setClarity] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,6 +23,7 @@ export function DashboardPage() {
         ]);
         setData(dashboard.data);
         setCatalog(catalogOverview.data);
+        microsoftClarityService.status().then((response) => setClarity(response.data || null)).catch(() => undefined);
       } catch (error) {
         toast.error(error.message);
       } finally {
@@ -79,6 +82,29 @@ export function DashboardPage() {
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
+        <Link to="/microsoft-clarity" className={ui.panel}>
+          <div className={ui.sectionHead}>
+            <div>
+              <h3 className="text-xl font-bold text-slate-900">Microsoft Clarity</h3>
+              <p className={ui.muted}>SDK connection status from mobile devices.</p>
+            </div>
+            <div className={ui.badge}>{clarity?.currentStatus || "Disabled"}</div>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-4 lg:grid-cols-4">
+            {[
+              ["Connected Devices", clarity?.connectedDevices || 0],
+              ["Active Sessions", clarity?.activeSessions || 0],
+              ["Failed Init", clarity?.failedInitializations || 0],
+              ["Waiting", clarity?.waitingDevices || 0],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-sm border border-slate-200 bg-slate-50 p-4">
+                <span className={ui.metricLabel}>{label}</span>
+                <strong className="mt-2 block text-2xl font-bold text-slate-900">{formatCompactNumber(value)}</strong>
+              </div>
+            ))}
+          </div>
+        </Link>
+
         <div className={ui.panel}>
           <div className={ui.sectionHead}>
             <div>
