@@ -6,6 +6,27 @@ import { useToast } from "../../context/ToastContext";
 import { cn, ui } from "../../ui";
 
 const logLevels = ["None", "Error", "Warning", "Info", "Verbose"];
+const statusOptions = [
+  "Initializing",
+  "Connected",
+  "Waiting for Data",
+  "Uploading",
+  "Recording",
+  "Disabled",
+  "Configuration API Failed",
+  "Cordova Not Ready",
+  "Device Not Ready",
+  "Initialization Failed",
+  "Plugin Not Loaded",
+  "Plugin Missing",
+  "Project ID Invalid",
+  "Internet Unavailable",
+  "Native Error",
+  "SDK Initialization Failed",
+  "Session Not Created",
+  "Upload Blocked",
+  "Upload Failed",
+];
 
 const emptyForm = {
   enabled: false,
@@ -64,7 +85,7 @@ export function MicrosoftClarityPage() {
         setLogs(response.data || []);
         setLogMeta(response.meta || null);
       }).catch(() => undefined);
-    }, 30000);
+    }, 5000);
     return () => window.clearInterval(id);
   }, [logFilter.level, logFilter.status, logFilter.search]);
 
@@ -123,11 +144,12 @@ export function MicrosoftClarityPage() {
     if (["Connected", "Recording", "Uploading"].includes(currentStatus)) return "bg-emerald-50 text-emerald-700 border-emerald-100";
     if (currentStatus === "Waiting for Data") return "bg-yellow-50 text-yellow-700 border-yellow-100";
     if (currentStatus === "Initializing") return "bg-orange-50 text-orange-700 border-orange-100";
-    if (["Initialization Failed", "Plugin Missing", "Project ID Invalid", "Internet Unavailable", "Native Error"].includes(currentStatus)) return "bg-rose-50 text-rose-700 border-rose-100";
+    if (["Configuration API Failed", "Cordova Not Ready", "Device Not Ready", "Initialization Failed", "Plugin Not Loaded", "Plugin Missing", "Project ID Invalid", "Internet Unavailable", "Native Error", "SDK Initialization Failed", "Session Not Created", "Upload Blocked", "Upload Failed"].includes(currentStatus)) return "bg-rose-50 text-rose-700 border-rose-100";
     return "bg-slate-100 text-slate-600 border-slate-200";
   }
 
   const latest = status?.latest || {};
+  const liveDebug = status?.liveDebug || {};
 
   return (
     <div className="flex flex-col gap-6">
@@ -188,6 +210,49 @@ export function MicrosoftClarityPage() {
                 <strong className="mt-2 block break-words text-sm font-bold text-slate-900">{value}</strong>
               </div>
             ))}
+          </div>
+          <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-black uppercase tracking-[0.16em] text-slate-700">Live Debug Console</h4>
+                <p className="mt-1 text-sm text-slate-500">Auto-refreshes from the latest mobile SDK event.</p>
+              </div>
+              <span className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-[0.16em] ${indicatorClass(liveDebug.uploadStatus)}`}>
+                {liveDebug.uploadStatus || "Unknown"}
+              </span>
+            </div>
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
+              {[
+                ["Plugin Loaded", liveDebug.pluginLoaded ? "Yes" : "No"],
+                ["Plugin Source", liveDebug.pluginSource || "-"],
+                ["Device Ready", liveDebug.deviceReady ? "Yes" : "No"],
+                ["Cordova Loaded", liveDebug.cordovaLoaded ? "Yes" : "No"],
+                ["SDK Initialized", liveDebug.sdkInitialized ? "Yes" : "No"],
+                ["Current Session", liveDebug.currentSession || "-"],
+                ["Session URL", liveDebug.sessionUrl || "-"],
+                ["Last API Call", liveDebug.lastApiCall || "-"],
+                ["Last Native Event", liveDebug.lastNativeEvent ? JSON.stringify(liveDebug.lastNativeEvent) : "-"],
+                ["Last Error", liveDebug.lastError || "-"],
+                ["Retry Count", liveDebug.retryCount ?? 0],
+                ["Connection", `${liveDebug.online === false ? "Offline" : "Online"} / ${liveDebug.connectionType || "unknown"}`],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-lg border border-slate-200 bg-white p-3">
+                  <span className={ui.metricLabel}>{label}</span>
+                  <strong className="mt-2 block break-words text-sm font-bold text-slate-900">{value}</strong>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+              <span className={ui.metricLabel}>Available Methods</span>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {Object.entries(liveDebug.availableMethods || {}).map(([method, exists]) => (
+                  <span key={method} className={exists ? "rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700" : "rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500"}>
+                    {method}: {exists ? "yes" : "no"}
+                  </span>
+                ))}
+                {!Object.keys(liveDebug.availableMethods || {}).length ? <span className="text-sm text-slate-500">No method snapshot yet.</span> : null}
+              </div>
+            </div>
           </div>
         </section>
 
@@ -267,7 +332,7 @@ export function MicrosoftClarityPage() {
               <option value="info">Info</option>
             </select>
             <select className={ui.input} value={logFilter.status} onChange={(event) => setLogFilter((current) => ({ ...current, status: event.target.value }))}>
-              {["all", "Initializing", "Connected", "Waiting for Data", "Uploading", "Recording", "Disabled", "Initialization Failed", "Plugin Missing", "Project ID Invalid", "Internet Unavailable", "Native Error"].map((item) => (
+              {["all", ...statusOptions].map((item) => (
                 <option key={item} value={item}>{item === "all" ? "All statuses" : item}</option>
               ))}
             </select>
@@ -282,6 +347,8 @@ export function MicrosoftClarityPage() {
                     <th className={ui.tableHead}>Level</th>
                     <th className={ui.tableHead}>Status</th>
                     <th className={ui.tableHead}>Message</th>
+                    <th className={ui.tableHead}>Session</th>
+                    <th className={ui.tableHead}>Plugin</th>
                     <th className={ui.tableHead}>Device</th>
                     <th className={ui.tableHead}>Error</th>
                   </tr>
@@ -292,12 +359,27 @@ export function MicrosoftClarityPage() {
                       <td className={ui.tableCell}>{log.timestamp ? new Date(log.timestamp).toLocaleString() : "-"}</td>
                       <td className={ui.tableCell}>{log.level}</td>
                       <td className={ui.tableCell}><span className={`inline-flex rounded-full border px-2 py-1 text-xs font-bold ${indicatorClass(log.status)}`}>{log.status}</span></td>
-                      <td className={ui.tableCell}>{log.message}</td>
+                      <td className={ui.tableCell}>
+                        <div className="max-w-md">
+                          <div>{log.message}</div>
+                          {log.metadata?.responseTimeMs ? <div className="mt-1 text-xs text-slate-500">API {log.metadata.apiStatus || "-"} in {log.metadata.responseTimeMs}ms</div> : null}
+                          {log.stack ? <details className="mt-1 text-xs text-slate-500"><summary>Stack trace</summary><pre className="mt-2 whitespace-pre-wrap">{log.stack}</pre></details> : null}
+                        </div>
+                      </td>
+                      <td className={ui.tableCell}>
+                        {log.sessionId || log.metadata?.currentSessionId || "-"}
+                        {log.metadata?.sessionUrl ? <div className="mt-1 max-w-xs break-words text-xs text-sky-700">{log.metadata.sessionUrl}</div> : null}
+                      </td>
+                      <td className={ui.tableCell}>
+                        {log.metadata?.pluginSource || "-"}
+                        <br />
+                        <span className="text-xs text-slate-500">{log.pluginVersion || "unknown"}</span>
+                      </td>
                       <td className={ui.tableCell}>{log.platform || "-"}<br/><span className="text-xs text-slate-500">{log.appVersion || ""}</span></td>
                       <td className={ui.tableCell}><span className="text-rose-700">{log.errorMessage || "-"}</span></td>
                     </tr>
                   ))}
-                  {!logs.length ? <tr><td className={ui.tableCell} colSpan={6}>No Microsoft Clarity logs found.</td></tr> : null}
+                  {!logs.length ? <tr><td className={ui.tableCell} colSpan={8}>No Microsoft Clarity logs found.</td></tr> : null}
                 </tbody>
               </table>
             </div>
