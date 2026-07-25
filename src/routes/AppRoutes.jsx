@@ -53,6 +53,7 @@ import { NotificationManagementPage } from "../pages/NotificationManagementPage"
 import { EmployeesPage } from "../pages/employees/EmployeesPage";
 import { AuditLogsPage } from "../pages/audit/AuditLogsPage";
 import { AIConfigurationPage } from "../pages/settings/AIConfigurationPage";
+import { MicrosoftClarityPage } from "../pages/settings/MicrosoftClarityPage";
 import { ThirdPartyScriptsPage } from "../pages/ThirdPartyScriptsPage";
 import { SubscriptionReminderPage } from "../pages/SubscriptionReminderPage";
 import { useAuth } from "../context/AuthContext";
@@ -154,6 +155,7 @@ export function AppRoutes() {
         <Route path="contact-messages" element={<ModuleAccess moduleKey="contact-messages"><ContactMessagesPage /></ModuleAccess>} />
         <Route path="support-tickets" element={<ModuleAccess moduleKey="support-tickets"><SupportTicketsPage /></ModuleAccess>} />
         <Route path="settings" element={<ModuleAccess moduleKey="settings"><SettingsPage /></ModuleAccess>} />
+        <Route path="microsoft-clarity" element={<MainAdminOnly><MicrosoftClarityPage /></MainAdminOnly>} />
         <Route path="third-party-scripts" element={<MainAdminOnly><ThirdPartyScriptsPage /></MainAdminOnly>} />
         <Route path="auth-settings" element={<ModuleAccess moduleKey="auth-settings"><AuthSettingsPage /></ModuleAccess>} />
         <Route path="email-templates" element={<ModuleAccess moduleKey="email-templates"><EmailTemplatesPage /></ModuleAccess>} />
