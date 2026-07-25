@@ -1,32 +1,11 @@
 import { useEffect, useState } from "react";
-import { Download, RefreshCw, Save, Trash2, X } from "lucide-react";
+import { Save, X } from "lucide-react";
 import { microsoftClarityService } from "../../api/microsoftClarityService";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { useToast } from "../../context/ToastContext";
 import { cn, ui } from "../../ui";
 
 const logLevels = ["None", "Error", "Warning", "Info", "Verbose"];
-const statusOptions = [
-  "Initializing",
-  "Connected",
-  "Waiting for Data",
-  "Uploading",
-  "Recording",
-  "Disabled",
-  "Configuration API Failed",
-  "Cordova Not Ready",
-  "Device Not Ready",
-  "Initialization Failed",
-  "Plugin Not Loaded",
-  "Plugin Missing",
-  "Project ID Invalid",
-  "Internet Unavailable",
-  "Native Error",
-  "SDK Initialization Failed",
-  "Session Not Created",
-  "Upload Blocked",
-  "Upload Failed",
-];
 
 const emptyForm = {
   enabled: false,
@@ -49,24 +28,18 @@ export function MicrosoftClarityPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState(null);
-  const [logs, setLogs] = useState([]);
-  const [logMeta, setLogMeta] = useState(null);
-  const [logFilter, setLogFilter] = useState({ level: "all", status: "all", search: "" });
 
   async function load() {
     setLoading(true);
     try {
-      const [response, statusResponse, logsResponse] = await Promise.all([
+      const [response, statusResponse] = await Promise.all([
         microsoftClarityService.get(),
         microsoftClarityService.status(),
-        microsoftClarityService.logs(logFilter),
       ]);
       const next = normalizeSettings(response.data || response);
       setForm(next);
       setSaved(next);
       setStatus(statusResponse.data || null);
-      setLogs(logsResponse.data || []);
-      setLogMeta(logsResponse.meta || null);
     } catch (error) {
       toast.error(error.message || "Unable to load Microsoft Clarity settings");
     } finally {
@@ -81,13 +54,9 @@ export function MicrosoftClarityPage() {
   useEffect(() => {
     const id = window.setInterval(() => {
       void microsoftClarityService.status().then((response) => setStatus(response.data || null)).catch(() => undefined);
-      void microsoftClarityService.logs(logFilter).then((response) => {
-        setLogs(response.data || []);
-        setLogMeta(response.meta || null);
-      }).catch(() => undefined);
     }, 5000);
     return () => window.clearInterval(id);
-  }, [logFilter.level, logFilter.status, logFilter.search]);
+  }, []);
 
   async function save(event) {
     event.preventDefault();
@@ -113,31 +82,6 @@ export function MicrosoftClarityPage() {
 
   function cancel() {
     setForm(saved);
-  }
-
-  async function refreshLogs() {
-    try {
-      const [statusResponse, logsResponse] = await Promise.all([
-        microsoftClarityService.status(),
-        microsoftClarityService.logs(logFilter),
-      ]);
-      setStatus(statusResponse.data || null);
-      setLogs(logsResponse.data || []);
-      setLogMeta(logsResponse.meta || null);
-    } catch (error) {
-      toast.error(error.message || "Unable to refresh Microsoft Clarity logs");
-    }
-  }
-
-  async function clearLogs() {
-    if (!window.confirm("Clear all Microsoft Clarity logs?")) return;
-    try {
-      const response = await microsoftClarityService.clearLogs();
-      toast.success(response.message || "Microsoft Clarity logs cleared");
-      await refreshLogs();
-    } catch (error) {
-      toast.error(error.message || "Unable to clear Microsoft Clarity logs");
-    }
   }
 
   function indicatorClass(currentStatus = "") {
@@ -308,84 +252,6 @@ export function MicrosoftClarityPage() {
           </div>
         </form>
         </>
-      ) : null}
-
-      {!loading ? (
-        <section className={ui.panel}>
-          <div className={ui.sectionHead}>
-            <div>
-              <h3 className="text-xl font-bold text-slate-900">Debug Logs</h3>
-              <p className={ui.muted}>Newest first. Use these logs to identify plugin, network, project ID, or native failures.</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={refreshLogs}><RefreshCw size={16} /> Refresh</button>
-              <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => void microsoftClarityService.exportLogs("csv")}><Download size={16} /> Export CSV</button>
-              <button className={cn(ui.buttonBase, ui.buttonDanger)} type="button" onClick={clearLogs}><Trash2 size={16} /> Clear Logs</button>
-            </div>
-          </div>
-          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <select className={ui.input} value={logFilter.level} onChange={(event) => setLogFilter((current) => ({ ...current, level: event.target.value }))}>
-              <option value="all">All levels</option>
-              <option value="success">Success</option>
-              <option value="warning">Warning</option>
-              <option value="error">Error</option>
-              <option value="info">Info</option>
-            </select>
-            <select className={ui.input} value={logFilter.status} onChange={(event) => setLogFilter((current) => ({ ...current, status: event.target.value }))}>
-              {["all", ...statusOptions].map((item) => (
-                <option key={item} value={item}>{item === "all" ? "All statuses" : item}</option>
-              ))}
-            </select>
-            <input className={ui.input} placeholder="Search logs" value={logFilter.search} onChange={(event) => setLogFilter((current) => ({ ...current, search: event.target.value }))} onBlur={refreshLogs} />
-          </div>
-          <div className={cn(ui.tableWrap, "mt-4")}>
-            <div className={ui.tableScroll}>
-              <table className={ui.table}>
-                <thead>
-                  <tr>
-                    <th className={ui.tableHead}>Time</th>
-                    <th className={ui.tableHead}>Level</th>
-                    <th className={ui.tableHead}>Status</th>
-                    <th className={ui.tableHead}>Message</th>
-                    <th className={ui.tableHead}>Session</th>
-                    <th className={ui.tableHead}>Plugin</th>
-                    <th className={ui.tableHead}>Device</th>
-                    <th className={ui.tableHead}>Error</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {logs.map((log) => (
-                    <tr key={log.id}>
-                      <td className={ui.tableCell}>{log.timestamp ? new Date(log.timestamp).toLocaleString() : "-"}</td>
-                      <td className={ui.tableCell}>{log.level}</td>
-                      <td className={ui.tableCell}><span className={`inline-flex rounded-full border px-2 py-1 text-xs font-bold ${indicatorClass(log.status)}`}>{log.status}</span></td>
-                      <td className={ui.tableCell}>
-                        <div className="max-w-md">
-                          <div>{log.message}</div>
-                          {log.metadata?.responseTimeMs ? <div className="mt-1 text-xs text-slate-500">API {log.metadata.apiStatus || "-"} in {log.metadata.responseTimeMs}ms</div> : null}
-                          {log.stack ? <details className="mt-1 text-xs text-slate-500"><summary>Stack trace</summary><pre className="mt-2 whitespace-pre-wrap">{log.stack}</pre></details> : null}
-                        </div>
-                      </td>
-                      <td className={ui.tableCell}>
-                        {log.sessionId || log.metadata?.currentSessionId || "-"}
-                        {log.metadata?.sessionUrl ? <div className="mt-1 max-w-xs break-words text-xs text-sky-700">{log.metadata.sessionUrl}</div> : null}
-                      </td>
-                      <td className={ui.tableCell}>
-                        {log.metadata?.pluginSource || "-"}
-                        <br />
-                        <span className="text-xs text-slate-500">{log.pluginVersion || "unknown"}</span>
-                      </td>
-                      <td className={ui.tableCell}>{log.platform || "-"}<br/><span className="text-xs text-slate-500">{log.appVersion || ""}</span></td>
-                      <td className={ui.tableCell}><span className="text-rose-700">{log.errorMessage || "-"}</span></td>
-                    </tr>
-                  ))}
-                  {!logs.length ? <tr><td className={ui.tableCell} colSpan={8}>No Microsoft Clarity logs found.</td></tr> : null}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          {logMeta ? <p className="mt-3 text-sm text-slate-500">Showing {logs.length} of {logMeta.total || 0} logs.</p> : null}
-        </section>
       ) : null}
     </div>
   );
