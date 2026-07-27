@@ -45,7 +45,7 @@ export function AppUsageAnalyticsPage() {
         appUsageService.analytics(query),
         appUsageService.users(query),
       ]);
-      setSettings({ ...settings, ...(settingsResponse.data || {}) });
+      setSettings((current) => ({ ...current, ...(settingsResponse.data || {}) }));
       setAnalytics(analyticsResponse.data || {});
       setUsers(usersResponse.data || []);
     } catch (error) {
@@ -147,6 +147,7 @@ export function AppUsageAnalyticsPage() {
           </select>
           <select className={ui.input} value={filters.eventType} onChange={(event) => setFilters((current) => ({ ...current, eventType: event.target.value }))}>
             <option value="all">All event types</option>
+            <option value="Login">Login</option>
             <option value="ScreenView">Screen views</option>
             <option value="Click">Clicks</option>
             <option value="Navigation">Navigation</option>
@@ -173,6 +174,20 @@ export function AppUsageAnalyticsPage() {
         <AnalyticsTable title="Platform Distribution" rows={analytics.platform || []} columns={["Platform", "Users", "Events"]} render={(row) => [row.platform, row.users, row.events]} />
       </div>
 
+      <AnalyticsTable
+        title="Recent Events"
+        rows={analytics.recent || []}
+        columns={["Time", "User", "Event", "Screen", "Method", "Platform"]}
+        render={(row) => [
+          formatDateTime(row.timestamp),
+          row.userName || row.email || row.userId || "-",
+          row.eventType || "-",
+          row.screen || row.componentName || "-",
+          row.loginMethod || row.metadata?.loginProvider || "-",
+          row.platform || "-",
+        ]}
+      />
+
       <section className={ui.panel}>
         <div className={ui.sectionHead}>
           <div>
@@ -188,13 +203,14 @@ export function AppUsageAnalyticsPage() {
         <div className={cn(ui.tableWrap, "mt-4")}>
           <div className={ui.tableScroll}>
             <table className={ui.table}>
-              <thead><tr><th className={ui.tableHead}>User</th><th className={ui.tableHead}>Email</th><th className={ui.tableHead}>Platform</th><th className={ui.tableHead}>Plan</th><th className={ui.tableHead}>Sessions</th><th className={ui.tableHead}>Last Active</th><th className={ui.tableHead}>Avg Duration</th></tr></thead>
+              <thead><tr><th className={ui.tableHead}>User</th><th className={ui.tableHead}>Email</th><th className={ui.tableHead}>Platform</th><th className={ui.tableHead}>Method</th><th className={ui.tableHead}>Plan</th><th className={ui.tableHead}>Sessions</th><th className={ui.tableHead}>Last Active</th><th className={ui.tableHead}>Avg Duration</th></tr></thead>
               <tbody>
                 {users.map((user) => (
                   <tr key={user._id}>
                     <td className={ui.tableCell}><button className="font-bold text-sky-700" onClick={() => void loadTimeline(user)}>{user.userName || user._id}</button></td>
                     <td className={ui.tableCell}>{user.email || "-"}</td>
                     <td className={ui.tableCell}>{user.platform || "-"}</td>
+                    <td className={ui.tableCell}>{user.loginMethod || "-"}</td>
                     <td className={ui.tableCell}>{user.userType || "-"}</td>
                     <td className={ui.tableCell}>{user.totalSessions || 0}</td>
                     <td className={ui.tableCell}>{formatDateTime(user.lastActive)}</td>
