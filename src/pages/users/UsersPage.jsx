@@ -36,21 +36,30 @@ const defaultForm = {
 const loginProviderOptions = [
   { value: "", label: "All Providers" },
   { value: "EMAIL", label: "Email" },
+  { value: "PHONE", label: "Phone" },
   { value: "GOOGLE", label: "Google" },
   { value: "APPLE", label: "Apple" },
+  { value: "GUEST", label: "Guest" },
+  { value: "FACEBOOK", label: "Facebook" },
 ];
 
 const loginProviderLabels = {
   EMAIL: "Email",
+  PHONE: "Phone",
   GOOGLE: "Google",
   APPLE: "Apple",
+  GUEST: "Guest",
+  FACEBOOK: "Facebook",
 };
 
 function resolveLoginProvider(user) {
   const explicit = String(user?.loginProvider || "").toUpperCase();
-  if (explicit) return explicit;
+  if (explicit && explicit !== "EMAIL") return explicit;
   if (user?.isAppleLogin || user?.appleUserId || (Array.isArray(user?.authTypes) && user.authTypes.includes("apple"))) return "APPLE";
   if (user?.googleId || (Array.isArray(user?.authTypes) && user.authTypes.includes("google"))) return "GOOGLE";
+  if (Array.isArray(user?.authTypes) && user.authTypes.includes("facebook")) return "FACEBOOK";
+  if (Array.isArray(user?.authTypes) && user.authTypes.includes("guest")) return "GUEST";
+  if (user?.mobile && !user?.email) return "PHONE";
   return "EMAIL";
 }
 
@@ -153,7 +162,7 @@ export function UsersPage() {
   async function loadUsers(nextQuery = query) {
     setLoading(true);
     try {
-      const response = await userService.list({ ...nextQuery, search, loginProvider: loginProviderFilter || undefined });
+      const response = await userService.list({ ...nextQuery, search, provider: loginProviderFilter || undefined });
       setUsers(response.data || []);
       setMeta(response.meta);
       setSelectedIds([]);

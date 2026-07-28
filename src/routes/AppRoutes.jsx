@@ -1,5 +1,7 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 import { AdminLayout } from "../components/layout/AdminLayout";
+import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { ProtectedRoute } from "./ProtectedRoute";
 import { LoginPage } from "../pages/auth/LoginPage";
 import { DashboardPage } from "../pages/dashboard/DashboardPage";
@@ -42,7 +44,6 @@ import { MistakeManagementPage } from "../pages/MistakeManagementPage";
 import { FreeQuestionsPage } from "../pages/FreeQuestionsPage";
 import { DashboardCarouselPage } from "../pages/DashboardCarouselPage";
 import { SubscriptionPageBuilderPage } from "../pages/SubscriptionPageBuilderPage";
-import { AppUsageAnalyticsPage } from "../pages/AppUsageAnalyticsPage";
 import { WebsiteContentPage } from "../pages/WebsiteContentPage";
 import { PolicyManagementPage } from "../pages/PolicyManagementPage";
 import { CmsPagesPage } from "../pages/CmsPagesPage";
@@ -58,6 +59,8 @@ import { ThirdPartyScriptsPage } from "../pages/ThirdPartyScriptsPage";
 import { SubscriptionReminderPage } from "../pages/SubscriptionReminderPage";
 import { useAuth } from "../context/AuthContext";
 import { canViewModule, firstAllowedModulePath, isEmployee } from "../config/adminPermissions";
+
+const AppUsageAnalyticsPage = lazy(() => import("../pages/AppUsageAnalyticsPage").then((module) => ({ default: module.AppUsageAnalyticsPage })));
 
 function MainAdminOnly({ children }) {
   const { admin } = useAuth();
@@ -131,7 +134,7 @@ export function AppRoutes() {
         <Route path="subscription-page-builder" element={<ModuleAccess moduleKey="subscription-page-builder"><SubscriptionPageBuilderPage /></ModuleAccess>} />
         <Route path="subscription-reminder" element={<MainAdminOnly><SubscriptionReminderPage /></MainAdminOnly>} />
         <Route path="dashboard-carousel" element={<ModuleAccess moduleKey="dashboard-carousel"><DashboardCarouselPage /></ModuleAccess>} />
-        <Route path="app-usage" element={<ModuleAccess moduleKey="app-usage"><AppUsageAnalyticsPage /></ModuleAccess>} />
+        <Route path="app-usage" element={<ModuleAccess moduleKey="app-usage"><Suspense fallback={<LoadingSpinner label="Loading app usage..." />}><AppUsageAnalyticsPage /></Suspense></ModuleAccess>} />
         <Route path="offer-timer-management" element={<MainAdminOnly><OfferTimerManagementPage /></MainAdminOnly>} />
         <Route path="website-content" element={<MainAdminOnly><WebsiteContentPage /></MainAdminOnly>} />
         <Route path="policy-pages" element={<ModuleAccess moduleKey="policy-pages"><PolicyManagementPage /></ModuleAccess>} />

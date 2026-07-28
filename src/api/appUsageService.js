@@ -17,6 +17,22 @@ export const appUsageService = {
     const response = await http.get("/admin/app-usage/users", { params });
     return response.data;
   },
+  async sessions(params = {}) {
+    const response = await http.get("/admin/app-usage/sessions", { params });
+    return response.data;
+  },
+  async events(params = {}) {
+    const response = await http.get("/admin/app-usage/events", { params });
+    return response.data;
+  },
+  async screens(params = {}) {
+    const response = await http.get("/admin/app-usage/screens", { params });
+    return response.data;
+  },
+  async devices(params = {}) {
+    const response = await http.get("/admin/app-usage/devices", { params });
+    return response.data;
+  },
   async userTimeline(userId, params = {}) {
     const response = await http.get(`/admin/app-usage/users/${userId}/timeline`, { params });
     return response.data;
