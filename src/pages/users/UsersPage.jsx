@@ -159,10 +159,20 @@ export function UsersPage() {
     ];
   }, [overview, revisionTotalCount]);
 
-  async function loadUsers(nextQuery = query) {
+  function userListParams(nextQuery = query, nextSearch = search, nextProvider = loginProviderFilter) {
+    const provider = String(nextProvider || "").trim();
+    return {
+      ...nextQuery,
+      search: nextSearch,
+      loginProvider: provider || undefined,
+      provider: provider || undefined,
+    };
+  }
+
+  async function loadUsers(nextQuery = query, nextSearch = search, nextProvider = loginProviderFilter) {
     setLoading(true);
     try {
-      const response = await userService.list({ ...nextQuery, search, loginProvider: loginProviderFilter || undefined });
+      const response = await userService.list(userListParams(nextQuery, nextSearch, nextProvider));
       setUsers(response.data || []);
       setMeta(response.meta);
       setSelectedIds([]);
@@ -419,9 +429,19 @@ export function UsersPage() {
 
   function handleLimitChange(event) {
     const limit = Number(event.target.value);
+    const nextQuery = { ...query, limit, page: 1 };
     setSelectedIds([]);
-    setQuery((current) => ({ ...current, limit, page: 1 }));
-    loadUsers({ ...query, limit, page: 1 });
+    setQuery(nextQuery);
+    loadUsers(nextQuery);
+  }
+
+  function handleProviderChange(event) {
+    const provider = event.target.value;
+    const nextQuery = { ...query, page: 1 };
+    setLoginProviderFilter(provider);
+    setSelectedIds([]);
+    setQuery(nextQuery);
+    loadUsers(nextQuery, search, provider);
   }
 
   return (
@@ -455,10 +475,7 @@ export function UsersPage() {
           ) : null}
           <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
             Provider
-            <select className={ui.input} value={loginProviderFilter} onChange={(event) => {
-              setLoginProviderFilter(event.target.value);
-              setQuery((current) => ({ ...current, page: 1 }));
-            }}>
+            <select className={ui.input} value={loginProviderFilter} onChange={handleProviderChange}>
               {loginProviderOptions.map((option) => (
                 <option key={option.value || "all"} value={option.value}>{option.label}</option>
               ))}
@@ -472,7 +489,11 @@ export function UsersPage() {
               ))}
             </select>
           </label>
-          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => loadUsers({ ...query, page: 1 })}>Search</button>
+          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => {
+            const nextQuery = { ...query, page: 1 };
+            setQuery(nextQuery);
+            loadUsers(nextQuery);
+          }}>Search</button>
         </div>
       </div>
 
