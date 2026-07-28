@@ -3,10 +3,12 @@ import { Activity, Download, RefreshCw, Trash2 } from "lucide-react";
 import { appUsageService } from "../api/appUsageService";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { ToggleSwitch } from "../components/forms/ToggleSwitch";
+import { Pagination } from "../components/tables/Pagination";
 import { useToast } from "../context/ToastContext";
 import { cn, ui } from "../ui";
 
 const retentionOptions = [7, 15, 30, 60, 90, 180, 365];
+const dateRangeOptions = [1, 2, 7, 30, 90, 365];
 
 function formatSeconds(value) {
   const seconds = Math.max(0, Number(value || 0));
@@ -31,6 +33,8 @@ export function AppUsageAnalyticsPage() {
   const [settings, setSettings] = useState({ enabled: false, automaticCleanupEnabled: false, retentionDays: 90, sessionTimeoutMinutes: 30 });
   const [analytics, setAnalytics] = useState({ summary: {}, pages: [], clicks: [], dailyActive: [], hourly: [], platform: [], users: [], recent: [] });
   const [users, setUsers] = useState([]);
+  const [usersMeta, setUsersMeta] = useState(null);
+  const [usersQuery, setUsersQuery] = useState({ page: 1, limit: 20 });
   const [selectedUser, setSelectedUser] = useState(null);
   const [timeline, setTimeline] = useState({ dates: [], events: [] });
   const [selectedDate, setSelectedDate] = useState("");
@@ -43,11 +47,12 @@ export function AppUsageAnalyticsPage() {
       const [settingsResponse, analyticsResponse, usersResponse] = await Promise.all([
         appUsageService.settings(),
         appUsageService.analytics(query),
-        appUsageService.users(query),
+        appUsageService.users({ ...query, ...usersQuery }),
       ]);
       setSettings((current) => ({ ...current, ...(settingsResponse.data || {}) }));
       setAnalytics(analyticsResponse.data || {});
       setUsers(usersResponse.data || []);
+      setUsersMeta(usersResponse.meta || null);
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -57,7 +62,12 @@ export function AppUsageAnalyticsPage() {
 
   useEffect(() => {
     void loadData();
-  }, [days, filters.platform, filters.plan, filters.eventType]);
+  }, [days, filters.platform, filters.plan, filters.eventType, usersQuery.page, usersQuery.limit]);
+
+  function updateFilters(patch) {
+    setFilters((current) => ({ ...current, ...patch }));
+    setUsersQuery((current) => ({ ...current, page: 1 }));
+  }
 
   async function saveSettings(nextSettings) {
     setSettings(nextSettings);
@@ -121,12 +131,13 @@ export function AppUsageAnalyticsPage() {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <ToggleSwitch checked={Boolean(settings.enabled)} disabled={saving} onChange={(enabled) => void saveSettings({ ...settings, enabled })} label={settings.enabled ? "Tracking enabled" : "Tracking disabled"} />
-            <select className={ui.input} value={days} onChange={(event) => setDays(Number(event.target.value))}>
-              <option value={1}>Last 1 day</option>
-              <option value={7}>Last 7 days</option>
-              <option value={30}>Last 30 days</option>
-              <option value={90}>Last 90 days</option>
-              <option value={365}>Last 365 days</option>
+            <select className={ui.input} value={days} onChange={(event) => {
+              setDays(Number(event.target.value));
+              setUsersQuery((current) => ({ ...current, page: 1 }));
+            }}>
+              {dateRangeOptions.map((daysOption) => (
+                <option key={daysOption} value={daysOption}>Last {daysOption} {daysOption === 1 ? "day" : "days"}</option>
+              ))}
             </select>
             <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={loadData}>
               <RefreshCw size={16} /> Refresh
@@ -134,18 +145,18 @@ export function AppUsageAnalyticsPage() {
           </div>
         </div>
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-4">
-          <select className={ui.input} value={filters.platform} onChange={(event) => setFilters((current) => ({ ...current, platform: event.target.value }))}>
+          <select className={ui.input} value={filters.platform} onChange={(event) => updateFilters({ platform: event.target.value })}>
             <option value="all">All platforms</option>
             <option value="android">Android</option>
             <option value="ios">iOS</option>
             <option value="web">Web</option>
           </select>
-          <select className={ui.input} value={filters.plan} onChange={(event) => setFilters((current) => ({ ...current, plan: event.target.value }))}>
+          <select className={ui.input} value={filters.plan} onChange={(event) => updateFilters({ plan: event.target.value })}>
             <option value="all">All plans</option>
             <option value="Free">Free</option>
             <option value="Premium">Premium</option>
           </select>
-          <select className={ui.input} value={filters.eventType} onChange={(event) => setFilters((current) => ({ ...current, eventType: event.target.value }))}>
+          <select className={ui.input} value={filters.eventType} onChange={(event) => updateFilters({ eventType: event.target.value })}>
             <option value="all">All event types</option>
             <option value="Login">Login</option>
             <option value="ScreenView">Screen views</option>
@@ -154,7 +165,7 @@ export function AppUsageAnalyticsPage() {
             <option value="Background">Background</option>
             <option value="Foreground">Foreground</option>
           </select>
-          <input className={ui.input} value={filters.screen} placeholder="Screen filter" onChange={(event) => setFilters((current) => ({ ...current, screen: event.target.value }))} onBlur={loadData} />
+          <input className={ui.input} value={filters.screen} placeholder="Screen filter" onChange={(event) => updateFilters({ screen: event.target.value })} onBlur={loadData} />
         </div>
       </section>
 
@@ -195,6 +206,12 @@ export function AppUsageAnalyticsPage() {
             <p className={ui.muted}>Click a user to inspect access dates and full timelines.</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+              Rows
+              <select className={ui.input} value={usersQuery.limit} onChange={(event) => setUsersQuery({ page: 1, limit: Number(event.target.value) })}>
+                {[10, 20, 50, 100].map((limit) => <option key={limit} value={limit}>{limit}</option>)}
+              </select>
+            </label>
             <a className={cn(ui.buttonBase, ui.buttonSecondary)} href={appUsageService.exportUrl({ ...query, dataset: "events", format: "csv" })}><Download size={16} /> CSV</a>
             <a className={cn(ui.buttonBase, ui.buttonSecondary)} href={appUsageService.exportUrl({ ...query, dataset: "sessions", format: "xlsx" })}><Download size={16} /> Excel</a>
             <a className={cn(ui.buttonBase, ui.buttonSecondary)} href={appUsageService.exportUrl({ ...query, dataset: "events", format: "pdf" })}><Download size={16} /> PDF</a>
@@ -221,6 +238,7 @@ export function AppUsageAnalyticsPage() {
             </table>
           </div>
         </div>
+        <Pagination meta={usersMeta} onChange={(page) => setUsersQuery((current) => ({ ...current, page }))} />
       </section>
 
       {selectedUser ? (

@@ -38,7 +38,7 @@ export function DashboardPage() {
 
   const stats = [
     ["Total Users", data.totalUsers, "Learner accounts across the platform", "/users"],
-    ["Premium Users", data.premiumUsers, "Active paid learners", "/users"],
+    ["Premium Users", data.premiumUsers, "Active paid learners", "/subscriptions"],
     ["Total Questions", data.totalQuestions, "Question bank coverage", "/questions"],
     ["Total Subjects", data.totalSubjects, "Catalog subjects configured", "/subjects"],
     ["Total Chapters", data.totalChapters, "Chapters available for practice", "/chapters"],
