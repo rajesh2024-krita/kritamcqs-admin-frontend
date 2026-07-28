@@ -37,6 +37,10 @@ export const appUsageService = {
     const response = await http.get(`/admin/app-usage/users/${userId}/timeline`, { params });
     return response.data;
   },
+  async userActivity(userId, params = {}) {
+    const response = await http.get(`/admin/app-usage/users/${userId}/activity`, { params });
+    return response.data;
+  },
   async session(sessionId) {
     const response = await http.get(`/admin/app-usage/sessions/${sessionId}`);
     return response.data;
