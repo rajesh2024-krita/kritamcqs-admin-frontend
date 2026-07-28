@@ -162,7 +162,7 @@ export function UsersPage() {
   async function loadUsers(nextQuery = query) {
     setLoading(true);
     try {
-      const response = await userService.list({ ...nextQuery, search, provider: loginProviderFilter || undefined });
+      const response = await userService.list({ ...nextQuery, search, loginProvider: loginProviderFilter || undefined });
       setUsers(response.data || []);
       setMeta(response.meta);
       setSelectedIds([]);
