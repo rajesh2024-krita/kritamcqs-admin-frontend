@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Award, Bell, CalendarDays, Download, FileText, RefreshCw, Search, Settings, ShieldCheck, Trophy, Users } from "lucide-react";
+import { Award, Bell, CalendarDays, Check, Download, FileText, Filter, RefreshCw, Search, Settings, ShieldCheck, Sparkles, Trophy, Users, X } from "lucide-react";
 import { nationalCompetitionService } from "../api/nationalCompetitionService";
 import { EmptyState } from "../components/common/EmptyState";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
@@ -31,6 +31,24 @@ const defaultForm = {
   marksPerQuestion: 4,
   negativeMarks: 1,
   questionIds: "",
+  questionSelection: {
+    mode: "manual",
+    targetCount: 180,
+    filters: {
+      examType: "BOTH",
+      subjectId: "",
+      chapterId: "",
+      topicId: "",
+      yearId: "",
+      difficultyId: "",
+      difficulty: "",
+      questionTypeId: "",
+      responseType: "",
+      questionStatus: "complete",
+      reviewStatus: "ready",
+      visibleOnly: true,
+    },
+  },
   rules: "Use one device only\nDo not leave the test screen\nFinal ranking follows configured tie-break rules",
   rewardsSummary: "",
   terms: "",
@@ -56,6 +74,11 @@ function fromForm(form) {
   return {
     ...form,
     questionIds: String(form.questionIds || "").split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean),
+    questionSelection: {
+      mode: form.questionSelection?.mode === "automatic" ? "automatic" : "manual",
+      targetCount: Number(form.questionSelection?.targetCount || form.totalQuestions || 0),
+      filters: form.questionSelection?.filters || {},
+    },
     rules: String(form.rules || "").split(/\r?\n/).map((item) => item.trim()).filter(Boolean),
     eligibility: {
       ...form.eligibility,
@@ -82,6 +105,11 @@ function toForm(item) {
     startsAt: toLocalInput(item.startsAt),
     endsAt: toLocalInput(item.endsAt),
     questionIds: (item.questionIds || []).join("\n"),
+    questionSelection: {
+      ...defaultForm.questionSelection,
+      ...(item.questionSelection || {}),
+      filters: { ...defaultForm.questionSelection.filters, ...(item.questionSelection?.filters || {}) },
+    },
     rules: (item.rules || []).join("\n"),
     eligibility: {
       ...defaultForm.eligibility,
@@ -143,6 +171,192 @@ function Reports({ reports }) {
   );
 }
 
+function QuestionSelectionPanel({
+  form,
+  setForm,
+  selectedQuestionIds,
+  questionMeta,
+  questionPool,
+  questionPoolMeta,
+  questionPoolLoading,
+  questionFilters,
+  setQuestionFilters,
+  loadQuestionPool,
+  toggleQuestion,
+  setManualQuestionIds,
+  updateQuestionSelection,
+  applyAutoFiltersFromPicker,
+}) {
+  const mode = form.questionSelection?.mode || "manual";
+  const autoFilters = form.questionSelection?.filters || {};
+  const selectedSet = new Set(selectedQuestionIds);
+  const setFilter = (key, value) => setQuestionFilters((current) => ({ ...current, [key]: value, page: 1 }));
+  const selectOptions = {
+    subjects: questionMeta.subjects || [],
+    chapters: questionMeta.chapters || [],
+    topics: questionMeta.topics || [],
+    years: questionMeta.years || [],
+    difficulties: questionMeta.difficulties || [],
+    questionTypes: questionMeta.questionTypes || [],
+  };
+
+  return (
+    <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <div className="text-sm font-black text-slate-950">Question configuration</div>
+          <p className="mt-1 text-xs text-slate-500">Choose questions manually, or let the system select them automatically from filtered categories.</p>
+        </div>
+        <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1">
+          {["manual", "automatic"].map((item) => (
+            <button
+              key={item}
+              type="button"
+              onClick={() => updateQuestionSelection({ mode: item })}
+              className={cn("rounded-md px-3 py-2 text-xs font-black uppercase transition", mode === item ? "bg-sky-600 text-white" : "text-slate-600 hover:bg-slate-100")}
+            >
+              {item}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-4">
+        <FilterInput label="Search" value={questionFilters.search} onChange={(value) => setFilter("search", value)} placeholder="Question text or tag" />
+        <FilterSelect label="Exam" value={questionFilters.examType} onChange={(value) => setFilter("examType", value)} options={[["BOTH", "Both"], ["NEET", "NEET"], ["JEE", "JEE"]]} />
+        <FilterSelect label="Subject" value={questionFilters.subjectId} onChange={(value) => setFilter("subjectId", value)} options={selectOptions.subjects.map((item) => [item.id, item.name])} />
+        <FilterSelect label="Chapter" value={questionFilters.chapterId} onChange={(value) => setFilter("chapterId", value)} options={selectOptions.chapters.map((item) => [item.id, item.name])} />
+        <FilterSelect label="Topic" value={questionFilters.topicId} onChange={(value) => setFilter("topicId", value)} options={selectOptions.topics.map((item) => [item.id, item.name])} />
+        <FilterSelect label="Year" value={questionFilters.yearId} onChange={(value) => setFilter("yearId", value)} options={selectOptions.years.map((item) => [item.id, item.year || item.label || item.name])} />
+        <FilterSelect label="Difficulty" value={questionFilters.difficultyId} onChange={(value) => setFilter("difficultyId", value)} options={selectOptions.difficulties.map((item) => [item.id, item.name || item.key])} />
+        <FilterSelect label="Question type" value={questionFilters.questionTypeId} onChange={(value) => setFilter("questionTypeId", value)} options={selectOptions.questionTypes.map((item) => [item.id, item.name || item.label || item.key])} />
+        <FilterSelect label="Response" value={questionFilters.responseType} onChange={(value) => setFilter("responseType", value)} options={[["single", "Single"], ["multiple", "Multiple"], ["numeric", "Numeric"]]} />
+        <FilterSelect label="Question status" value={questionFilters.questionStatus} onChange={(value) => setFilter("questionStatus", value)} options={[["complete", "Complete"], ["incomplete", "Incomplete"]]} />
+        <FilterSelect label="Review status" value={questionFilters.reviewStatus} onChange={(value) => setFilter("reviewStatus", value)} options={[["ready", "Ready"], ["needs_review", "Needs review"]]} />
+        <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700">
+          <input type="checkbox" className={ui.checkbox} checked={questionFilters.visibleOnly !== false} onChange={(event) => setFilter("visibleOnly", event.target.checked)} />
+          Visible only
+        </label>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <button type="button" className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={() => loadQuestionPool(questionFilters)}>
+          <Filter size={16} />Apply filters
+        </button>
+        <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={applyAutoFiltersFromPicker}>
+          <Sparkles size={16} />Use filters for automatic
+        </button>
+        <div className="rounded-full bg-white px-3 py-2 text-xs font-bold text-slate-600">
+          Pool: {questionPoolMeta?.total || 0} | Selected: {selectedQuestionIds.length}
+        </div>
+        {mode === "automatic" ? (
+          <label className="flex items-center gap-2 text-sm font-bold text-slate-700">
+            Auto count
+            <input
+              type="number"
+              className={cn(ui.input, "w-28")}
+              value={form.questionSelection?.targetCount || form.totalQuestions || 180}
+              onChange={(event) => updateQuestionSelection({ targetCount: Number(event.target.value || 0) })}
+            />
+          </label>
+        ) : null}
+      </div>
+
+      {mode === "automatic" ? (
+        <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+          <div className="font-black">Automatic selection active</div>
+          <p className="mt-1">The backend will select {form.questionSelection?.targetCount || form.totalQuestions || 0} questions matching the saved filters when this competition is saved.</p>
+          <div className="mt-3 grid gap-2 md:grid-cols-3">
+            {Object.entries(autoFilters).filter(([, value]) => value).map(([key, value]) => (
+              <span key={key} className="rounded-full bg-white px-3 py-1 text-xs font-bold text-emerald-800">{key}: {String(value)}</span>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="grid grid-cols-[56px_1fr_160px_130px] border-b border-slate-200 bg-slate-50 px-3 py-2 text-xs font-black uppercase tracking-wide text-slate-500">
+          <span>Select</span><span>Question</span><span>Category</span><span>Status</span>
+        </div>
+        {questionPoolLoading ? (
+          <div className="p-5"><LoadingSpinner label="Loading questions..." /></div>
+        ) : questionPool.length ? (
+          <div className="max-h-[460px] overflow-y-auto">
+            {questionPool.map((question) => {
+              const id = question.id || question._id;
+              const checked = selectedSet.has(String(id));
+              return (
+                <button
+                  type="button"
+                  key={id}
+                  onClick={() => mode === "manual" && toggleQuestion(id)}
+                  className={cn("grid w-full grid-cols-[56px_1fr_160px_130px] items-start gap-3 border-b border-slate-100 px-3 py-3 text-left transition", checked ? "bg-sky-50" : "hover:bg-slate-50", mode === "automatic" && "cursor-default")}
+                >
+                  <span className={cn("flex h-9 w-9 items-center justify-center rounded-lg border", checked ? "border-sky-300 bg-sky-600 text-white" : "border-slate-200 bg-white text-slate-400")}>
+                    {checked ? <Check size={16} /> : null}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="line-clamp-2 text-sm font-bold text-slate-900">{question.question}</span>
+                    <span className="mt-1 block text-xs text-slate-500">{question.responseType || "single"} | {question.examMode || question.exam || "Exam"}</span>
+                  </span>
+                  <span className="text-xs text-slate-600">
+                    <strong className="block text-slate-800">{question.subjectId?.name || "Subject"}</strong>
+                    {question.chapterId?.name || "Chapter"}
+                  </span>
+                  <span className="text-xs text-slate-600">{question.questionStatus}<br />{question.reviewStatus}</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <EmptyState title="No questions found" description="Adjust filters to find questions for this competition." />
+        )}
+      </div>
+
+      {selectedQuestionIds.length && mode === "manual" ? (
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <div className="text-xs font-black uppercase tracking-wide text-slate-500">Selected questions</div>
+            <button type="button" className={cn(ui.buttonBase, ui.buttonGhost, "min-h-8 px-3 py-1 text-xs")} onClick={() => setManualQuestionIds([])}>
+              <X size={14} />Clear all
+            </button>
+          </div>
+          <div className="flex max-h-28 flex-wrap gap-2 overflow-y-auto">
+            {selectedQuestionIds.map((id) => (
+              <button key={id} type="button" onClick={() => toggleQuestion(id)} className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-bold text-sky-700">
+                {id.slice(-8)} x
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <textarea className="sr-only" value={form.questionIds} onChange={(event) => setForm({ ...form, questionIds: event.target.value })} />
+    </section>
+  );
+}
+
+function FilterInput({ label, value, onChange, placeholder }) {
+  return (
+    <label className="flex flex-col gap-1.5 text-xs font-bold text-slate-600">
+      {label}
+      <input className={ui.input} value={value || ""} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
+    </label>
+  );
+}
+
+function FilterSelect({ label, value, onChange, options }) {
+  return (
+    <label className="flex flex-col gap-1.5 text-xs font-bold text-slate-600">
+      {label}
+      <select className={ui.input} value={value || ""} onChange={(event) => onChange(event.target.value)}>
+        <option value="">All</option>
+        {(options || []).map(([id, name]) => <option key={id || name} value={id}>{name || id}</option>)}
+      </select>
+    </label>
+  );
+}
+
 export function NationalCompetitionsPage() {
   const toast = useToast();
   const [tab, setTab] = useState("overview");
@@ -160,7 +374,13 @@ export function NationalCompetitionsPage() {
   const [notifications, setNotifications] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
   const [search, setSearch] = useState("");
+  const [questionMeta, setQuestionMeta] = useState({ subjects: [], chapters: [], topics: [], years: [], difficulties: [], questionTypes: [] });
+  const [questionPool, setQuestionPool] = useState([]);
+  const [questionPoolMeta, setQuestionPoolMeta] = useState(null);
+  const [questionPoolLoading, setQuestionPoolLoading] = useState(false);
+  const [questionFilters, setQuestionFilters] = useState({ page: 1, limit: 20, search: "", examType: "BOTH", subjectId: "", chapterId: "", topicId: "", yearId: "", difficultyId: "", difficulty: "", questionTypeId: "", responseType: "", questionStatus: "complete", reviewStatus: "ready", visibleOnly: true });
   const selected = useMemo(() => detail?.competition || items.find((item) => item.id === selectedId), [detail, items, selectedId]);
+  const selectedQuestionIds = useMemo(() => String(form.questionIds || "").split(/\r?\n|,/).map((item) => item.trim()).filter(Boolean), [form.questionIds]);
 
   async function loadBase() {
     setLoading(true);
@@ -177,6 +397,30 @@ export function NationalCompetitionsPage() {
       toast.error(error.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loadQuestionMeta() {
+    try {
+      const response = await nationalCompetitionService.questionPoolMeta();
+      setQuestionMeta(response.data || { subjects: [], chapters: [], topics: [], years: [], difficulties: [], questionTypes: [] });
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  async function loadQuestionPool(nextFilters = questionFilters) {
+    setQuestionPoolLoading(true);
+    try {
+      const cleanFilters = Object.fromEntries(Object.entries(nextFilters).filter(([, value]) => value !== "" && value !== null && value !== undefined));
+      const response = await nationalCompetitionService.questionPool(cleanFilters);
+      setQuestionPool(response.data || []);
+      setQuestionPoolMeta(response.meta || null);
+      setQuestionFilters(nextFilters);
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setQuestionPoolLoading(false);
     }
   }
 
@@ -207,6 +451,8 @@ export function NationalCompetitionsPage() {
 
   useEffect(() => {
     void loadBase();
+    void loadQuestionMeta();
+    void loadQuestionPool();
   }, []);
 
   useEffect(() => {
@@ -261,6 +507,47 @@ export function NationalCompetitionsPage() {
     } catch (error) {
       toast.error(error.message);
     }
+  }
+
+  function updateQuestionSelection(patch) {
+    setForm((current) => ({
+      ...current,
+      questionSelection: {
+        ...current.questionSelection,
+        ...patch,
+        filters: { ...current.questionSelection?.filters, ...(patch.filters || {}) },
+      },
+    }));
+  }
+
+  function setManualQuestionIds(ids) {
+    const uniqueIds = [...new Set(ids.map(String).filter(Boolean))];
+    setForm((current) => ({
+      ...current,
+      questionIds: uniqueIds.join("\n"),
+      totalQuestions: current.questionSelection?.mode === "manual" ? uniqueIds.length || current.totalQuestions : current.totalQuestions,
+      questionSelection: {
+        ...current.questionSelection,
+        targetCount: current.questionSelection?.mode === "manual" ? uniqueIds.length : current.questionSelection?.targetCount,
+      },
+    }));
+  }
+
+  function toggleQuestion(questionId) {
+    const id = String(questionId || "");
+    if (!id) return;
+    const current = new Set(selectedQuestionIds);
+    if (current.has(id)) current.delete(id);
+    else current.add(id);
+    setManualQuestionIds([...current]);
+  }
+
+  function applyAutoFiltersFromPicker() {
+    updateQuestionSelection({
+      mode: "automatic",
+      targetCount: Number(form.totalQuestions || form.questionSelection?.targetCount || 180),
+      filters: { ...questionFilters, page: undefined, limit: undefined, search: undefined },
+    });
   }
 
   if (loading) return <LoadingSpinner label="Loading national competition workspace..." />;
@@ -331,7 +618,24 @@ export function NationalCompetitionsPage() {
                 <Field label="Duration minutes"><input type="number" className={ui.input} value={form.durationMinutes} onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })} /></Field>
                 <Field label="Total questions"><input type="number" className={ui.input} value={form.totalQuestions} onChange={(e) => setForm({ ...form, totalQuestions: e.target.value })} /></Field>
                 <Field label="Description" wide><textarea className={ui.textarea} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
-                <Field label="Question IDs" wide><textarea className={ui.textarea} value={form.questionIds} onChange={(e) => setForm({ ...form, questionIds: e.target.value })} /></Field>
+                <div className="md:col-span-2">
+                  <QuestionSelectionPanel
+                    form={form}
+                    setForm={setForm}
+                    selectedQuestionIds={selectedQuestionIds}
+                    questionMeta={questionMeta}
+                    questionPool={questionPool}
+                    questionPoolMeta={questionPoolMeta}
+                    questionPoolLoading={questionPoolLoading}
+                    questionFilters={questionFilters}
+                    setQuestionFilters={setQuestionFilters}
+                    loadQuestionPool={loadQuestionPool}
+                    toggleQuestion={toggleQuestion}
+                    setManualQuestionIds={setManualQuestionIds}
+                    updateQuestionSelection={updateQuestionSelection}
+                    applyAutoFiltersFromPicker={applyAutoFiltersFromPicker}
+                  />
+                </div>
                 <Field label="Rules" wide><textarea className={ui.textarea} value={form.rules} onChange={(e) => setForm({ ...form, rules: e.target.value })} /></Field>
                 <Field label="Terms" wide><textarea className={ui.textarea} value={form.terms} onChange={(e) => setForm({ ...form, terms: e.target.value })} /></Field>
               </div>

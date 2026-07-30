@@ -20,5 +20,7 @@ export const nationalCompetitionService = {
   notifications: async (id) => (await http.get(`${base}/${id}/notifications`)).data,
   createNotification: async (id, payload) => (await http.post(`${base}/${id}/notifications`, payload)).data,
   auditLogs: async (params = {}) => (await http.get("/admin/national-competitions-audit-logs", { params })).data,
+  questionPoolMeta: async () => (await http.get(`${base}/question-pool/meta`)).data,
+  questionPool: async (params = {}) => (await http.get(`${base}/question-pool`, { params })).data,
   exportUrl: (id, format = "excel") => `${http.defaults.baseURL}${base}/${id}/export/${format}`,
 };
