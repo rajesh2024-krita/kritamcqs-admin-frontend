@@ -40,6 +40,7 @@ const navItems = [
   { label: "Questions", to: "/questions", section: "Content", icon: TagIcon, moduleKey: "questions" },
   // { label: "Daily Plans", to: "/daily-plans", section: "Content", icon: FileStackIcon },
   { label: "Mock Tests", to: "/mock-tests", section: "Content", icon: OverviewIcon, moduleKey: "mock-tests" },
+  { label: "National Competitions", to: "/national-competitions", section: "Content", icon: ShieldIcon, moduleKey: "national-competitions" },
   { label: "Free Mock Tests", to: "/free-mock-tests", section: "Content", icon: OverviewIcon, moduleKey: "free-mock-tests" },
   { label: "Free Questions", to: "/free-questions", section: "Content", icon: BookIcon, moduleKey: "free-questions" },
   { label: "Daily Test Management", to: "/daily-test-management", section: "Operations", icon: DashboardIcon, moduleKey: "daily-test-management" },

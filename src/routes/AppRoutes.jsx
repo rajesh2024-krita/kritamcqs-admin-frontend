@@ -57,6 +57,7 @@ import { AIConfigurationPage } from "../pages/settings/AIConfigurationPage";
 import { MicrosoftClarityPage } from "../pages/settings/MicrosoftClarityPage";
 import { ThirdPartyScriptsPage } from "../pages/ThirdPartyScriptsPage";
 import { SubscriptionReminderPage } from "../pages/SubscriptionReminderPage";
+import { NationalCompetitionsPage } from "../pages/NationalCompetitionsPage";
 import { useAuth } from "../context/AuthContext";
 import { canViewModule, firstAllowedModulePath, isEmployee } from "../config/adminPermissions";
 
@@ -124,6 +125,7 @@ export function AppRoutes() {
         <Route path="audit-logs" element={<MainAdminOnly><AuditLogsPage /></MainAdminOnly>} />
         <Route path="ai-configuration" element={<MainAdminOnly><AIConfigurationPage /></MainAdminOnly>} />
         <Route path="mock-tests" element={<ModuleAccess moduleKey="mock-tests"><MockTestsPage /></ModuleAccess>} />
+        <Route path="national-competitions" element={<ModuleAccess moduleKey="national-competitions"><NationalCompetitionsPage /></ModuleAccess>} />
         <Route path="free-mock-tests" element={<ModuleAccess moduleKey="free-mock-tests"><MockTestsPage freeOnly /></ModuleAccess>} />
         <Route path="free-questions" element={<ModuleAccess moduleKey="free-questions"><FreeQuestionsPage /></ModuleAccess>} />
         <Route path="users" element={<ModuleAccess moduleKey="users"><UsersPage /></ModuleAccess>} />
