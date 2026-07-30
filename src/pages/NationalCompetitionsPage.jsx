@@ -61,6 +61,22 @@ const defaultForm = {
     publishMonthly: true,
   },
   security: { oneAttemptOnly: true, deviceValidation: true, duplicateLoginDetection: true, autosaveIntervalSeconds: 20 },
+  isPublished: false,
+  isEnabled: false,
+  isActive: true,
+  banner: {
+    enabled: true,
+    testName: "",
+    backgroundImageUrl: "",
+    backgroundColor: "#4f21d8",
+    overlayColor: "rgba(42,19,143,0.42)",
+    textColor: "#ffffff",
+    countdownEnabled: true,
+    ctaText: "View Details",
+    buttonColor: "#ffffff",
+    buttonTextColor: "#3b159f",
+    buttonAction: "view_details",
+  },
 };
 
 function toLocalInput(date) {
@@ -123,6 +139,10 @@ function toForm(item) {
       rankingPriority: (item.leaderboard?.rankingPriority || []).join(", "),
     },
     security: { ...defaultForm.security, ...(item.security || {}) },
+    banner: { ...defaultForm.banner, ...(item.banner || {}) },
+    isPublished: Boolean(item.isPublished),
+    isEnabled: Boolean(item.isEnabled),
+    isActive: item.isActive !== false,
   };
 }
 
@@ -168,6 +188,62 @@ function Reports({ reports }) {
       <DataTable rows={reports?.statePerformance || []} columns={["_id", "averageMarks", "participants"]} />
       <DataTable rows={reports?.topPerformers || []} columns={["rank", "userName", "score", "state", "district"]} />
     </div>
+  );
+}
+
+function BannerEditor({ form, setForm }) {
+  const banner = form.banner || defaultForm.banner;
+  const update = (patch) => setForm((current) => ({ ...current, banner: { ...current.banner, ...patch } }));
+  return (
+    <section className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <div className="text-sm font-black text-slate-950">Home competition banner</div>
+          <p className="mt-1 text-xs text-slate-500">Shown at the top of the student dashboard only when the competition is published and enabled.</p>
+        </div>
+        <label className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700">
+          <input type="checkbox" className={ui.checkbox} checked={banner.enabled !== false} onChange={(event) => update({ enabled: event.target.checked })} />
+          Banner enabled
+        </label>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-[1fr_320px]">
+        <div className="grid gap-3 md:grid-cols-2">
+          <Field label="Test name"><input className={ui.input} value={banner.testName} onChange={(e) => update({ testName: e.target.value })} /></Field>
+          <Field label="Background image URL"><input className={ui.input} value={banner.backgroundImageUrl} onChange={(e) => update({ backgroundImageUrl: e.target.value })} /></Field>
+          <Field label="Background color"><input className={ui.input} value={banner.backgroundColor} onChange={(e) => update({ backgroundColor: e.target.value })} /></Field>
+          <Field label="Overlay color"><input className={ui.input} value={banner.overlayColor} onChange={(e) => update({ overlayColor: e.target.value })} /></Field>
+          <Field label="Text color"><input className={ui.input} value={banner.textColor} onChange={(e) => update({ textColor: e.target.value })} /></Field>
+          <Field label="Button color"><input className={ui.input} value={banner.buttonColor} onChange={(e) => update({ buttonColor: e.target.value })} /></Field>
+          <Field label="Button text"><input className={ui.input} value={banner.ctaText} onChange={(e) => update({ ctaText: e.target.value })} /></Field>
+          <Field label="Button action">
+            <select className={ui.input} value={banner.buttonAction} onChange={(e) => update({ buttonAction: e.target.value })}>
+              <option value="register">Register</option>
+              <option value="view_details">View Details</option>
+              <option value="join_test">Join Test</option>
+            </select>
+          </Field>
+          <label className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-bold text-slate-700">
+            <input type="checkbox" className={ui.checkbox} checked={banner.countdownEnabled !== false} onChange={(event) => update({ countdownEnabled: event.target.checked })} />
+            Countdown timer
+          </label>
+        </div>
+        <div
+          className="min-h-56 rounded-xl bg-cover bg-center p-5 shadow-lg"
+          style={{
+            backgroundColor: banner.backgroundColor,
+            backgroundImage: banner.backgroundImageUrl ? `linear-gradient(${banner.overlayColor}, ${banner.overlayColor}), url(${banner.backgroundImageUrl})` : `linear-gradient(${banner.overlayColor}, ${banner.overlayColor})`,
+            color: banner.textColor,
+          }}
+        >
+          <div className="text-xs font-black uppercase opacity-80">Preview</div>
+          <div className="mt-3 text-2xl font-black">{banner.testName || form.title || "Weekly All India Mock Test"}</div>
+          <div className="mt-3 text-sm opacity-90">Rank 1: Student name changes by National, State, or District.</div>
+          <button type="button" className="mt-5 rounded-lg px-4 py-2 text-sm font-black" style={{ backgroundColor: banner.buttonColor, color: banner.buttonTextColor }}>
+            {banner.ctaText || "View Details"}
+          </button>
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -509,6 +585,34 @@ export function NationalCompetitionsPage() {
     }
   }
 
+  async function lifecycleAction(action) {
+    if (!selectedId) return;
+    try {
+      await nationalCompetitionService.action(selectedId, action);
+      toast.success(action === "publish" ? "Competition published" : action === "enable" ? "Competition enabled" : "Competition disabled");
+      await loadBase();
+      await loadDetail(selectedId);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  async function deleteCompetition() {
+    if (!selectedId) return;
+    const ok = window.confirm("Delete this competition and its registrations, attempts, leaderboards, rewards, notifications, and audit links?");
+    if (!ok) return;
+    try {
+      await nationalCompetitionService.remove(selectedId);
+      toast.success("Competition deleted");
+      setSelectedId("");
+      setDetail(null);
+      setForm(defaultForm);
+      await loadBase();
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
   function updateQuestionSelection(patch) {
     setForm((current) => ({
       ...current,
@@ -569,6 +673,17 @@ export function NationalCompetitionsPage() {
             <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={() => { setSelectedId(""); setDetail(null); setForm(defaultForm); setTab("setup"); }}>New competition</button>
           </div>
         </div>
+        {selectedId ? (
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => lifecycleAction("publish")}>Publish</button>
+            <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={() => lifecycleAction("enable")}>Enable</button>
+            <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => lifecycleAction("disable")}>Disable</button>
+            <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={deleteCompetition}>Delete</button>
+            <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black uppercase text-slate-600">
+              {selected?.isPublished ? "Published" : "Draft"} | {selected?.isEnabled ? "Enabled" : "Disabled"}
+            </span>
+          </div>
+        ) : null}
         <div className="mt-5 flex gap-2 overflow-x-auto pb-1">
           {tabs.map(({ key, label, icon: Icon }) => (
             <button key={key} className={cn(ui.buttonBase, tab === key ? ui.buttonPrimary : ui.buttonGhost, "shrink-0")} onClick={() => setTab(key)}>
@@ -639,6 +754,7 @@ export function NationalCompetitionsPage() {
                 <Field label="Rules" wide><textarea className={ui.textarea} value={form.rules} onChange={(e) => setForm({ ...form, rules: e.target.value })} /></Field>
                 <Field label="Terms" wide><textarea className={ui.textarea} value={form.terms} onChange={(e) => setForm({ ...form, terms: e.target.value })} /></Field>
               </div>
+              <BannerEditor form={form} setForm={setForm} />
               <div className="grid gap-4 md:grid-cols-3">
                 {["premiumRequired", "approvalRequired"].map((key) => (
                   <label key={key} className="flex items-center gap-2 rounded-lg border border-slate-200 p-3 text-sm font-bold"><input type="checkbox" className={ui.checkbox} checked={Boolean(form.eligibility[key])} onChange={(e) => setForm({ ...form, eligibility: { ...form.eligibility, [key]: e.target.checked } })} />{key}</label>

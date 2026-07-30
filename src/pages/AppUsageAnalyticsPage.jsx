@@ -145,7 +145,7 @@ export function AppUsageAnalyticsPage() {
   const summary = analytics.summary || {};
   const retentionRate = summary.activeUsers ? Math.round((Number(summary.todaysActiveUsers || 0) / Number(summary.activeUsers || 1)) * 100) : 0;
   const kpis = [
-    { label: "Total Users", value: summary.activeUsers ?? 0, icon: Users },
+    { label: "Total Users", value: summary.totalUsers ?? summary.activeUsers ?? 0, icon: Users },
     { label: "Active Users", value: summary.todaysActiveUsers ?? 0, icon: Activity },
     { label: "New Users", value: summary.newUsers ?? 0, icon: Users },
     { label: "Premium Users", value: summary.premiumUsers ?? 0, icon: Users },
