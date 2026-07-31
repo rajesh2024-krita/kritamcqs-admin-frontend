@@ -115,6 +115,20 @@ function formatDateTime(value) {
   return value ? new Date(value).toLocaleString() : "-";
 }
 
+function dateInputValue(date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function activityRangeFromDays(days) {
+  const numericDays = Number(days || 7);
+  if (numericDays === 1) return { range: "today", from: "", to: "" };
+  if (numericDays === 7) return { range: "last7", from: "", to: "" };
+  if (numericDays === 30) return { range: "last30", from: "", to: "" };
+  const to = new Date();
+  const from = new Date(Date.now() - numericDays * 24 * 60 * 60 * 1000);
+  return { range: "custom", from: dateInputValue(from), to: dateInputValue(to) };
+}
+
 function useDebouncedValue(value, delay = 300) {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -138,7 +152,7 @@ export function AppUsageAnalyticsPage() {
   const [activityUser, setActivityUser] = useState(null);
   const [activityLoading, setActivityLoading] = useState(false);
   const [activityData, setActivityData] = useState(null);
-  const [activityFilters, setActivityFilters] = useState({ range: "today", from: "", to: "", platform: "all", appVersion: "", loginProvider: "all", deviceModel: "", sessionStatus: "all", search: "", page: 1, limit: 10 });
+  const [activityFilters, setActivityFilters] = useState({ range: "last7", from: "", to: "", platform: "all", appVersion: "", loginProvider: "all", deviceModel: "", sessionStatus: "all", search: "", page: 1, limit: 10 });
   const debouncedActivitySearch = useDebouncedValue(activityFilters.search);
 
   const query = useMemo(() => ({ ...filters }), [filters]);
@@ -232,7 +246,12 @@ export function AppUsageAnalyticsPage() {
     const userId = row?._id || row?.userId || row?.id;
     if (!userId) return;
     setActivityUser({ id: userId, userName: row.userName || "", email: row.email || "", loginMethod: row.loginMethod || "" });
-    setActivityFilters((current) => ({ ...current, page: 1 }));
+    setActivityFilters((current) => ({
+      ...current,
+      ...activityRangeFromDays(filters.days),
+      platform: filters.platform,
+      page: 1,
+    }));
   }
 
   function updateActivityFilters(patch) {
