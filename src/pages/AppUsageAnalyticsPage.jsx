@@ -39,8 +39,11 @@ const tableConfigs = {
       { key: "email", label: "Email", sortable: true, render: (row) => row.email || "-" },
       { key: "platform", label: "Platform", sortable: true, render: (row) => row.platform || "-" },
       { key: "loginMethod", label: "Method", render: (row) => row.loginMethod || "-" },
+      { key: "userStatus", label: "Status", render: (row) => <StatusBadge value={row.userStatus || "Existing User"} /> },
       { key: "userType", label: "Plan", render: (row) => <StatusBadge value={row.userType || "-"} /> },
       { key: "totalSessions", label: "Sessions", sortable: true },
+      { key: "totalTimeSpent", label: "Total Time", sortable: true, render: (row) => formatSeconds(row.totalTimeSpent) },
+      { key: "lastLogin", label: "Last Login", render: (row) => formatDateTime(row.lastLogin) },
       { key: "lastActive", label: "Last Active", sortable: true, render: (row) => formatDateTime(row.lastActive) },
       { key: "averageSessionDuration", label: "Avg Time", sortable: true, render: (row) => formatSeconds(row.averageSessionDuration) },
     ],
@@ -243,9 +246,9 @@ export function AppUsageAnalyticsPage() {
   }
 
   function openUserActivity(row) {
-    const userId = row?._id || row?.userId || row?.id;
+    const userId = row?.email || row?._id || row?.userId || row?.id;
     if (!userId) return;
-    setActivityUser({ id: userId, userName: row.userName || "", email: row.email || "", loginMethod: row.loginMethod || "" });
+    setActivityUser({ id: userId, userName: row.userName || "", email: row.email || "", loginMethod: row.loginMethod || "", userStatus: row.userStatus || "" });
     setActivityFilters((current) => ({
       ...current,
       ...activityRangeFromDays(filters.days),
@@ -458,6 +461,10 @@ function UserActivityDrawer({ open, user, loading, data, filters, onFilterChange
               <div className={ui.eyebrow}>User Activity Details</div>
               <h3 className="truncate text-xl font-black text-slate-950">{displayUser.name || displayUser.userName || user?.userName || "Selected User"}</h3>
               <p className="truncate text-sm text-slate-500">{displayUser.email || user?.email || displayUser.id}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <StatusBadge value={displayUser.loginProvider || user?.loginMethod || "-"} />
+                <StatusBadge value={displayUser.userStatus || user?.userStatus || "Existing User"} />
+              </div>
             </div>
             <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary, "shrink-0 px-3")} onClick={onClose} aria-label="Close"><X size={18} /></button>
           </div>
@@ -514,6 +521,19 @@ function UserActivityDrawer({ open, user, loading, data, filters, onFilterChange
                 </div>
               ))}
               {!(summary.mostVisitedScreens || []).length ? <p className={ui.muted}>No screen visits found.</p> : null}
+            </div>
+          </section>
+
+          <section className={cn(ui.panel, "mt-5")}>
+            <h4 className="text-base font-black text-slate-950">Most Clicked Features</h4>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              {(summary.mostClickedFeatures || []).map((feature) => (
+                <div key={`${feature.componentName}-${feature.screen}`} className="rounded-lg border border-slate-200 px-3 py-2 text-sm">
+                  <strong className="block truncate text-slate-900">{feature.componentName}</strong>
+                  <span className="text-slate-500">{feature.clicks} clicks{feature.screen ? ` on ${feature.screen}` : ""}</span>
+                </div>
+              ))}
+              {!(summary.mostClickedFeatures || []).length ? <p className={ui.muted}>No feature clicks found.</p> : null}
             </div>
           </section>
 

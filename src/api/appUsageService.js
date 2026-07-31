@@ -34,11 +34,11 @@ export const appUsageService = {
     return response.data;
   },
   async userTimeline(userId, params = {}) {
-    const response = await http.get(`/admin/app-usage/users/${userId}/timeline`, { params });
+    const response = await http.get(`/admin/app-usage/users/${encodeURIComponent(userId)}/timeline`, { params });
     return response.data;
   },
   async userActivity(userId, params = {}) {
-    const response = await http.get(`/admin/app-usage/users/${userId}/activity`, { params });
+    const response = await http.get(`/admin/app-usage/users/${encodeURIComponent(userId)}/activity`, { params });
     return response.data;
   },
   async session(sessionId) {
