@@ -14,7 +14,7 @@ export function AuthSettingsPage() {
     googleClientId: "",
     googleAndroidClientId: "",
     googleIosClientId: "",
-    googleAndroidPackageName: "com.kritamcqs.androidapp",
+    googleAndroidPackageName: "app.kritamcqs.androidapp",
     googleAndroidSha1: "CE:34:23:0A:77:79:E5:01:09:10:2C:3C:A9:9C:B3:BF:7B:FD:AF:C4",
     googleClientSecret: "",
     googleRedirectUrls: [],
