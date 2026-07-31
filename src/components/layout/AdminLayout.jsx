@@ -55,7 +55,7 @@ const navItems = [
   { label: "Page Builder", to: "/subscription-page-builder", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscription-page-builder" },
   { label: "Subscription Reminder", to: "/subscription-reminder", section: "Subscription Management", icon: Bell, mainOnly: true },
   { label: "Dashboard Carousel", to: "/dashboard-carousel", section: "Operations", icon: OverviewIcon, moduleKey: "dashboard-carousel" },
-  { label: "App Usage", to: "/app-usage", section: "Operations", icon: DashboardIcon, moduleKey: "app-usage" },
+  { label: "Analytics", to: "/app-usage", section: "Operations", icon: DashboardIcon, moduleKey: "app-usage" },
   { label: "Offer Timer Management", to: "/offer-timer-management", section: "Operations", icon: TagIcon, mainOnly: true },
   { label: "Website Content", to: "/website-content", section: "Operations", icon: SettingsIcon, mainOnly: true },
   { label: "Policy Management", to: "/policy-pages", section: "Website CMS", icon: FileStackIcon, moduleKey: "policy-pages" },

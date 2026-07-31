@@ -37,6 +37,7 @@ const tableConfigs = {
     columns: [
       { key: "userName", label: "User", sortable: true, fixed: true, render: (row) => row.userName || row._id || "-" },
       { key: "email", label: "Email", sortable: true, render: (row) => row.email || "-" },
+      { key: "mobile", label: "Mobile", render: (row) => row.mobile || "-" },
       { key: "platform", label: "Platform", sortable: true, render: (row) => row.platform || "-" },
       { key: "loginMethod", label: "Method", render: (row) => row.loginMethod || "-" },
       { key: "userStatus", label: "Status", render: (row) => <StatusBadge value={row.userStatus || "Existing User"} /> },
@@ -53,9 +54,12 @@ const tableConfigs = {
     defaultSortBy: "lastActive",
     columns: [
       { key: "deviceModel", label: "Device", sortable: true, fixed: true, render: (row) => row.deviceModel || "Unknown" },
+      { key: "deviceBrand", label: "Brand", sortable: true, render: (row) => row.deviceBrand || "-" },
       { key: "platform", label: "Platform", sortable: true, render: (row) => row.platform || "-" },
       { key: "appVersion", label: "App Version", sortable: true, render: (row) => row.appVersion || "-" },
       { key: "osVersion", label: "OS", render: (row) => row.osVersion || "-" },
+      { key: "androidVersion", label: "Android", render: (row) => row.androidVersion || "-" },
+      { key: "networkType", label: "Network", render: (row) => row.networkType || "-" },
       { key: "users", label: "Users", sortable: true },
       { key: "sessions", label: "Sessions", sortable: true },
       { key: "averageSessionDuration", label: "Avg Time", render: (row) => formatSeconds(row.averageSessionDuration) },
@@ -69,6 +73,7 @@ const tableConfigs = {
       { key: "userName", label: "User", sortable: true, fixed: true, render: (row) => row.userName || row.userId || "-" },
       { key: "sessionId", label: "Session", render: (row) => <span className="font-mono text-xs">{row.sessionId}</span> },
       { key: "platform", label: "Platform", sortable: true },
+      { key: "deviceBrand", label: "Brand", render: (row) => row.deviceBrand || "-" },
       { key: "entryScreen", label: "Entry", render: (row) => row.entryScreen || "-" },
       { key: "exitScreen", label: "Exit", render: (row) => row.exitScreen || "-" },
       { key: "durationSeconds", label: "Duration", sortable: true, render: (row) => formatSeconds(row.durationSeconds) },
@@ -100,6 +105,7 @@ const tableConfigs = {
       { key: "componentName", label: "Component", sortable: true, render: (row) => row.componentName || "-" },
       { key: "componentType", label: "Type", render: (row) => row.componentType || "-" },
       { key: "platform", label: "Platform", sortable: true, render: (row) => row.platform || "-" },
+      { key: "deviceBrand", label: "Brand", render: (row) => row.deviceBrand || "-" },
       { key: "deviceModel", label: "Device", render: (row) => row.deviceModel || "-" },
     ],
   },
@@ -148,7 +154,7 @@ export function AppUsageAnalyticsPage() {
   const [tableLoading, setTableLoading] = useState(false);
   const [settings, setSettings] = useState({ enabled: false, automaticCleanupEnabled: false, retentionDays: 90, retentionNeverDelete: false, sessionTimeoutMinutes: 30 });
   const [analytics, setAnalytics] = useState({ summary: {}, pages: [], clicks: [], dailyActive: [], hourly: [], platform: [], users: [], recent: [] });
-  const [filters, setFilters] = useState({ days: 7, platform: "all", plan: "all", eventType: "all", screen: "" });
+  const [filters, setFilters] = useState({ days: 7, platform: "all", plan: "all", eventType: "all", screen: "", appVersion: "", androidVersion: "", deviceBrand: "", deviceModel: "", networkType: "", sessionStatus: "all" });
   const [tableSearch, setTableSearch] = useState("");
   const debouncedSearch = useDebouncedValue(tableSearch);
   const [tableState, setTableState] = useState(() => Object.fromEntries(Object.keys(tableConfigs).map((key) => [key, { rows: [], meta: null, page: 1, limit: 25, sortBy: tableConfigs[key].defaultSortBy, sortOrder: "desc" }])));
@@ -162,9 +168,12 @@ export function AppUsageAnalyticsPage() {
   const summary = analytics.summary || {};
   const retentionRate = summary.activeUsers ? Math.round((Number(summary.todaysActiveUsers || 0) / Number(summary.activeUsers || 1)) * 100) : 0;
   const kpis = [
-    { label: "Total Users", value: summary.totalUsers ?? summary.activeUsers ?? 0, icon: Users },
-    { label: "Active Users", value: summary.todaysActiveUsers ?? 0, icon: Activity },
+    { label: "Total Active Users", value: summary.activeUsers ?? 0, icon: Users },
+    { label: "Online Users", value: summary.onlineUsers ?? summary.todaysActiveUsers ?? 0, icon: Activity },
+    { label: "Daily Active Users", value: summary.todaysActiveUsers ?? 0, icon: Activity },
+    { label: "Monthly Active Users", value: summary.monthlyActiveUsers ?? summary.activeUsers ?? 0, icon: Activity },
     { label: "New Users", value: summary.newUsers ?? 0, icon: Users },
+    { label: "Returning Users", value: summary.returningUsers ?? 0, icon: Users },
     { label: "Premium Users", value: summary.premiumUsers ?? 0, icon: Users },
     { label: "Free Users", value: summary.freeUsers ?? 0, icon: Users },
     { label: "Sessions", value: summary.totalSessions ?? 0, icon: Activity },
@@ -205,12 +214,12 @@ export function AppUsageAnalyticsPage() {
 
   useEffect(() => {
     void loadOverview();
-  }, [query.days, query.platform, query.plan, query.eventType, query.screen]);
+  }, [query.days, query.platform, query.plan, query.eventType, query.screen, query.appVersion, query.androidVersion, query.deviceBrand, query.deviceModel, query.networkType, query.sessionStatus]);
 
   useEffect(() => {
     if (!tableConfigs[activeTab]) return;
     void loadTable(activeTab, { page: 1 });
-  }, [activeTab, query.days, query.platform, query.plan, query.eventType, query.screen, debouncedSearch]);
+  }, [activeTab, query.days, query.platform, query.plan, query.eventType, query.screen, query.appVersion, query.androidVersion, query.deviceBrand, query.deviceModel, query.networkType, query.sessionStatus, debouncedSearch]);
 
   useEffect(() => {
     if (!activityUser) return;
@@ -316,10 +325,23 @@ export function AppUsageAnalyticsPage() {
               <option value="ScreenView">Screen views</option>
               <option value="Click">Clicks</option>
               <option value="Navigation">Navigation</option>
+              <option value="API Failure">API failures</option>
+              <option value="Network Failure">Network failures</option>
+              <option value="JS Error">JS errors</option>
+              <option value="Image Loading Error">Image errors</option>
               <option value="Background">Background</option>
               <option value="Foreground">Foreground</option>
             </select>
             <input className={ui.input} value={filters.screen} placeholder="Screen contains..." onChange={(event) => updateFilters({ screen: event.target.value })} />
+            <input className={ui.input} value={filters.deviceBrand} placeholder="Device brand" onChange={(event) => updateFilters({ deviceBrand: event.target.value })} />
+            <input className={ui.input} value={filters.deviceModel} placeholder="Device model" onChange={(event) => updateFilters({ deviceModel: event.target.value })} />
+            <input className={ui.input} value={filters.appVersion} placeholder="App version" onChange={(event) => updateFilters({ appVersion: event.target.value })} />
+            <input className={ui.input} value={filters.androidVersion} placeholder="Android version" onChange={(event) => updateFilters({ androidVersion: event.target.value })} />
+            <input className={ui.input} value={filters.networkType} placeholder="Network type" onChange={(event) => updateFilters({ networkType: event.target.value })} />
+            <select className={ui.input} value={filters.sessionStatus} onChange={(event) => updateFilters({ sessionStatus: event.target.value })}>
+              <option value="all">All session statuses</option>
+              {sessionStatusOptions.map((status) => <option key={status} value={status}>{status}</option>)}
+            </select>
             <ToggleSwitch checked={Boolean(settings.enabled)} onChange={(enabled) => void saveSettings({ ...settings, enabled })} label={settings.enabled ? "Tracking enabled" : "Tracking disabled"} />
           </div>
         </details>
@@ -573,7 +595,7 @@ function SessionCard({ session }) {
             <strong className="text-sm text-slate-950">{formatDateTime(session.startedAt)}</strong>
             <StatusBadge value={session.status || "Active"} />
           </div>
-          <p className="mt-1 truncate text-xs text-slate-500">{session.platform || "-"} / {session.appVersion || "-"} / {session.deviceModel || "Unknown device"}</p>
+          <p className="mt-1 truncate text-xs text-slate-500">{session.platform || "-"} / {session.appVersion || "-"} / {session.deviceBrand || "-"} {session.deviceModel || "Unknown device"}</p>
         </div>
         <div className="flex shrink-0 items-center gap-3 text-sm font-bold text-slate-700">
           {formatSeconds(session.durationSeconds)}
@@ -587,8 +609,15 @@ function SessionCard({ session }) {
         <InfoItem label="IP Address" value={session.ipAddress || "-"} />
         <InfoItem label="Platform" value={session.platform || "-"} />
         <InfoItem label="App Version" value={session.appVersion || "-"} />
+        <InfoItem label="Device Brand" value={session.deviceBrand || "-"} />
         <InfoItem label="Device" value={session.deviceModel || "-"} />
         <InfoItem label="OS" value={session.osVersion || "-"} />
+        <InfoItem label="Android Version" value={session.androidVersion || "-"} />
+        <InfoItem label="Network" value={session.networkType || "-"} />
+        <InfoItem label="Resolution" value={session.screenResolution || "-"} />
+        <InfoItem label="Foreground" value={formatSeconds(session.foregroundSeconds)} />
+        <InfoItem label="Background" value={formatSeconds(session.backgroundSeconds)} />
+        <InfoItem label="Battery" value={session.batteryLevel !== undefined && session.batteryLevel !== null ? `${session.batteryLevel}%${session.batteryCharging ? " charging" : ""}` : "-"} />
       </div>
       <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-3">
         <div className="flex min-w-max items-center gap-2 text-sm font-bold text-slate-700">
