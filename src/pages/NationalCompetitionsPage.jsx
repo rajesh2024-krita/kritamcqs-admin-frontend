@@ -449,6 +449,109 @@ function FilterSelect({ label, value, onChange, options }) {
   );
 }
 
+const participantStatusOptions = [
+  ["all", "All"],
+  ["pending", "Pending"],
+  ["approved", "Approved"],
+  ["rejected", "Rejected"],
+  ["locked", "Locked"],
+  ["cancelled", "Cancelled"],
+];
+
+function statusPillClass(status) {
+  const normalized = String(status || "").toLowerCase();
+  if (normalized === "approved") return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (normalized === "pending") return "border-amber-200 bg-amber-50 text-amber-700";
+  if (normalized === "rejected" || normalized === "cancelled") return "border-rose-200 bg-rose-50 text-rose-700";
+  if (normalized === "locked") return "border-sky-200 bg-sky-50 text-sky-700";
+  return "border-slate-200 bg-slate-50 text-slate-600";
+}
+
+function ParticipantsApprovalPanel({ participants, attendance, statusFilter, onStatusFilter, onChangeStatus, selected }) {
+  const rows = participants.map((item) => {
+    const registration = item.registration || {};
+    const user = item.user || {};
+    return {
+      registration,
+      id: registration.id || registration._id,
+      name: user.name || user.email || "Learner",
+      email: user.email || "",
+      mobile: user.mobile || "",
+      premium: user.isPremium ? "Premium" : "Free",
+      status: registration.status || "pending",
+      state: registration.state || "",
+      district: registration.district || "",
+      deviceId: registration.deviceId || "",
+      registeredAt: registration.createdAt || "",
+    };
+  });
+  const pendingCount = rows.filter((row) => row.status === "pending").length;
+
+  return (
+    <div className="space-y-5">
+      <section className={ui.panel}>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className={ui.eyebrow}>Participant approval</div>
+            <h3 className="text-lg font-black text-slate-950">
+              {selected?.eligibility?.approvalRequired ? "Approval is required" : "Approval is optional"}
+            </h3>
+            <p className="mt-1 text-sm font-medium text-slate-500">
+              {pendingCount ? `${pendingCount} registration${pendingCount === 1 ? "" : "s"} waiting for approval.` : "No pending registrations."}
+            </p>
+          </div>
+          <label className="flex min-w-[180px] flex-col gap-1.5 text-xs font-bold text-slate-600">
+            Status
+            <select className={ui.input} value={statusFilter} onChange={(event) => onStatusFilter(event.target.value)}>
+              {participantStatusOptions.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <div className="grid grid-cols-[1.4fr_120px_1fr_1fr_260px] gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-black uppercase text-slate-500">
+          <div>User</div>
+          <div>Status</div>
+          <div>Location</div>
+          <div>Device</div>
+          <div>Actions</div>
+        </div>
+        {rows.length ? rows.map((row) => (
+          <div key={row.id} className="grid grid-cols-[1.4fr_120px_1fr_1fr_260px] gap-3 border-b border-slate-100 px-4 py-3 text-sm last:border-b-0">
+            <div className="min-w-0">
+              <div className="truncate font-bold text-slate-950">{row.name}</div>
+              <div className="truncate text-xs text-slate-500">{[row.email, row.mobile, row.premium].filter(Boolean).join(" | ")}</div>
+            </div>
+            <div>
+              <span className={cn("inline-flex rounded-full border px-2.5 py-1 text-xs font-black capitalize", statusPillClass(row.status))}>
+                {row.status}
+              </span>
+            </div>
+            <div className="min-w-0">
+              <div className="truncate font-semibold text-slate-800">{row.state || "-"}</div>
+              <div className="truncate text-xs text-slate-500">{row.district || "-"}</div>
+            </div>
+            <div className="truncate text-xs font-medium text-slate-500">{row.deviceId || "-"}</div>
+            <div className="flex flex-wrap gap-2">
+              <button disabled={row.status === "approved"} className={cn(ui.buttonBase, ui.buttonPrimary, "px-3 py-1.5 text-xs disabled:opacity-50")} onClick={() => onChangeStatus(row.id, "approved")}><Check size={14} />Approve</button>
+              <button disabled={row.status === "rejected"} className={cn(ui.buttonBase, ui.buttonDanger, "px-3 py-1.5 text-xs disabled:opacity-50")} onClick={() => onChangeStatus(row.id, "rejected")}><X size={14} />Reject</button>
+              <button disabled={row.status === "locked"} className={cn(ui.buttonBase, ui.buttonSecondary, "px-3 py-1.5 text-xs disabled:opacity-50")} onClick={() => onChangeStatus(row.id, "locked")}>Lock</button>
+              <button disabled={row.status === "cancelled"} className={cn(ui.buttonBase, ui.buttonGhost, "px-3 py-1.5 text-xs disabled:opacity-50")} onClick={() => onChangeStatus(row.id, "cancelled")}>Cancel</button>
+            </div>
+          </div>
+        )) : (
+          <div className="p-6">
+            <EmptyState title="No participants" description="Registrations will appear here after students register for this competition." />
+          </div>
+        )}
+      </div>
+
+      <DataTable rows={attendance} columns={["userId", "attendance", "attemptStatus", "state", "district", "startedAt", "submittedAt"]} />
+    </div>
+  );
+}
+
 export function NationalCompetitionsPage() {
   const toast = useToast();
   const [tab, setTab] = useState("overview");
@@ -460,6 +563,7 @@ export function NationalCompetitionsPage() {
   const [detail, setDetail] = useState(null);
   const [form, setForm] = useState(defaultForm);
   const [participants, setParticipants] = useState([]);
+  const [participantStatusFilter, setParticipantStatusFilter] = useState("all");
   const [leaderboard, setLeaderboard] = useState([]);
   const [reports, setReports] = useState(null);
   const [analytics, setAnalytics] = useState(null);
@@ -530,7 +634,7 @@ export function NationalCompetitionsPage() {
     try {
       const [detailResponse, participantsResponse, leaderboardResponse, reportsResponse, rewardsResponse, notificationsResponse, auditResponse, analyticsResponse, attendanceResponse, disqualifiedResponse, deviceResponse, snapshotResponse, rankingHistoryResponse] = await Promise.all([
         nationalCompetitionService.get(id),
-        nationalCompetitionService.participants(id),
+        nationalCompetitionService.participants(id, { status: participantStatusFilter }),
         nationalCompetitionService.leaderboard(id),
         nationalCompetitionService.reports(id),
         nationalCompetitionService.rewards(id),
@@ -570,7 +674,7 @@ export function NationalCompetitionsPage() {
 
   useEffect(() => {
     void loadDetail(selectedId);
-  }, [selectedId]);
+  }, [selectedId, participantStatusFilter]);
 
   async function saveCompetition(event) {
     event.preventDefault();
@@ -689,6 +793,17 @@ export function NationalCompetitionsPage() {
       targetCount: Number(form.totalQuestions || form.questionSelection?.targetCount || 180),
       filters: { ...questionFilters, page: undefined, limit: undefined, search: undefined },
     });
+  }
+
+  async function updateParticipantStatus(registrationId, status) {
+    if (!registrationId) return;
+    try {
+      await nationalCompetitionService.updateParticipant(registrationId, { status });
+      toast.success(`Participant ${status}`);
+      await loadDetail(selectedId);
+    } catch (error) {
+      toast.error(error.message);
+    }
   }
 
   async function duplicateCompetition() {
@@ -846,7 +961,16 @@ export function NationalCompetitionsPage() {
             </form>
           )}
 
-          {tab === "participants" && <div className="space-y-5"><DataTable rows={participants.map((item) => ({ id: item.registration.id, name: item.user?.name || item.user?.email || "Learner", status: item.registration.status, state: item.registration.state, district: item.registration.district }))} columns={["name", "status", "state", "district"]} /><DataTable rows={attendance} columns={["userId", "attendance", "attemptStatus", "state", "district", "startedAt", "submittedAt"]} /></div>}
+          {tab === "participants" && (
+            <ParticipantsApprovalPanel
+              participants={participants}
+              attendance={attendance}
+              statusFilter={participantStatusFilter}
+              onStatusFilter={setParticipantStatusFilter}
+              onChangeStatus={updateParticipantStatus}
+              selected={selected}
+            />
+          )}
           {tab === "leaderboard" && <div className="space-y-4"><div className="flex flex-wrap gap-2"><button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={refreshLeaderboard}><RefreshCw size={16} />Refresh ranking</button>{selectedId ? <a className={cn(ui.buttonBase, ui.buttonSecondary)} href={nationalCompetitionService.exportUrl(selectedId, "excel")}><Download size={16} />Excel</a> : null}{selectedId ? <a className={cn(ui.buttonBase, ui.buttonSecondary)} href={nationalCompetitionService.exportUrl(selectedId, "pdf")}><Download size={16} />PDF</a> : null}{selectedId ? <a className={cn(ui.buttonBase, ui.buttonSecondary)} href={nationalCompetitionService.exportUrl(selectedId, "csv")}><Download size={16} />CSV</a> : null}{selectedId ? <a className={cn(ui.buttonBase, ui.buttonSecondary)} href={nationalCompetitionService.exportUrl(selectedId, "print")} target="_blank" rel="noreferrer"><Download size={16} />Print</a> : null}</div><DataTable rows={leaderboard} columns={["rank", "userName", "score", "accuracy", "state", "district"]} /><DataTable rows={snapshots} columns={["scope", "periodKey", "entries", "topScore", "refreshedAt"]} /><DataTable rows={rankingHistory} columns={["action", "actorRole", "createdAt"]} /></div>}
           {tab === "rewards" && <PanelList action="Add reward" onAction={createReward} rows={rewards} columns={["title", "rewardType", "rankFrom", "rankTo", "approvalStatus"]} />}
           {tab === "reports" && <Reports reports={reports} />}
