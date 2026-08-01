@@ -13,6 +13,8 @@ const tabs = [
   { key: "leaderboard", label: "Leaderboard", icon: ShieldCheck },
   { key: "rewards", label: "Rewards", icon: Award },
   { key: "reports", label: "Reports", icon: FileText },
+  { key: "security", label: "Security", icon: ShieldCheck },
+  { key: "calendar", label: "Calendar", icon: CalendarDays },
   { key: "notifications", label: "Notifications", icon: Bell },
   { key: "audit", label: "Audit", icon: CalendarDays },
 ];
@@ -460,6 +462,13 @@ export function NationalCompetitionsPage() {
   const [participants, setParticipants] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [reports, setReports] = useState(null);
+  const [analytics, setAnalytics] = useState(null);
+  const [attendance, setAttendance] = useState([]);
+  const [disqualified, setDisqualified] = useState([]);
+  const [deviceLogs, setDeviceLogs] = useState(null);
+  const [snapshots, setSnapshots] = useState([]);
+  const [rankingHistory, setRankingHistory] = useState([]);
+  const [calendarItems, setCalendarItems] = useState([]);
   const [rewards, setRewards] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
@@ -475,13 +484,15 @@ export function NationalCompetitionsPage() {
   async function loadBase() {
     setLoading(true);
     try {
-      const [dashboardResponse, listResponse] = await Promise.all([
+      const [dashboardResponse, listResponse, calendarResponse] = await Promise.all([
         nationalCompetitionService.dashboard(),
         nationalCompetitionService.list({ search }),
+        nationalCompetitionService.calendar().catch(() => ({ data: [] })),
       ]);
       const nextItems = listResponse.data || [];
       setDashboard(dashboardResponse.data);
       setItems(nextItems);
+      setCalendarItems(calendarResponse.data || []);
       if (!selectedId && nextItems[0]) setSelectedId(nextItems[0].id);
     } catch (error) {
       toast.error(error.message);
@@ -517,7 +528,7 @@ export function NationalCompetitionsPage() {
   async function loadDetail(id = selectedId) {
     if (!id) return;
     try {
-      const [detailResponse, participantsResponse, leaderboardResponse, reportsResponse, rewardsResponse, notificationsResponse, auditResponse] = await Promise.all([
+      const [detailResponse, participantsResponse, leaderboardResponse, reportsResponse, rewardsResponse, notificationsResponse, auditResponse, analyticsResponse, attendanceResponse, disqualifiedResponse, deviceResponse, snapshotResponse, rankingHistoryResponse] = await Promise.all([
         nationalCompetitionService.get(id),
         nationalCompetitionService.participants(id),
         nationalCompetitionService.leaderboard(id),
@@ -525,12 +536,24 @@ export function NationalCompetitionsPage() {
         nationalCompetitionService.rewards(id),
         nationalCompetitionService.notifications(id),
         nationalCompetitionService.auditLogs({ competitionId: id }),
+        nationalCompetitionService.analytics(id).catch(() => ({ data: null })),
+        nationalCompetitionService.attendance(id).catch(() => ({ data: [] })),
+        nationalCompetitionService.disqualified(id).catch(() => ({ data: [] })),
+        nationalCompetitionService.deviceLogs(id).catch(() => ({ data: null })),
+        nationalCompetitionService.leaderboardSnapshots(id).catch(() => ({ data: [] })),
+        nationalCompetitionService.rankingHistory(id).catch(() => ({ data: [] })),
       ]);
       setDetail(detailResponse.data);
       setForm(toForm(detailResponse.data.competition));
       setParticipants(participantsResponse.data || []);
       setLeaderboard(leaderboardResponse.data || []);
       setReports(reportsResponse.data || null);
+      setAnalytics(analyticsResponse.data || null);
+      setAttendance(attendanceResponse.data || []);
+      setDisqualified(disqualifiedResponse.data || []);
+      setDeviceLogs(deviceResponse.data || null);
+      setSnapshots(snapshotResponse.data || []);
+      setRankingHistory(rankingHistoryResponse.data || []);
       setRewards(rewardsResponse.data || []);
       setNotifications(notificationsResponse.data || []);
       setAuditLogs(auditResponse.data || []);
@@ -668,6 +691,31 @@ export function NationalCompetitionsPage() {
     });
   }
 
+  async function duplicateCompetition() {
+    if (!selectedId) return;
+    try {
+      const response = await nationalCompetitionService.duplicate(selectedId);
+      toast.success("Competition duplicated as draft");
+      setSelectedId(response.data.id);
+      setTab("setup");
+      await loadBase();
+      await loadDetail(response.data.id);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  async function previewCompetition() {
+    if (!selectedId) return;
+    try {
+      const response = await nationalCompetitionService.preview(selectedId);
+      const preview = response.data;
+      window.alert(`${preview.title}\n${preview.examType} | ${preview.totalQuestions} Questions | ${preview.durationMinutes} Min\nStarts: ${preview.startsAt}`);
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
   function updateFormField(name, value) {
     setForm((current) => ({ ...current, [name]: value }));
   }
@@ -696,6 +744,9 @@ export function NationalCompetitionsPage() {
             <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => lifecycleAction("publish")}>Publish</button>
             <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={() => lifecycleAction("enable")}>Enable</button>
             <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => lifecycleAction("disable")}>Disable</button>
+            <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => lifecycleAction("archive")}>Archive</button>
+            <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={duplicateCompetition}>Duplicate</button>
+            <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={previewCompetition}>Preview</button>
             <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={deleteCompetition}>Delete</button>
             <span className="inline-flex items-center rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-black uppercase text-slate-600">
               {selected?.isPublished ? "Published" : "Draft"} | {selected?.isEnabled ? "Enabled" : "Disabled"}
@@ -735,6 +786,15 @@ export function NationalCompetitionsPage() {
                 <Metric label="Submissions" value={dashboard?.summary?.submissions || 0} />
                 <Metric label="Top Entries" value={dashboard?.summary?.topRankedEntries || 0} />
               </div>
+              {analytics ? (
+                <div className="grid gap-4 md:grid-cols-5">
+                  <Metric label="Attended" value={analytics.totals?.attended || 0} />
+                  <Metric label="Disqualified" value={analytics.totals?.disqualified || 0} />
+                  <Metric label="Pending Rewards" value={analytics.totals?.pendingRewards || 0} />
+                  <Metric label="Submitted" value={analytics.totals?.submitted || 0} />
+                  <Metric label="Registered" value={analytics.totals?.registrations || 0} />
+                </div>
+              ) : null}
               <DataTable rows={dashboard?.recentLeaderboard || []} columns={["rank", "userName", "score", "state", "district"]} />
             </div>
           )}
@@ -786,10 +846,12 @@ export function NationalCompetitionsPage() {
             </form>
           )}
 
-          {tab === "participants" && <DataTable rows={participants.map((item) => ({ id: item.registration.id, name: item.user?.name || item.user?.email || "Learner", status: item.registration.status, state: item.registration.state, district: item.registration.district }))} columns={["name", "status", "state", "district"]} />}
-          {tab === "leaderboard" && <div className="space-y-4"><div className="flex flex-wrap gap-2"><button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={refreshLeaderboard}><RefreshCw size={16} />Refresh ranking</button>{selectedId ? <a className={cn(ui.buttonBase, ui.buttonSecondary)} href={nationalCompetitionService.exportUrl(selectedId, "excel")}><Download size={16} />Excel</a> : null}{selectedId ? <a className={cn(ui.buttonBase, ui.buttonSecondary)} href={nationalCompetitionService.exportUrl(selectedId, "pdf")}><Download size={16} />PDF</a> : null}</div><DataTable rows={leaderboard} columns={["rank", "userName", "score", "accuracy", "state", "district"]} /></div>}
+          {tab === "participants" && <div className="space-y-5"><DataTable rows={participants.map((item) => ({ id: item.registration.id, name: item.user?.name || item.user?.email || "Learner", status: item.registration.status, state: item.registration.state, district: item.registration.district }))} columns={["name", "status", "state", "district"]} /><DataTable rows={attendance} columns={["userId", "attendance", "attemptStatus", "state", "district", "startedAt", "submittedAt"]} /></div>}
+          {tab === "leaderboard" && <div className="space-y-4"><div className="flex flex-wrap gap-2"><button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={refreshLeaderboard}><RefreshCw size={16} />Refresh ranking</button>{selectedId ? <a className={cn(ui.buttonBase, ui.buttonSecondary)} href={nationalCompetitionService.exportUrl(selectedId, "excel")}><Download size={16} />Excel</a> : null}{selectedId ? <a className={cn(ui.buttonBase, ui.buttonSecondary)} href={nationalCompetitionService.exportUrl(selectedId, "pdf")}><Download size={16} />PDF</a> : null}{selectedId ? <a className={cn(ui.buttonBase, ui.buttonSecondary)} href={nationalCompetitionService.exportUrl(selectedId, "csv")}><Download size={16} />CSV</a> : null}{selectedId ? <a className={cn(ui.buttonBase, ui.buttonSecondary)} href={nationalCompetitionService.exportUrl(selectedId, "print")} target="_blank" rel="noreferrer"><Download size={16} />Print</a> : null}</div><DataTable rows={leaderboard} columns={["rank", "userName", "score", "accuracy", "state", "district"]} /><DataTable rows={snapshots} columns={["scope", "periodKey", "entries", "topScore", "refreshedAt"]} /><DataTable rows={rankingHistory} columns={["action", "actorRole", "createdAt"]} /></div>}
           {tab === "rewards" && <PanelList action="Add reward" onAction={createReward} rows={rewards} columns={["title", "rewardType", "rankFrom", "rankTo", "approvalStatus"]} />}
           {tab === "reports" && <Reports reports={reports} />}
+          {tab === "security" && <div className="space-y-5"><DataTable rows={disqualified} columns={["userId", "status", "score", "suspiciousFlags", "updatedAt"]} /><DataTable rows={deviceLogs?.registrations || []} columns={["userId", "deviceId", "state", "district", "updatedAt"]} /><DataTable rows={deviceLogs?.attempts || []} columns={["userId", "deviceId", "ipAddress", "suspiciousFlags", "startedAt", "submittedAt"]} /></div>}
+          {tab === "calendar" && <DataTable rows={calendarItems} columns={["title", "status", "examType", "registrationOpensAt", "registrationClosesAt", "startsAt", "endsAt", "isPublished", "isEnabled"]} />}
           {tab === "notifications" && <PanelList action="Add notification" onAction={createNotification} rows={notifications} columns={["title", "channel", "audience", "eventKey", "status"]} />}
           {tab === "audit" && <DataTable rows={auditLogs} columns={["action", "actorRole", "actorId", "createdAt"]} />}
         </main>
