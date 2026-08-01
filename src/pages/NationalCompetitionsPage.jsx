@@ -150,6 +150,20 @@ function Field({ label, children, wide }) {
   return <label className={cn(ui.field, wide && "md:col-span-2")}>{label}{children}</label>;
 }
 
+function DateTimeField({ label, name, value, onChange }) {
+  return (
+    <Field label={label}>
+      <input
+        type="datetime-local"
+        className={ui.input}
+        name={name}
+        value={value || ""}
+        onChange={(event) => onChange(name, event.target.value)}
+      />
+    </Field>
+  );
+}
+
 function Metric({ label, value }) {
   return (
     <div className={ui.metricCard}>
@@ -654,6 +668,10 @@ export function NationalCompetitionsPage() {
     });
   }
 
+  function updateFormField(name, value) {
+    setForm((current) => ({ ...current, [name]: value }));
+  }
+
   if (loading) return <LoadingSpinner label="Loading national competition workspace..." />;
 
   return (
@@ -726,10 +744,10 @@ export function NationalCompetitionsPage() {
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="Title"><input className={ui.input} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field>
                 <Field label="Exam type"><select className={ui.input} value={form.examType} onChange={(e) => setForm({ ...form, examType: e.target.value })}><option>BOTH</option><option>NEET</option><option>JEE</option></select></Field>
-                <Field label="Registration opens"><input type="datetime-local" className={ui.input} value={form.registrationOpensAt} onChange={(e) => setForm({ ...form, registrationOpensAt: e.target.value })} /></Field>
-                <Field label="Registration closes"><input type="datetime-local" className={ui.input} value={form.registrationClosesAt} onChange={(e) => setForm({ ...form, registrationClosesAt: e.target.value })} /></Field>
-                <Field label="Starts"><input type="datetime-local" className={ui.input} value={form.startsAt} onChange={(e) => setForm({ ...form, startsAt: e.target.value })} /></Field>
-                <Field label="Ends"><input type="datetime-local" className={ui.input} value={form.endsAt} onChange={(e) => setForm({ ...form, endsAt: e.target.value })} /></Field>
+                <DateTimeField label="Registration opens" name="registrationOpensAt" value={form.registrationOpensAt} onChange={updateFormField} />
+                <DateTimeField label="Registration closes" name="registrationClosesAt" value={form.registrationClosesAt} onChange={updateFormField} />
+                <DateTimeField label="Starts" name="startsAt" value={form.startsAt} onChange={updateFormField} />
+                <DateTimeField label="Ends" name="endsAt" value={form.endsAt} onChange={updateFormField} />
                 <Field label="Duration minutes"><input type="number" className={ui.input} value={form.durationMinutes} onChange={(e) => setForm({ ...form, durationMinutes: e.target.value })} /></Field>
                 <Field label="Total questions"><input type="number" className={ui.input} value={form.totalQuestions} onChange={(e) => setForm({ ...form, totalQuestions: e.target.value })} /></Field>
                 <Field label="Description" wide><textarea className={ui.textarea} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></Field>
