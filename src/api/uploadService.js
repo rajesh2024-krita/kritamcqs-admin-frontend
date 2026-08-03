@@ -10,6 +10,15 @@ export const uploadService = {
     });
     return response.data;
   },
+  async appVideo(file, folder = "app-videos") {
+    const formData = new FormData();
+    formData.set("video", file);
+    formData.set("folder", folder);
+    const response = await http.post("/admin/uploads/app-video", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    return response.data;
+  },
   async appImages(files, folder = "app-assets") {
     const formData = new FormData();
     files.forEach((file) => formData.append("images", file));

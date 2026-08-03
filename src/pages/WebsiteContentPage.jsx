@@ -114,6 +114,8 @@ const defaultContent = {
         title: "Krita MCQs Reel",
         description: "A quick look at Krita MCQs.",
         url: "https://www.instagram.com/reel/DZYtqECzGGY/",
+        videoUrl: "",
+        thumbnailUrl: "",
         enabled: true,
         order: 1,
       },
@@ -223,6 +225,8 @@ function emptyInstagramVideo(order = 1) {
     title: "New Instagram Video",
     description: "",
     url: "",
+    videoUrl: "",
+    thumbnailUrl: "",
     enabled: true,
     order,
   };
@@ -307,6 +311,25 @@ export function WebsiteContentPage() {
     } catch (error) {
       setStatus("error");
       setMessage(error.message || "Unable to upload image.");
+    } finally {
+      setUploadingPath("");
+      event.target.value = "";
+    }
+  }
+
+  async function uploadVideo(path, event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setUploadingPath(path);
+    setMessage("");
+    try {
+      const response = await uploadService.appVideo(file, "website-content/videos");
+      const nextUrl = response.data?.url || response.data?.path || response.url || "";
+      update(path, nextUrl);
+      setMessage("Video uploaded and applied to this section.");
+    } catch (error) {
+      setStatus("error");
+      setMessage(error.message || "Unable to upload video.");
     } finally {
       setUploadingPath("");
       event.target.value = "";
@@ -475,6 +498,9 @@ export function WebsiteContentPage() {
               <InstagramVideoList
                 value={getIn(content, "instagramVideos", defaultContent.instagramVideos)}
                 onChange={(value) => update("instagramVideos", value)}
+                onImageUpload={uploadImage}
+                onVideoUpload={uploadVideo}
+                uploadingPath={uploadingPath}
               />
             </Section>
           )}
@@ -679,7 +705,7 @@ function ButtonList({ items, onChange }) {
   );
 }
 
-function InstagramVideoList({ value, onChange }) {
+function InstagramVideoList({ value, onChange, onImageUpload, onVideoUpload, uploadingPath }) {
   const config = value && typeof value === "object" ? value : defaultContent.instagramVideos;
   const list = Array.isArray(config.items)
     ? [...config.items].sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
@@ -716,15 +742,51 @@ function InstagramVideoList({ value, onChange }) {
   return (
     <Repeatable title="Instagram Video Links" onAdd={() => commit([...list, emptyInstagramVideo(list.length + 1)])}>
       <div className="rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-xs font-semibold text-sky-800">
-        Use Instagram Reel/Post URLs like https://www.instagram.com/reel/SHORTCODE/. Disabled videos stay saved but will not appear on the website.
+        Use the Instagram URL for reference and add a playable MP4/WebM URL for the custom website player. Disabled videos stay saved but will not appear on the website.
       </div>
       {list.map((item, index) => {
         const invalid = item.url && !isInstagramUrl(item.url);
+        const missingVideo = !item.videoUrl;
         const isDefault = config.defaultVideoId === item.id;
         return (
           <Card key={item.id || index} title={`${index + 1}. ${item.title || "Instagram Video"}`} onRemove={() => removeVideo(index)}>
             <InlineField label="Title" value={item.title} onChange={(title) => updateVideo(index, { title })} />
             <InlineField label="Instagram URL" value={item.url} onChange={(url) => updateVideo(index, { url })} />
+            <div className={ui.field}>
+              Playable Video URL
+              <div className="flex gap-2">
+                <input className={ui.input} value={item.videoUrl || ""} onChange={(event) => updateVideo(index, { videoUrl: event.target.value })} placeholder="https://.../video.mp4 or /uploads/..." />
+                <label className={cn(ui.buttonBase, ui.buttonSecondary, "shrink-0 cursor-pointer")}>
+                  <Upload size={16} />
+                  {uploadingPath === `instagramVideos.items.${index}.videoUrl` ? "Uploading..." : "Upload"}
+                  <input
+                    type="file"
+                    accept="video/*"
+                    className="hidden"
+                    disabled={uploadingPath === `instagramVideos.items.${index}.videoUrl`}
+                    onChange={(event) => onVideoUpload(`instagramVideos.items.${index}.videoUrl`, event)}
+                  />
+                </label>
+              </div>
+            </div>
+            <div className={ui.field}>
+              Thumbnail URL
+              <div className="flex gap-2">
+                <input className={ui.input} value={item.thumbnailUrl || ""} onChange={(event) => updateVideo(index, { thumbnailUrl: event.target.value })} placeholder="https://.../thumbnail.jpg or /uploads/..." />
+                <label className={cn(ui.buttonBase, ui.buttonSecondary, "shrink-0 cursor-pointer")}>
+                  <Upload size={16} />
+                  {uploadingPath === `instagramVideos.items.${index}.thumbnailUrl` ? "Uploading..." : "Upload"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingPath === `instagramVideos.items.${index}.thumbnailUrl`}
+                    onChange={(event) => onImageUpload(`instagramVideos.items.${index}.thumbnailUrl`, event)}
+                  />
+                </label>
+              </div>
+              {item.thumbnailUrl ? <img src={assetUrl(item.thumbnailUrl)} alt={item.title || "Video thumbnail"} className="mt-3 h-36 w-24 rounded-lg border border-slate-200 bg-white object-cover" /> : null}
+            </div>
             <InlineField label="Description" value={item.description} onChange={(description) => updateVideo(index, { description })} textarea />
             <CheckField label="Enable this video" checked={item.enabled !== false} onChange={(enabled) => updateVideo(index, { enabled })} />
             <div className="flex flex-wrap items-center gap-2 lg:col-span-2">
@@ -743,6 +805,7 @@ function InstagramVideoList({ value, onChange }) {
               </button>
             </div>
             {invalid ? <p className="text-sm font-semibold text-rose-600 lg:col-span-2">Enter a valid Instagram reel, post, or TV URL.</p> : null}
+            {missingVideo ? <p className="text-sm font-semibold text-amber-600 lg:col-span-2">Add a playable video URL or upload a video so the website can show this without Instagram UI.</p> : null}
           </Card>
         );
       })}
