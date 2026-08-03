@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Image, Plus, RefreshCw, Save, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, Eye, EyeOff, Image, Plus, RefreshCw, Save, Trash2, Upload } from "lucide-react";
 import { uploadService } from "../api/uploadService";
 import { websiteContentService } from "../api/websiteContentService";
 import { cn, ui } from "../ui";
@@ -102,6 +102,23 @@ const defaultContent = {
       { q: "How much does Premium cost?", a: "Rs.499 for 6 months." },
     ],
   },
+  instagramVideos: {
+    enabled: true,
+    title: "See Krita MCQs in action",
+    subtitle: "Play our latest Instagram videos right here and get a quick look at how Krita helps NEET and JEE students practice smarter.",
+    autoPlay: false,
+    defaultVideoId: "krita-reel-default",
+    items: [
+      {
+        id: "krita-reel-default",
+        title: "Krita MCQs Reel",
+        description: "A quick look at Krita MCQs.",
+        url: "https://www.instagram.com/reel/DZYtqECzGGY/",
+        enabled: true,
+        order: 1,
+      },
+    ],
+  },
   contact: {
     title: "Get in touch with Team Krita",
     description: "Have questions about our rank improvement engine? Our team of experts is here to help you navigate your NEET & JEE journey.",
@@ -136,6 +153,7 @@ const sections = [
   ["comparison", "Comparison"],
   ["roadmap", "Roadmap"],
   ["faq", "FAQ"],
+  ["instagramVideos", "Instagram Videos"],
   ["contact", "Contact"],
   ["finalCta", "Final CTA"],
   ["footer", "Footer"],
@@ -197,6 +215,17 @@ function emptyPlan() {
 
 function emptyButton() {
   return { label: "New Button", href: "", linkKey: "contact", icon: "phone" };
+}
+
+function emptyInstagramVideo(order = 1) {
+  return {
+    id: `instagram-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    title: "New Instagram Video",
+    description: "",
+    url: "",
+    enabled: true,
+    order,
+  };
 }
 
 export function WebsiteContentPage() {
@@ -437,6 +466,19 @@ export function WebsiteContentPage() {
             </Section>
           )}
 
+          {activeSection === "instagramVideos" && (
+            <Section title="Instagram Videos">
+              <Field label="Section Title" path="instagramVideos.title" value={getIn(content, "instagramVideos.title")} onChange={update} />
+              <CheckPathField label="Show Instagram videos section" path="instagramVideos.enabled" checked={Boolean(getIn(content, "instagramVideos.enabled", true))} onChange={update} />
+              <TextareaField label="Section Subtitle" path="instagramVideos.subtitle" value={getIn(content, "instagramVideos.subtitle")} onChange={update} />
+              <CheckPathField label="Auto Play selected video" path="instagramVideos.autoPlay" checked={Boolean(getIn(content, "instagramVideos.autoPlay", false))} onChange={update} />
+              <InstagramVideoList
+                value={getIn(content, "instagramVideos", defaultContent.instagramVideos)}
+                onChange={(value) => update("instagramVideos", value)}
+              />
+            </Section>
+          )}
+
           {activeSection === "contact" && (
             <Section title="Contact Section">
               <Field label="Title" path="contact.title" value={getIn(content, "contact.title")} onChange={update} />
@@ -637,6 +679,78 @@ function ButtonList({ items, onChange }) {
   );
 }
 
+function InstagramVideoList({ value, onChange }) {
+  const config = value && typeof value === "object" ? value : defaultContent.instagramVideos;
+  const list = Array.isArray(config.items)
+    ? [...config.items].sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+    : [];
+
+  function commit(nextItems, patch = {}) {
+    onChange({
+      ...config,
+      ...patch,
+      items: nextItems.map((item, index) => ({ ...item, order: index + 1 })),
+    });
+  }
+
+  function updateVideo(index, patch) {
+    commit(list.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
+  }
+
+  function removeVideo(index) {
+    const removedId = list[index]?.id;
+    const nextItems = list.filter((_, itemIndex) => itemIndex !== index);
+    const patch = removedId && config.defaultVideoId === removedId ? { defaultVideoId: nextItems.find((item) => item.enabled !== false)?.id || "" } : {};
+    commit(nextItems, patch);
+  }
+
+  function moveVideo(index, direction) {
+    const target = index + direction;
+    if (target < 0 || target >= list.length) return;
+    const nextItems = [...list];
+    const [item] = nextItems.splice(index, 1);
+    nextItems.splice(target, 0, item);
+    commit(nextItems);
+  }
+
+  return (
+    <Repeatable title="Instagram Video Links" onAdd={() => commit([...list, emptyInstagramVideo(list.length + 1)])}>
+      <div className="rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-xs font-semibold text-sky-800">
+        Use Instagram Reel/Post URLs like https://www.instagram.com/reel/SHORTCODE/. Disabled videos stay saved but will not appear on the website.
+      </div>
+      {list.map((item, index) => {
+        const invalid = item.url && !isInstagramUrl(item.url);
+        const isDefault = config.defaultVideoId === item.id;
+        return (
+          <Card key={item.id || index} title={`${index + 1}. ${item.title || "Instagram Video"}`} onRemove={() => removeVideo(index)}>
+            <InlineField label="Title" value={item.title} onChange={(title) => updateVideo(index, { title })} />
+            <InlineField label="Instagram URL" value={item.url} onChange={(url) => updateVideo(index, { url })} />
+            <InlineField label="Description" value={item.description} onChange={(description) => updateVideo(index, { description })} textarea />
+            <CheckField label="Enable this video" checked={item.enabled !== false} onChange={(enabled) => updateVideo(index, { enabled })} />
+            <div className="flex flex-wrap items-center gap-2 lg:col-span-2">
+              <button type="button" className={cn(ui.buttonBase, isDefault ? ui.buttonPrimary : ui.buttonSecondary)} onClick={() => onChange({ ...config, defaultVideoId: item.id })}>
+                {isDefault ? "Default Video" : "Set Default"}
+              </button>
+              <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => moveVideo(index, -1)} disabled={index === 0}>
+                <ArrowUp size={16} /> Move Up
+              </button>
+              <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => moveVideo(index, 1)} disabled={index === list.length - 1}>
+                <ArrowDown size={16} /> Move Down
+              </button>
+              <button type="button" className={cn(ui.buttonBase, item.enabled === false ? ui.buttonSecondary : ui.buttonGhost)} onClick={() => updateVideo(index, { enabled: item.enabled === false })}>
+                {item.enabled === false ? <Eye size={16} /> : <EyeOff size={16} />}
+                {item.enabled === false ? "Enable" : "Disable"}
+              </button>
+            </div>
+            {invalid ? <p className="text-sm font-semibold text-rose-600 lg:col-span-2">Enter a valid Instagram reel, post, or TV URL.</p> : null}
+          </Card>
+        );
+      })}
+      {!list.length ? <div className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm font-semibold text-slate-500">No Instagram videos added.</div> : null}
+    </Repeatable>
+  );
+}
+
 function Repeatable({ title, onAdd, children }) {
   return (
     <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -718,6 +832,14 @@ function CheckField({ label, checked, onChange }) {
       {label}
     </label>
   );
+}
+
+function CheckPathField({ label, path, checked, onChange }) {
+  return <CheckField label={label} checked={checked} onChange={(value) => onChange(path, value)} />;
+}
+
+function isInstagramUrl(value) {
+  return /^https?:\/\/(www\.)?instagram\.com\/(reel|p|tv)\/[A-Za-z0-9_-]+\/?/i.test(String(value || "").trim());
 }
 
 function IconButton({ label, onClick, children }) {
