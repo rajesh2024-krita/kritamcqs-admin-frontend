@@ -742,7 +742,7 @@ function InstagramVideoList({ value, onChange, onImageUpload, onVideoUpload, upl
   return (
     <Repeatable title="Instagram Video Links" onAdd={() => commit([...list, emptyInstagramVideo(list.length + 1)])}>
       <div className="rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-xs font-semibold text-sky-800">
-        Use the Instagram URL for reference and add a playable MP4/WebM URL for the custom website player. Disabled videos stay saved but will not appear on the website.
+        Use the Instagram URL for reference. Upload a video or paste a direct MP4/WebM URL for the custom website player; thumbnails are optional because the website can preview the video frame automatically.
       </div>
       {list.map((item, index) => {
         const invalid = item.url && !isInstagramUrl(item.url);
@@ -753,7 +753,7 @@ function InstagramVideoList({ value, onChange, onImageUpload, onVideoUpload, upl
             <InlineField label="Title" value={item.title} onChange={(title) => updateVideo(index, { title })} />
             <InlineField label="Instagram URL" value={item.url} onChange={(url) => updateVideo(index, { url })} />
             <div className={ui.field}>
-              Playable Video URL
+              Playable Video URL / Upload
               <div className="flex gap-2">
                 <input className={ui.input} value={item.videoUrl || ""} onChange={(event) => updateVideo(index, { videoUrl: event.target.value })} placeholder="https://.../video.mp4 or /uploads/..." />
                 <label className={cn(ui.buttonBase, ui.buttonSecondary, "shrink-0 cursor-pointer")}>
@@ -805,7 +805,7 @@ function InstagramVideoList({ value, onChange, onImageUpload, onVideoUpload, upl
               </button>
             </div>
             {invalid ? <p className="text-sm font-semibold text-rose-600 lg:col-span-2">Enter a valid Instagram reel, post, or TV URL.</p> : null}
-            {missingVideo ? <p className="text-sm font-semibold text-amber-600 lg:col-span-2">Add a playable video URL or upload a video so the website can show this without Instagram UI.</p> : null}
+            {missingVideo ? <p className="text-sm font-semibold text-amber-600 lg:col-span-2">Add a playable video URL or upload a video so the website can show this without Instagram UI. A normal Instagram page link cannot be used by the custom player.</p> : null}
           </Card>
         );
       })}
