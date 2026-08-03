@@ -224,6 +224,12 @@ function emptyInstagramVideo(order = 1) {
     id: `instagram-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     title: "New Instagram Video",
     description: "",
+    studentName: "",
+    badge: "",
+    duration: "",
+    views: "",
+    likes: "",
+    comments: "",
     url: "",
     videoUrl: "",
     thumbnailUrl: "",
@@ -751,6 +757,8 @@ function InstagramVideoList({ value, onChange, onImageUpload, onVideoUpload, upl
         return (
           <Card key={item.id || index} title={`${index + 1}. ${item.title || "Instagram Video"}`} onRemove={() => removeVideo(index)}>
             <InlineField label="Title" value={item.title} onChange={(title) => updateVideo(index, { title })} />
+            <InlineField label="Student / Author Name" value={item.studentName} onChange={(studentName) => updateVideo(index, { studentName })} />
+            <InlineField label="Badge" value={item.badge} onChange={(badge) => updateVideo(index, { badge })} />
             <InlineField label="Instagram URL" value={item.url} onChange={(url) => updateVideo(index, { url })} />
             <div className={ui.field}>
               Playable Video URL / Upload
@@ -788,6 +796,10 @@ function InstagramVideoList({ value, onChange, onImageUpload, onVideoUpload, upl
               {item.thumbnailUrl ? <img src={assetUrl(item.thumbnailUrl)} alt={item.title || "Video thumbnail"} className="mt-3 h-36 w-24 rounded-lg border border-slate-200 bg-white object-cover" /> : null}
             </div>
             <InlineField label="Description" value={item.description} onChange={(description) => updateVideo(index, { description })} textarea />
+            <InlineField label="Duration" value={item.duration} onChange={(duration) => updateVideo(index, { duration })} />
+            <InlineField label="Views" value={item.views} onChange={(views) => updateVideo(index, { views })} />
+            <InlineField label="Likes" value={item.likes} onChange={(likes) => updateVideo(index, { likes })} />
+            <InlineField label="Comments" value={item.comments} onChange={(comments) => updateVideo(index, { comments })} />
             <CheckField label="Enable this video" checked={item.enabled !== false} onChange={(enabled) => updateVideo(index, { enabled })} />
             <div className="flex flex-wrap items-center gap-2 lg:col-span-2">
               <button type="button" className={cn(ui.buttonBase, isDefault ? ui.buttonPrimary : ui.buttonSecondary)} onClick={() => onChange({ ...config, defaultVideoId: item.id })}>
