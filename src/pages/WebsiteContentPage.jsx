@@ -4,6 +4,11 @@ import { uploadService } from "../api/uploadService";
 import { websiteContentService } from "../api/websiteContentService";
 import { cn, ui } from "../ui";
 
+const defaultInstagramTabs = [
+  { id: "student-reviews", name: "Student Reviews", enabled: true, order: 1 },
+  { id: "creator-collaborations", name: "Creator Collaborations", enabled: true, order: 2 },
+];
+
 const defaultContent = {
   links: {
     googlePlay: "https://play.google.com/store/apps/details?id=app.kritamcqs.androidapp",
@@ -106,8 +111,20 @@ const defaultContent = {
     enabled: true,
     title: "See Krita MCQs in action",
     subtitle: "Play our latest Instagram videos right here and get a quick look at how Krita helps NEET and JEE students practice smarter.",
+    description: "Join thousands of aspirants preparing smarter",
+    ctaText: "View all reels on Instagram",
     autoPlay: false,
     defaultVideoId: "krita-reel-default",
+    profileUrl: "https://www.instagram.com/krita_mcqs.official/",
+    tabs: structuredClone(defaultInstagramTabs),
+    stats: {
+      items: [
+        { enabled: true, type: "metric", icon: "users", tone: "blue", value: "1,00,000+", label: "Happy Students" },
+        { enabled: true, type: "metric", icon: "star", tone: "yellow", value: "4.8/5", label: "Average Rating" },
+        { enabled: true, type: "android", label: "Android App", linkKey: "googlePlay" },
+        { enabled: true, type: "ios", label: "iOS App", href: "https://apps.apple.com/in/app/krita-neet-jee-mcqs-pyqs/id6782789640" },
+      ],
+    },
     items: [
       {
         id: "krita-reel-default",
@@ -116,6 +133,7 @@ const defaultContent = {
         url: "https://www.instagram.com/reel/DZYtqECzGGY/",
         videoUrl: "",
         thumbnailUrl: "",
+        tabId: "student-reviews",
         enabled: true,
         order: 1,
       },
@@ -233,9 +251,37 @@ function emptyInstagramVideo(order = 1) {
     url: "",
     videoUrl: "",
     thumbnailUrl: "",
+    tabId: defaultInstagramTabs[0].id,
     enabled: true,
     order,
   };
+}
+
+function emptyInstagramTab(order = 1) {
+  return {
+    id: `instagram-tab-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+    name: "New Tab",
+    enabled: true,
+    order,
+  };
+}
+
+function normalizeInstagramTabs(tabs) {
+  const source = Array.isArray(tabs) && tabs.length ? tabs : defaultInstagramTabs;
+  return source
+    .map((tab, index) => ({
+      id: String(tab?.id || `instagram-tab-${index + 1}`).trim() || `instagram-tab-${index + 1}`,
+      name: String(tab?.name || tab?.label || `Tab ${index + 1}`).trim() || `Tab ${index + 1}`,
+      enabled: tab?.enabled !== false,
+      order: Number(tab?.order || index + 1),
+    }))
+    .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+    .map((tab, index) => ({ ...tab, order: index + 1 }));
+}
+
+function defaultInstagramStat(index = 0) {
+  const defaults = defaultContent.instagramVideos.stats.items;
+  return structuredClone(defaults[index] || { enabled: true, type: "metric", icon: "users", tone: "blue", value: "500+", label: "New Card" });
 }
 
 export function WebsiteContentPage() {
@@ -500,6 +546,9 @@ export function WebsiteContentPage() {
               <Field label="Section Title" path="instagramVideos.title" value={getIn(content, "instagramVideos.title")} onChange={update} />
               <CheckPathField label="Show Instagram videos section" path="instagramVideos.enabled" checked={Boolean(getIn(content, "instagramVideos.enabled", true))} onChange={update} />
               <TextareaField label="Section Subtitle" path="instagramVideos.subtitle" value={getIn(content, "instagramVideos.subtitle")} onChange={update} />
+              <TextareaField label="Bottom Description" path="instagramVideos.description" value={getIn(content, "instagramVideos.description")} onChange={update} />
+              <Field label="Profile Button Text" path="instagramVideos.ctaText" value={getIn(content, "instagramVideos.ctaText")} onChange={update} />
+              <Field label="View All Videos Profile URL" path="instagramVideos.profileUrl" value={getIn(content, "instagramVideos.profileUrl")} onChange={update} />
               <CheckPathField label="Auto Play selected video" path="instagramVideos.autoPlay" checked={Boolean(getIn(content, "instagramVideos.autoPlay", false))} onChange={update} />
               <InstagramVideoList
                 value={getIn(content, "instagramVideos", defaultContent.instagramVideos)}
@@ -713,16 +762,57 @@ function ButtonList({ items, onChange }) {
 
 function InstagramVideoList({ value, onChange, onImageUpload, onVideoUpload, uploadingPath }) {
   const config = value && typeof value === "object" ? value : defaultContent.instagramVideos;
+  const tabs = normalizeInstagramTabs(config.tabs);
+  const tabOptions = tabs.map((tab) => ({ value: tab.id, label: tab.name }));
   const list = Array.isArray(config.items)
     ? [...config.items].sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
     : [];
+  const stats = Array.isArray(config.stats?.items)
+    ? config.stats.items.slice(0, 4)
+    : defaultContent.instagramVideos.stats.items;
 
   function commit(nextItems, patch = {}) {
     onChange({
       ...config,
       ...patch,
+      tabs: normalizeInstagramTabs(patch.tabs || config.tabs),
       items: nextItems.map((item, index) => ({ ...item, order: index + 1 })),
     });
+  }
+
+  function commitTabs(nextTabs) {
+    const normalizedTabs = normalizeInstagramTabs(nextTabs);
+    const fallbackTabId = normalizedTabs[0]?.id || "";
+    onChange({
+      ...config,
+      tabs: normalizedTabs,
+      items: list.map((item) => ({
+        ...item,
+        tabId: normalizedTabs.some((tab) => tab.id === item.tabId) ? item.tabId : fallbackTabId,
+      })),
+    });
+  }
+
+  function addTab() {
+    commitTabs([...tabs, emptyInstagramTab(tabs.length + 1)]);
+  }
+
+  function updateTab(index, patch) {
+    commitTabs(tabs.map((tab, tabIndex) => (tabIndex === index ? { ...tab, ...patch } : tab)));
+  }
+
+  function removeTab(index) {
+    if (tabs.length <= 1) return;
+    commitTabs(tabs.filter((_, tabIndex) => tabIndex !== index));
+  }
+
+  function moveTab(index, direction) {
+    const target = index + direction;
+    if (target < 0 || target >= tabs.length) return;
+    const nextTabs = [...tabs];
+    const [tab] = nextTabs.splice(index, 1);
+    nextTabs.splice(target, 0, tab);
+    commitTabs(nextTabs);
   }
 
   function updateVideo(index, patch) {
@@ -745,7 +835,37 @@ function InstagramVideoList({ value, onChange, onImageUpload, onVideoUpload, upl
     commit(nextItems);
   }
 
+  function updateStat(index, patch) {
+    const nextStats = [...stats];
+    nextStats[index] = { ...defaultInstagramStat(index), ...(nextStats[index] || {}), ...patch };
+    onChange({
+      ...config,
+      stats: { ...(config.stats || {}), items: nextStats },
+    });
+  }
+
   return (
+    <>
+    <Repeatable title="Tabs Management" onAdd={addTab}>
+      <div className="rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-xs font-semibold text-sky-800">
+        Tabs shown here appear on the website automatically. Assign each reel to a tab below.
+      </div>
+      {tabs.map((tab, index) => (
+        <Card key={tab.id} title={`${index + 1}. ${tab.name || "Instagram Tab"}`} onRemove={tabs.length > 1 ? () => removeTab(index) : undefined}>
+          <InlineField label="Tab Name" value={tab.name} onChange={(name) => updateTab(index, { name })} />
+          <CheckField label="Enable this tab" checked={tab.enabled !== false} onChange={(enabled) => updateTab(index, { enabled })} />
+          <div className="flex flex-wrap items-center gap-2 lg:col-span-2">
+            <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => moveTab(index, -1)} disabled={index === 0}>
+              <ArrowUp size={16} /> Move Up
+            </button>
+            <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => moveTab(index, 1)} disabled={index === tabs.length - 1}>
+              <ArrowDown size={16} /> Move Down
+            </button>
+            <span className="text-xs font-semibold text-slate-500">ID: {tab.id}</span>
+          </div>
+        </Card>
+      ))}
+    </Repeatable>
     <Repeatable title="Instagram Video Links" onAdd={() => commit([...list, emptyInstagramVideo(list.length + 1)])}>
       <div className="rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-xs font-semibold text-sky-800">
         Use the Instagram URL for reference. Upload a video or paste a direct MP4/WebM URL for the custom website player; thumbnails are optional because the website can preview the video frame automatically.
@@ -759,6 +879,7 @@ function InstagramVideoList({ value, onChange, onImageUpload, onVideoUpload, upl
             <InlineField label="Title" value={item.title} onChange={(title) => updateVideo(index, { title })} />
             <InlineField label="Student / Author Name" value={item.studentName} onChange={(studentName) => updateVideo(index, { studentName })} />
             <InlineField label="Badge" value={item.badge} onChange={(badge) => updateVideo(index, { badge })} />
+            <SelectField label="Tab / Category" value={item.tabId || tabs[0]?.id || ""} options={tabOptions} onChange={(tabId) => updateVideo(index, { tabId })} />
             <InlineField label="Instagram URL" value={item.url} onChange={(url) => updateVideo(index, { url })} />
             <div className={ui.field}>
               Playable Video URL / Upload
@@ -823,6 +944,33 @@ function InstagramVideoList({ value, onChange, onImageUpload, onVideoUpload, upl
       })}
       {!list.length ? <div className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm font-semibold text-slate-500">No Instagram videos added.</div> : null}
     </Repeatable>
+    <Repeatable title="Review / Download Cards" onAdd={() => null}>
+      {Array.from({ length: 4 }).map((_, index) => {
+        const item = { ...defaultInstagramStat(index), ...(stats[index] || {}) };
+        const type = item.type || (index >= 2 ? (index === 2 ? "android" : "ios") : "metric");
+        return (
+          <Card key={index} title={`${index + 1}. ${item.label || "Card"}`} onRemove={undefined}>
+            <SelectField label="Card Type" value={type} options={["metric", "android", "ios"]} onChange={(value) => updateStat(index, { type: value })} />
+            <CheckField label="Enable this card" checked={item.enabled !== false} onChange={(enabled) => updateStat(index, { enabled })} />
+            {type === "metric" ? (
+              <>
+                <InlineField label="Value" value={item.value} onChange={(value) => updateStat(index, { value })} />
+                <InlineField label="Label" value={item.label} onChange={(label) => updateStat(index, { label })} />
+                <SelectField label="Icon" value={item.icon || "users"} options={["users", "star", "play", "quote"]} onChange={(icon) => updateStat(index, { icon })} />
+                <SelectField label="Color" value={item.tone || "blue"} options={["blue", "yellow", "rose", "purple"]} onChange={(tone) => updateStat(index, { tone })} />
+              </>
+            ) : (
+              <>
+                <InlineField label="Accessible Label" value={item.label} onChange={(label) => updateStat(index, { label })} />
+                <SelectField label="Link Key" value={item.linkKey || (type === "android" ? "googlePlay" : "")} options={linkKeys} onChange={(linkKey) => updateStat(index, { linkKey })} />
+                <InlineField label="Custom URL" value={item.href} onChange={(href) => updateStat(index, { href })} />
+              </>
+            )}
+          </Card>
+        );
+      })}
+    </Repeatable>
+    </>
   );
 }
 
@@ -839,10 +987,12 @@ function ListHeader({ title, onAdd }) {
   return (
     <div className="flex items-center justify-between gap-3">
       <h3 className="text-base font-black text-slate-900">{title}</h3>
-      <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={onAdd}>
-        <Plus size={16} />
-        Add
-      </button>
+      {onAdd ? (
+        <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={onAdd}>
+          <Plus size={16} />
+          Add
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -852,9 +1002,11 @@ function Card({ title, onRemove, children }) {
     <div className="rounded-xl border border-slate-200 bg-white p-4">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h4 className="font-bold text-slate-900">{title}</h4>
-        <IconButton label="Remove" onClick={onRemove}>
-          <Trash2 size={16} />
-        </IconButton>
+        {onRemove ? (
+          <IconButton label="Remove" onClick={onRemove}>
+            <Trash2 size={16} />
+          </IconButton>
+        ) : null}
       </div>
       <div className="grid gap-4 lg:grid-cols-2">{children}</div>
     </div>
@@ -879,9 +1031,11 @@ function SelectField({ label, value, options, onChange }) {
     <label className={ui.field}>
       {label}
       <select className={ui.input} value={value} onChange={(event) => onChange(event.target.value)}>
-        {options.map((option) => (
-          <option key={option || "custom"} value={option}>{option || "Custom URL"}</option>
-        ))}
+        {options.map((option) => {
+          const optionValue = typeof option === "object" ? option.value : option;
+          const optionLabel = typeof option === "object" ? option.label : option || "Custom URL";
+          return <option key={optionValue || "custom"} value={optionValue}>{optionLabel}</option>;
+        })}
       </select>
     </label>
   );
