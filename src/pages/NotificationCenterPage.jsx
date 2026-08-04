@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { notificationService } from "../api/notificationService";
+import { emailTemplateService } from "../api/emailTemplateService";
 import { cn, ui } from "../ui";
 
 const targetOptions = [
@@ -8,6 +9,8 @@ const targetOptions = [
   { value: "premium", label: "Premium Users" },
   { value: "neet", label: "NEET Users" },
   { value: "jee", label: "JEE Users" },
+  { value: "active", label: "Active Users" },
+  { value: "inactive", label: "Inactive Users" },
   { value: "selected", label: "Selected Users" },
 ];
 
@@ -22,6 +25,11 @@ const categoryOptions = [
 ];
 
 const deepLinks = ["/daily-test", "/mock-tests", "/revision", "/weak-areas", "/subscription", "/notifications", "/dashboard"];
+const deliveryOptions = [
+  { value: "notification", label: "Notification Only" },
+  { value: "email", label: "Email Only" },
+  { value: "both", label: "Notification + Email" },
+];
 
 const emptyTemplate = {
   name: "",
@@ -38,10 +46,18 @@ const emptyTemplate = {
 
 const emptySend = {
   templateId: "",
+  campaignName: "",
+  deliveryType: "notification",
   title: "",
   message: "",
   image: "",
   deepLink: "/notifications",
+  ctaText: "",
+  targetScreen: "",
+  emailTemplateId: "",
+  emailTemplateKey: "",
+  emailSubject: "",
+  emailBody: "",
   targetType: "all",
   selectedUsers: "",
   category: "custom",
@@ -69,6 +85,7 @@ function selectedUserValues(value = "") {
 export function NotificationCenterPage() {
   const [tab, setTab] = useState("send");
   const [templates, setTemplates] = useState([]);
+  const [emailTemplates, setEmailTemplates] = useState([]);
   const [history, setHistory] = useState([]);
   const [scheduled, setScheduled] = useState([]);
   const [stats, setStats] = useState(null);
@@ -77,6 +94,7 @@ export function NotificationCenterPage() {
   const [userLoading, setUserLoading] = useState(false);
   const [templateForm, setTemplateForm] = useState(emptyTemplate);
   const [editingTemplateId, setEditingTemplateId] = useState("");
+  const [editingCampaignId, setEditingCampaignId] = useState("");
   const [sendForm, setSendForm] = useState(emptySend);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -89,6 +107,12 @@ export function NotificationCenterPage() {
       notificationService.stats(),
     ]);
     setTemplates(templateResponse.data || []);
+    try {
+      const emailTemplateResponse = await emailTemplateService.catalog();
+      setEmailTemplates((emailTemplateResponse.data?.templates || []).filter((item) => item.status?.isActive !== false));
+    } catch {
+      setEmailTemplates([]);
+    }
     setHistory(historyResponse.data || []);
     setScheduled(scheduledResponse.data || []);
     setStats(statsResponse.data || null);
@@ -101,6 +125,11 @@ export function NotificationCenterPage() {
   const activeTemplate = useMemo(
     () => templates.find((item) => String(item.id || item._id) === String(sendForm.templateId)),
     [templates, sendForm.templateId],
+  );
+
+  const activeEmailTemplate = useMemo(
+    () => emailTemplates.find((item) => String(item.id || item.status?.templateId || item.key) === String(sendForm.emailTemplateId)),
+    [emailTemplates, sendForm.emailTemplateId],
   );
 
   useEffect(() => {
@@ -117,6 +146,16 @@ export function NotificationCenterPage() {
       priority: activeTemplate.priority || "high",
     }));
   }, [activeTemplate]);
+
+  useEffect(() => {
+    if (!activeEmailTemplate) return;
+    setSendForm((current) => ({
+      ...current,
+      emailTemplateKey: activeEmailTemplate.key || "",
+      emailSubject: activeEmailTemplate.subject || "",
+      emailBody: activeEmailTemplate.htmlContent || activeEmailTemplate.textContent || "",
+    }));
+  }, [activeEmailTemplate]);
 
   useEffect(() => {
     if (sendForm.targetType !== "selected") return;
@@ -140,6 +179,8 @@ export function NotificationCenterPage() {
 
   const selectedUserList = useMemo(() => selectedUserValues(sendForm.selectedUsers), [sendForm.selectedUsers]);
   const selectedUserSet = useMemo(() => new Set(selectedUserList), [selectedUserList]);
+  const shouldSendNotification = ["notification", "both"].includes(sendForm.deliveryType);
+  const shouldSendEmail = ["email", "both"].includes(sendForm.deliveryType);
 
   function setSelectedUserList(values) {
     const unique = [...new Set(values.map((item) => String(item || "").trim()).filter(Boolean))];
@@ -185,15 +226,41 @@ export function NotificationCenterPage() {
     setBusy(true);
     setMessage("");
     try {
-      const response = await notificationService.send(payload);
+      let response;
+      if (editingCampaignId && sendForm.action !== "send") {
+        response = await notificationService.updateScheduled(editingCampaignId, {
+          ...payload,
+          status: sendForm.action === "schedule" ? "pending" : "draft",
+        });
+      } else {
+        response = await notificationService.send(payload);
+        if (editingCampaignId && sendForm.action === "send") {
+          await notificationService.cancelScheduled(editingCampaignId);
+        }
+      }
       await loadAll();
       setMessage(response.message || "Notification request completed.");
-      if (sendForm.action === "send") setSendForm(emptySend);
+      if (sendForm.action === "send" || editingCampaignId) {
+        setSendForm(emptySend);
+        setEditingCampaignId("");
+      }
     } catch (error) {
       setMessage(error.message);
     } finally {
       setBusy(false);
     }
+  }
+
+  function editCampaign(item) {
+    setEditingCampaignId(item.id || item._id);
+    setSendForm({
+      ...emptySend,
+      ...item,
+      action: item.status === "draft" ? "draft" : "schedule",
+      scheduleDate: toInputDate(item.scheduleDate),
+      selectedUsers: Array.isArray(item.selectedUsers) ? item.selectedUsers.join("\n") : item.selectedUsers || "",
+    });
+    setTab("send");
   }
 
   async function cancelSchedule(id) {
@@ -254,15 +321,26 @@ export function NotificationCenterPage() {
 
       {tab === "send" ? (
         <form className={ui.panel} onSubmit={sendNotification}>
-          <h2 className="mb-4 text-xl font-black text-slate-900">Send Notification</h2>
+          <h2 className="mb-4 text-xl font-black text-slate-900">{editingCampaignId ? "Edit Campaign" : "Create Campaign"}</h2>
           <div className="grid gap-4 lg:grid-cols-3">
+            <label className={ui.field}><span>Campaign Name</span><input className={ui.input} value={sendForm.campaignName} onChange={(event) => setSendForm((current) => ({ ...current, campaignName: event.target.value }))} placeholder="August premium announcement" /></label>
+            <label className={ui.field}><span>Delivery Channel</span><select className={ui.input} value={sendForm.deliveryType} onChange={(event) => setSendForm((current) => ({ ...current, deliveryType: event.target.value }))}>{deliveryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
             <label className={ui.field}><span>Use Template</span><select className={ui.input} value={sendForm.templateId} onChange={(event) => setSendForm((current) => ({ ...current, templateId: event.target.value }))}><option value="">Custom Notification</option>{templates.filter((item) => item.status !== false).map((item) => <option key={item.id || item._id} value={item.id || item._id}>{item.name}</option>)}</select></label>
-            <label className={ui.field}><span>Title</span><input className={ui.input} value={sendForm.title} onChange={(event) => setSendForm((current) => ({ ...current, title: event.target.value }))} required /></label>
             <label className={ui.field}><span>Target Audience</span><select className={ui.input} value={sendForm.targetType} onChange={(event) => setSendForm((current) => ({ ...current, targetType: event.target.value }))}>{targetOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-            <label className={cn(ui.field, "lg:col-span-3")}><span>Message</span><textarea className={ui.textarea} value={sendForm.message} onChange={(event) => setSendForm((current) => ({ ...current, message: event.target.value }))} required /></label>
-            <label className={ui.field}><span>Image URL</span><input className={ui.input} value={sendForm.image} onChange={(event) => setSendForm((current) => ({ ...current, image: event.target.value }))} /></label>
-            <label className={ui.field}><span>Deep Link</span><input className={ui.input} list="notification-deep-links" value={sendForm.deepLink} onChange={(event) => setSendForm((current) => ({ ...current, deepLink: event.target.value }))} /><datalist id="notification-deep-links">{deepLinks.map((item) => <option key={item} value={item} />)}</datalist></label>
             <label className={ui.field}><span>Category</span><select className={ui.input} value={sendForm.category} onChange={(event) => setSendForm((current) => ({ ...current, category: event.target.value }))}>{categoryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+            {shouldSendNotification ? <>
+              <label className={ui.field}><span>Notification Title</span><input className={ui.input} value={sendForm.title} onChange={(event) => setSendForm((current) => ({ ...current, title: event.target.value }))} required={shouldSendNotification} /></label>
+              <label className={cn(ui.field, "lg:col-span-3")}><span>Notification Message</span><textarea className={ui.textarea} value={sendForm.message} onChange={(event) => setSendForm((current) => ({ ...current, message: event.target.value }))} required={shouldSendNotification} /></label>
+              <label className={ui.field}><span>CTA Button Text</span><input className={ui.input} value={sendForm.ctaText} onChange={(event) => setSendForm((current) => ({ ...current, ctaText: event.target.value }))} placeholder="Open App" /></label>
+              <label className={ui.field}><span>CTA Action / Deep Link</span><input className={ui.input} list="notification-deep-links" value={sendForm.deepLink} onChange={(event) => setSendForm((current) => ({ ...current, deepLink: event.target.value }))} /><datalist id="notification-deep-links">{deepLinks.map((item) => <option key={item} value={item} />)}</datalist></label>
+              <label className={ui.field}><span>Target Screen</span><input className={ui.input} value={sendForm.targetScreen} onChange={(event) => setSendForm((current) => ({ ...current, targetScreen: event.target.value }))} placeholder="subscription" /></label>
+              <label className={ui.field}><span>Image URL</span><input className={ui.input} value={sendForm.image} onChange={(event) => setSendForm((current) => ({ ...current, image: event.target.value }))} /></label>
+            </> : null}
+            {shouldSendEmail ? <>
+              <label className={ui.field}><span>Email Template</span><select className={ui.input} value={sendForm.emailTemplateId} onChange={(event) => setSendForm((current) => ({ ...current, emailTemplateId: event.target.value }))} required={shouldSendEmail}><option value="">Select Email Template</option>{emailTemplates.map((item) => <option key={item.id || item.status?.templateId || item.key} value={item.id || item.status?.templateId || item.key}>{item.name}</option>)}</select></label>
+              <label className={cn(ui.field, "lg:col-span-2")}><span>Email Subject</span><input className={ui.input} value={sendForm.emailSubject} onChange={(event) => setSendForm((current) => ({ ...current, emailSubject: event.target.value }))} required={shouldSendEmail} /></label>
+              <label className={cn(ui.field, "lg:col-span-3")}><span>Email Body</span><textarea className={cn(ui.textarea, "min-h-56")} value={sendForm.emailBody} onChange={(event) => setSendForm((current) => ({ ...current, emailBody: event.target.value }))} required={shouldSendEmail} /></label>
+            </> : null}
             <label className={ui.field}><span>Sound</span><select className={ui.input} value={sendForm.sound} onChange={(event) => setSendForm((current) => ({ ...current, sound: event.target.value }))}><option value="default">Default</option><option value="custom">Custom</option><option value="silent">Silent</option></select></label>
             <label className={ui.field}><span>Priority</span><select className={ui.input} value={sendForm.priority} onChange={(event) => setSendForm((current) => ({ ...current, priority: event.target.value }))}><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select></label>
             <label className={ui.field}><span>Action</span><select className={ui.input} value={sendForm.action} onChange={(event) => setSendForm((current) => ({ ...current, action: event.target.value }))}><option value="send">Send Now</option><option value="schedule">Schedule</option><option value="draft">Save Draft</option></select></label>
@@ -313,14 +391,18 @@ export function NotificationCenterPage() {
                         </button>
                       ))}
                     </div>
-                    <p className={ui.muted}>For push testing, select one user with token count greater than 0 and click Send Now.</p>
+                    <p className={ui.muted}>For selected campaigns, add user IDs, emails, or mobiles. Push requires a device token; email requires an email address.</p>
                   </div>
                 </div>
               </div>
             ) : null}
           </div>
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            {shouldSendNotification ? <PreviewCard title="Notification Preview" heading={sendForm.title || "Notification title"} body={sendForm.message || "Notification message"} cta={sendForm.ctaText || sendForm.deepLink} /> : null}
+            {shouldSendEmail ? <div className="rounded-xl border border-slate-200 bg-slate-50 p-4"><div className={ui.eyebrow}>Email Preview</div><h3 className="text-base font-black text-slate-950">{sendForm.emailSubject || "Email subject"}</h3><div className="prose prose-sm mt-3 max-w-none text-slate-700" dangerouslySetInnerHTML={{ __html: sendForm.emailBody || "<p>Select an email template to preview.</p>" }} /></div> : null}
+          </div>
           <div className="mt-5 flex justify-end">
-            <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy}>{busy ? "Working..." : sendForm.action === "send" ? "Send Now" : sendForm.action === "schedule" ? "Schedule" : "Save Draft"}</button>
+            <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy}>{busy ? "Working..." : sendForm.action === "send" ? "Send Immediately" : sendForm.action === "schedule" ? "Schedule Campaign" : "Save Draft"}</button>
           </div>
         </form>
       ) : null}
@@ -350,25 +432,27 @@ export function NotificationCenterPage() {
       {tab === "scheduled" ? (
         <section className={ui.panel}>
           <div className="mb-4 flex justify-end"><button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={processScheduled} disabled={busy}>Process Due Now</button></div>
-          <SimpleTable columns={["Title", "Audience", "Schedule", "Status", "Actions"]} rows={scheduled.map((item) => [
-            item.title,
+          <SimpleTable columns={["Campaign", "Delivery", "Audience", "Schedule", "Status", "Actions"]} rows={scheduled.map((item) => [
+            item.campaignName || item.title || item.emailSubject,
+            item.deliveryType || "notification",
             item.targetType,
-            toInputDate(item.scheduleDate).replace("T", " "),
+            item.scheduleDate ? toInputDate(item.scheduleDate).replace("T", " ") : "-",
             item.status,
-            item.status === "pending" ? <button key={item.id || item._id} className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => cancelSchedule(item.id || item._id)}>Cancel</button> : "-",
+            ["pending", "draft"].includes(item.status) ? <div key={item.id || item._id} className="flex flex-wrap gap-2"><button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => editCampaign(item)}>Edit</button><button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => cancelSchedule(item.id || item._id)}>Cancel</button></div> : "-",
           ])} />
         </section>
       ) : null}
 
       {tab === "history" ? (
         <section className={ui.panel}>
-          <SimpleTable columns={["Title", "Audience", "Sent", "Delivered", "Failed", "No Token", "Status"]} rows={history.map((item) => [
-            item.title,
+          <SimpleTable columns={["Campaign", "Delivery", "Audience", "Push Sent", "Push Delivered", "Email Sent", "Failed", "Status"]} rows={history.map((item) => [
+            item.campaignName || item.title || item.emailSubject,
+            item.deliveryType || "notification",
             item.targetType,
             item.sentCount || 0,
             item.successCount || 0,
-            item.failedCount || 0,
-            item.noTokenCount || 0,
+            item.emailSentCount || 0,
+            Number(item.failedCount || 0) + Number(item.emailFailedCount || 0),
             item.status,
           ])} />
         </section>
@@ -407,6 +491,19 @@ function SimpleTable({ columns, rows }) {
           <thead><tr>{columns.map((column) => <th key={column} className={ui.tableHead}>{column}</th>)}</tr></thead>
           <tbody>{rows.map((row, index) => <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex} className={ui.tableCell}>{cell}</td>)}</tr>)}</tbody>
         </table>
+      </div>
+    </div>
+  );
+}
+
+function PreviewCard({ title, heading, body, cta }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+      <div className={ui.eyebrow}>{title}</div>
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <h3 className="text-base font-black text-slate-950">{heading}</h3>
+        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{body}</p>
+        {cta ? <div className="mt-3 inline-flex rounded-lg bg-slate-900 px-3 py-2 text-xs font-black text-white">{cta}</div> : null}
       </div>
     </div>
   );
