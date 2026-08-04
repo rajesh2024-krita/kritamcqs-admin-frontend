@@ -134,6 +134,8 @@ const defaultContent = {
         videoUrl: "",
         thumbnailUrl: "",
         tabId: "student-reviews",
+        category: "Student Reviews",
+        type: "student-reviews",
         enabled: true,
         order: 1,
       },
@@ -252,6 +254,8 @@ function emptyInstagramVideo(order = 1) {
     videoUrl: "",
     thumbnailUrl: "",
     tabId: defaultInstagramTabs[0].id,
+    category: defaultInstagramTabs[0].name,
+    type: defaultInstagramTabs[0].id,
     enabled: true,
     order,
   };
@@ -277,6 +281,43 @@ function normalizeInstagramTabs(tabs) {
     }))
     .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
     .map((tab, index) => ({ ...tab, order: index + 1 }));
+}
+
+function tabPatchFor(tabId, tabs) {
+  const tab = tabs.find((item) => item.id === tabId);
+  return { tabId, category: tab?.name || "", type: tabId };
+}
+
+function slugifyTabLabel(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function resolveInstagramVideoTabId(item, tabs) {
+  const direct = String(item?.tabId || item?.type || "").trim();
+  if (direct && tabs.some((tab) => tab.id === direct)) return direct;
+
+  const category = String(item?.category || "").trim();
+  if (category) {
+    const categorySlug = slugifyTabLabel(category);
+    const matchedTab = tabs.find((tab) => tab.name.toLowerCase() === category.toLowerCase() || slugifyTabLabel(tab.name) === categorySlug);
+    if (matchedTab) return matchedTab.id;
+  }
+
+  const legacy = `${item?.category || item?.type || ""}`.toLowerCase();
+  if (legacy.includes("creator") || legacy.includes("collab")) {
+    const creatorTab = tabs.find((tab) => tab.id === "creator-collaborations" || tab.name.toLowerCase().includes("creator"));
+    return creatorTab?.id || tabs[0]?.id || "";
+  }
+  if (legacy.includes("student") || legacy.includes("review")) {
+    const studentTab = tabs.find((tab) => tab.id === "student-reviews" || tab.name.toLowerCase().includes("student"));
+    return studentTab?.id || tabs[0]?.id || "";
+  }
+
+  return tabs[0]?.id || "";
 }
 
 function defaultInstagramStat(index = 0) {
@@ -788,7 +829,7 @@ function InstagramVideoList({ value, onChange, onImageUpload, onVideoUpload, upl
       tabs: normalizedTabs,
       items: list.map((item) => ({
         ...item,
-        tabId: normalizedTabs.some((tab) => tab.id === item.tabId) ? item.tabId : fallbackTabId,
+        ...tabPatchFor(resolveInstagramVideoTabId(item, normalizedTabs) || fallbackTabId, normalizedTabs),
       })),
     });
   }
@@ -874,12 +915,13 @@ function InstagramVideoList({ value, onChange, onImageUpload, onVideoUpload, upl
         const invalid = item.url && !isInstagramUrl(item.url);
         const missingVideo = !item.videoUrl;
         const isDefault = config.defaultVideoId === item.id;
+        const selectedTabId = resolveInstagramVideoTabId(item, tabs);
         return (
           <Card key={item.id || index} title={`${index + 1}. ${item.title || "Instagram Video"}`} onRemove={() => removeVideo(index)}>
             <InlineField label="Title" value={item.title} onChange={(title) => updateVideo(index, { title })} />
             <InlineField label="Student / Author Name" value={item.studentName} onChange={(studentName) => updateVideo(index, { studentName })} />
             <InlineField label="Badge" value={item.badge} onChange={(badge) => updateVideo(index, { badge })} />
-            <SelectField label="Tab / Category" value={item.tabId || tabs[0]?.id || ""} options={tabOptions} onChange={(tabId) => updateVideo(index, { tabId })} />
+            <SelectField label="Tab / Category" value={selectedTabId} options={tabOptions} onChange={(tabId) => updateVideo(index, tabPatchFor(tabId, tabs))} />
             <InlineField label="Instagram URL" value={item.url} onChange={(url) => updateVideo(index, { url })} />
             <div className={ui.field}>
               Playable Video URL / Upload
