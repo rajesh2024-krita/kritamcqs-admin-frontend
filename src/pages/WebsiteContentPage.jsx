@@ -320,6 +320,33 @@ function resolveInstagramVideoTabId(item, tabs) {
   return tabs[0]?.id || "";
 }
 
+function normalizeInstagramVideosConfig(value) {
+  const config = value && typeof value === "object" ? value : defaultContent.instagramVideos;
+  const tabs = normalizeInstagramTabs(config.tabs);
+  const items = Array.isArray(config.items) ? config.items : [];
+  return {
+    ...config,
+    tabs,
+    items: items
+      .map((item, index) => {
+        const tabId = resolveInstagramVideoTabId(item, tabs);
+        return {
+          ...item,
+          ...tabPatchFor(tabId, tabs),
+          order: Number(item?.order || index + 1),
+        };
+      })
+      .sort((a, b) => Number(a.order || 0) - Number(b.order || 0))
+      .map((item, index) => ({ ...item, order: index + 1 })),
+  };
+}
+
+function normalizeWebsiteContentForPublish(value) {
+  const nextContent = value && typeof value === "object" ? structuredClone(value) : structuredClone(defaultContent);
+  nextContent.instagramVideos = normalizeInstagramVideosConfig(nextContent.instagramVideos);
+  return nextContent;
+}
+
 function defaultInstagramStat(index = 0) {
   const defaults = defaultContent.instagramVideos.stats.items;
   return structuredClone(defaults[index] || { enabled: true, type: "metric", icon: "users", tone: "blue", value: "500+", label: "New Card" });
@@ -355,7 +382,7 @@ export function WebsiteContentPage() {
     setMessage("");
     try {
       const response = await websiteContentService.getLanding();
-      const nextContent = mergeContent(defaultContent, response.data?.content || {});
+      const nextContent = normalizeWebsiteContentForPublish(mergeContent(defaultContent, response.data?.content || {}));
       setContent(nextContent);
       setAdvancedText(JSON.stringify(nextContent, null, 2));
       setStatus("idle");
@@ -370,7 +397,7 @@ export function WebsiteContentPage() {
   }, []);
 
   async function saveContent() {
-    const payload = activeSection === "advanced" && advancedParsed.ok ? advancedParsed.value : content;
+    const payload = normalizeWebsiteContentForPublish(activeSection === "advanced" && advancedParsed.ok ? advancedParsed.value : content);
     if (activeSection === "advanced" && !advancedParsed.ok) {
       setStatus("error");
       setMessage(`JSON error: ${advancedParsed.error}`);
@@ -593,7 +620,7 @@ export function WebsiteContentPage() {
               <CheckPathField label="Auto Play selected video" path="instagramVideos.autoPlay" checked={Boolean(getIn(content, "instagramVideos.autoPlay", false))} onChange={update} />
               <InstagramVideoList
                 value={getIn(content, "instagramVideos", defaultContent.instagramVideos)}
-                onChange={(value) => update("instagramVideos", value)}
+                onChange={(value) => update("instagramVideos", normalizeInstagramVideosConfig(value))}
                 onImageUpload={uploadImage}
                 onVideoUpload={uploadVideo}
                 uploadingPath={uploadingPath}
@@ -813,11 +840,19 @@ function InstagramVideoList({ value, onChange, onImageUpload, onVideoUpload, upl
     : defaultContent.instagramVideos.stats.items;
 
   function commit(nextItems, patch = {}) {
+    const nextTabs = normalizeInstagramTabs(patch.tabs || config.tabs);
     onChange({
       ...config,
       ...patch,
-      tabs: normalizeInstagramTabs(patch.tabs || config.tabs),
-      items: nextItems.map((item, index) => ({ ...item, order: index + 1 })),
+      tabs: nextTabs,
+      items: nextItems.map((item, index) => {
+        const tabId = resolveInstagramVideoTabId(item, nextTabs);
+        return {
+          ...item,
+          ...tabPatchFor(tabId, nextTabs),
+          order: index + 1,
+        };
+      }),
     });
   }
 
