@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Eye, EyeOff, Image, Plus, RefreshCw, Save, Trash2, Upload } from "lucide-react";
 import { uploadService } from "../api/uploadService";
 import { websiteContentService } from "../api/websiteContentService";
@@ -354,6 +354,7 @@ function defaultInstagramStat(index = 0) {
 
 export function WebsiteContentPage() {
   const [content, setContent] = useState(defaultContent);
+  const contentRef = useRef(defaultContent);
   const [activeSection, setActiveSection] = useState("general");
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
@@ -369,7 +370,9 @@ export function WebsiteContentPage() {
   }, [advancedText]);
 
   function update(path, value) {
-    setContent((current) => setIn(current, path, value));
+    const nextContent = setIn(contentRef.current, path, value);
+    contentRef.current = nextContent;
+    setContent(nextContent);
   }
 
   function updateArray(path, updater) {
@@ -383,6 +386,7 @@ export function WebsiteContentPage() {
     try {
       const response = await websiteContentService.getLanding();
       const nextContent = normalizeWebsiteContentForPublish(mergeContent(defaultContent, response.data?.content || {}));
+      contentRef.current = nextContent;
       setContent(nextContent);
       setAdvancedText(JSON.stringify(nextContent, null, 2));
       setStatus("idle");
@@ -397,7 +401,7 @@ export function WebsiteContentPage() {
   }, []);
 
   async function saveContent() {
-    const payload = normalizeWebsiteContentForPublish(activeSection === "advanced" && advancedParsed.ok ? advancedParsed.value : content);
+    const payload = normalizeWebsiteContentForPublish(activeSection === "advanced" && advancedParsed.ok ? advancedParsed.value : contentRef.current);
     if (activeSection === "advanced" && !advancedParsed.ok) {
       setStatus("error");
       setMessage(`JSON error: ${advancedParsed.error}`);
@@ -407,9 +411,12 @@ export function WebsiteContentPage() {
     setStatus("saving");
     setMessage("");
     try {
-      await websiteContentService.updateLanding({ content: payload, status: "published" });
-      setContent(mergeContent(defaultContent, payload));
-      setAdvancedText(JSON.stringify(payload, null, 2));
+      const response = await websiteContentService.updateLanding({ content: payload, status: "published" });
+      const savedContent = response.data?.content && typeof response.data.content === "object" ? response.data.content : payload;
+      const nextContent = normalizeWebsiteContentForPublish(mergeContent(defaultContent, savedContent));
+      contentRef.current = nextContent;
+      setContent(nextContent);
+      setAdvancedText(JSON.stringify(nextContent, null, 2));
       setStatus("idle");
       setMessage("Website content published successfully.");
     } catch (error) {
@@ -493,7 +500,7 @@ export function WebsiteContentPage() {
                 type="button"
                 onClick={() => {
                   setActiveSection(key);
-                  if (key === "advanced") setAdvancedText(JSON.stringify(content, null, 2));
+                  if (key === "advanced") setAdvancedText(JSON.stringify(contentRef.current, null, 2));
                 }}
                 className={`w-full rounded-lg px-3 py-2.5 text-left text-sm font-bold transition ${activeSection === key ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"}`}
               >
@@ -951,12 +958,16 @@ function InstagramVideoList({ value, onChange, onImageUpload, onVideoUpload, upl
         const missingVideo = !item.videoUrl;
         const isDefault = config.defaultVideoId === item.id;
         const selectedTabId = resolveInstagramVideoTabId(item, tabs);
+        const selectedTab = tabs.find((tab) => tab.id === selectedTabId);
         return (
           <Card key={item.id || index} title={`${index + 1}. ${item.title || "Instagram Video"}`} onRemove={() => removeVideo(index)}>
             <InlineField label="Title" value={item.title} onChange={(title) => updateVideo(index, { title })} />
             <InlineField label="Student / Author Name" value={item.studentName} onChange={(studentName) => updateVideo(index, { studentName })} />
             <InlineField label="Badge" value={item.badge} onChange={(badge) => updateVideo(index, { badge })} />
-            <SelectField label="Tab / Category" value={selectedTabId} options={tabOptions} onChange={(tabId) => updateVideo(index, tabPatchFor(tabId, tabs))} />
+            <div className={ui.field}>
+              <SelectField label="Tab / Category" value={selectedTabId || tabs[0]?.id || ""} options={tabOptions} onChange={(tabId) => updateVideo(index, tabPatchFor(tabId, tabs))} />
+              <p className="text-xs font-semibold text-slate-500">Selected tab: {selectedTab?.name || "Unassigned"}</p>
+            </div>
             <InlineField label="Instagram URL" value={item.url} onChange={(url) => updateVideo(index, { url })} />
             <div className={ui.field}>
               Playable Video URL / Upload
