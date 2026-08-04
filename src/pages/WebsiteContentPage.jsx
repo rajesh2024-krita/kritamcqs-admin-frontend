@@ -297,8 +297,8 @@ function slugifyTabLabel(value) {
 }
 
 function resolveInstagramVideoTabId(item, tabs) {
-  const direct = String(item?.tabId || item?.type || "").trim();
-  if (direct && tabs.some((tab) => tab.id === direct)) return direct;
+  const directTabId = String(item?.tabId || "").trim();
+  if (directTabId && tabs.some((tab) => tab.id === directTabId)) return directTabId;
 
   const category = String(item?.category || "").trim();
   if (category) {
@@ -307,7 +307,10 @@ function resolveInstagramVideoTabId(item, tabs) {
     if (matchedTab) return matchedTab.id;
   }
 
-  const legacy = `${item?.category || item?.type || ""}`.toLowerCase();
+  const legacyType = String(item?.type || "").trim();
+  if (legacyType && tabs.some((tab) => tab.id === legacyType)) return legacyType;
+
+  const legacy = `${category || legacyType}`.toLowerCase();
   if (legacy.includes("creator") || legacy.includes("collab")) {
     const creatorTab = tabs.find((tab) => tab.id === "creator-collaborations" || tab.name.toLowerCase().includes("creator"));
     return creatorTab?.id || tabs[0]?.id || "";
