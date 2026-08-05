@@ -82,6 +82,20 @@ function selectedUserValues(value = "") {
     .filter(Boolean);
 }
 
+function deliverySummaryMessage(response, fallback = "Notification request completed.") {
+  const data = response?.data || {};
+  const push = data.delivery || {};
+  const email = data.emailDelivery || {};
+  const parts = [];
+  if (Number(push.sentCount || 0) || Number(push.successCount || 0) || Number(push.failedCount || 0) || Number(push.noTokenCount || 0)) {
+    parts.push(`Notification delivered: ${Number(push.successCount || 0)}, failed: ${Number(push.failedCount || 0)}, no token: ${Number(push.noTokenCount || 0)}`);
+  }
+  if (Number(email.emailSentCount || 0) || Number(email.emailFailedCount || 0) || Number(email.emailSkippedCount || 0)) {
+    parts.push(`Email sent: ${Number(email.emailSentCount || 0)}, failed: ${Number(email.emailFailedCount || 0)}, skipped: ${Number(email.emailSkippedCount || 0)}`);
+  }
+  return parts.length ? parts.join(" | ") : response?.message || fallback;
+}
+
 export function NotificationCenterPage() {
   const [tab, setTab] = useState("send");
   const [templates, setTemplates] = useState([]);
@@ -239,7 +253,7 @@ export function NotificationCenterPage() {
         }
       }
       await loadAll();
-      setMessage(response.message || "Notification request completed.");
+      setMessage(deliverySummaryMessage(response));
       if (sendForm.action === "send" || editingCampaignId) {
         setSendForm(emptySend);
         setEditingCampaignId("");
@@ -452,7 +466,7 @@ export function NotificationCenterPage() {
             item.sentCount || 0,
             item.successCount || 0,
             item.emailSentCount || 0,
-            Number(item.failedCount || 0) + Number(item.emailFailedCount || 0),
+            Number(item.failedCount || 0) + Number(item.emailFailedCount || 0) + Number(item.emailSkippedCount || 0),
             item.status,
           ])} />
         </section>
