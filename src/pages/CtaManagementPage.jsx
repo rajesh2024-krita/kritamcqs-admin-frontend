@@ -44,7 +44,8 @@ export function CtaManagementPage() {
     try {
       const params = filter === "both" ? {} : { channel: filter };
       const response = await ctaConfigService.list(params);
-      setItems(response.data || []);
+      const payload = response?.data ?? response;
+      setItems(Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : []);
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -137,7 +138,7 @@ export function CtaManagementPage() {
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-4"><strong>How to add a CTA</strong><p className="mt-2">Create a CTA here, choose where it is available, then select it inside an Email Template or Push Notification form. You can still override fields after selection.</p></div>
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-4"><strong>Fields</strong><p className="mt-2">Button Text is the visible label. CTA Type is a route shortcut. CTA URL / Deep Link is the final destination. Open In controls app/web preference. Colors and alignment are used by email buttons.</p></div>
           <div className="rounded-lg border border-slate-200 bg-slate-50 p-4"><strong>Placeholders</strong><p className="mt-2">URLs support template variables such as <code>{"{{user_id}}"}</code>, <code>{"{{email}}"}</code>, <code>{"{{plan_name}}"}</code>, <code>{"{{referral_code}}"}</code>, <code>{"{{notification_id}}"}</code>, and any variables sent with the email or notification campaign.</p></div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4"><strong>Examples</strong><p className="mt-2"><code>https://app.kritamcqs.com/subscription</code><br /><code>https://app.kritamcqs.com/mock-test</code><br /><code>https://kritamcqs.com</code><br /><code>kritamcqs://subscription?plan={{plan_id}}</code><br /><code>https://app.kritamcqs.com/referral?code={{referral_code}}</code></p></div>
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4"><strong>Examples</strong><p className="mt-2"><code>https://app.kritamcqs.com/subscription</code><br /><code>https://app.kritamcqs.com/mock-test</code><br /><code>https://kritamcqs.com</code><br /><code>{"kritamcqs://subscription?plan={{plan_id}}"}</code><br /><code>{"https://app.kritamcqs.com/referral?code={{referral_code}}"}</code></p></div>
         </div>
       </section>
 
