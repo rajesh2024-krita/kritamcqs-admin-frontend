@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { notificationService } from "../api/notificationService";
 import { emailTemplateService } from "../api/emailTemplateService";
+import { ctaConfigService } from "../api/ctaConfigService";
 import { cn, ui } from "../ui";
 
 const targetOptions = [
@@ -37,6 +38,8 @@ const emptyTemplate = {
   message: "",
   image: "",
   deepLink: "/notifications",
+  ctaConfigId: "",
+  ctaText: "",
   targetType: "all",
   category: "custom",
   sound: "default",
@@ -52,6 +55,7 @@ const emptySend = {
   message: "",
   image: "",
   deepLink: "/notifications",
+  ctaConfigId: "",
   ctaText: "",
   targetScreen: "",
   emailTemplateId: "",
@@ -100,6 +104,7 @@ export function NotificationCenterPage() {
   const [tab, setTab] = useState("send");
   const [templates, setTemplates] = useState([]);
   const [emailTemplates, setEmailTemplates] = useState([]);
+  const [ctaConfigs, setCtaConfigs] = useState([]);
   const [history, setHistory] = useState([]);
   const [scheduled, setScheduled] = useState([]);
   const [stats, setStats] = useState(null);
@@ -114,11 +119,12 @@ export function NotificationCenterPage() {
   const [busy, setBusy] = useState(false);
 
   async function loadAll() {
-    const [templateResponse, historyResponse, scheduledResponse, statsResponse] = await Promise.all([
+    const [templateResponse, historyResponse, scheduledResponse, statsResponse, ctaResponse] = await Promise.all([
       notificationService.templates(),
       notificationService.history({ limit: 50 }),
       notificationService.scheduled(),
       notificationService.stats(),
+      ctaConfigService.list({ channel: "push", isActive: true }),
     ]);
     setTemplates(templateResponse.data || []);
     try {
@@ -130,6 +136,7 @@ export function NotificationCenterPage() {
     setHistory(historyResponse.data || []);
     setScheduled(scheduledResponse.data || []);
     setStats(statsResponse.data || null);
+    setCtaConfigs(ctaResponse.data || []);
   }
 
   useEffect(() => {
@@ -154,6 +161,8 @@ export function NotificationCenterPage() {
       message: activeTemplate.message || "",
       image: activeTemplate.image || "",
       deepLink: activeTemplate.deepLink || "/notifications",
+      ctaConfigId: activeTemplate.ctaConfigId || "",
+      ctaText: activeTemplate.ctaText || "",
       targetType: activeTemplate.targetType || "all",
       category: activeTemplate.category || "custom",
       sound: activeTemplate.sound || "default",
@@ -207,6 +216,43 @@ export function NotificationCenterPage() {
 
   function removeSelectedUser(value) {
     setSelectedUserList(selectedUserList.filter((item) => item !== value));
+  }
+
+  function applyCtaConfig(id, target = "send") {
+    const selected = ctaConfigs.find((item) => String(item.id || item._id) === String(id));
+    const patch = !id ? { ctaConfigId: "" } : {
+      ctaConfigId: selected?.id || selected?._id || "",
+      ctaText: selected?.ctaText || "",
+      deepLink: selected?.ctaUrl || "/notifications",
+    };
+    if (target === "template") setTemplateForm((current) => ({ ...current, ...patch }));
+    else setSendForm((current) => ({ ...current, ...patch }));
+  }
+
+  async function createCtaFromSendForm() {
+    if (!sendForm.ctaText.trim() || !sendForm.deepLink.trim()) {
+      setMessage("Enter CTA text and deep link first.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const response = await ctaConfigService.create({
+        name: `${sendForm.campaignName || sendForm.title || sendForm.ctaText} CTA`,
+        channel: "push",
+        ctaText: sendForm.ctaText,
+        ctaType: "custom_url",
+        ctaUrl: sendForm.deepLink,
+        openIn: "app",
+      });
+      const item = response.data;
+      setCtaConfigs((current) => [item, ...current]);
+      setSendForm((current) => ({ ...current, ctaConfigId: item?.id || item?._id || "" }));
+      setMessage("Reusable push CTA created.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function saveTemplate(event) {
@@ -345,9 +391,11 @@ export function NotificationCenterPage() {
             {shouldSendNotification ? <>
               <label className={ui.field}><span>Notification Title</span><input className={ui.input} value={sendForm.title} onChange={(event) => setSendForm((current) => ({ ...current, title: event.target.value }))} required={shouldSendNotification} /></label>
               <label className={cn(ui.field, "lg:col-span-3")}><span>Notification Message</span><textarea className={ui.textarea} value={sendForm.message} onChange={(event) => setSendForm((current) => ({ ...current, message: event.target.value }))} required={shouldSendNotification} /></label>
+              <label className={ui.field}><span>Managed CTA</span><select className={ui.input} value={sendForm.ctaConfigId} onChange={(event) => applyCtaConfig(event.target.value)}><option value="">Custom CTA / None</option>{ctaConfigs.map((item) => <option key={item.id || item._id} value={item.id || item._id}>{item.name} - {item.ctaText}</option>)}</select></label>
               <label className={ui.field}><span>CTA Button Text</span><input className={ui.input} value={sendForm.ctaText} onChange={(event) => setSendForm((current) => ({ ...current, ctaText: event.target.value }))} placeholder="Open App" /></label>
               <label className={ui.field}><span>CTA Action / Deep Link</span><input className={ui.input} list="notification-deep-links" value={sendForm.deepLink} onChange={(event) => setSendForm((current) => ({ ...current, deepLink: event.target.value }))} /><datalist id="notification-deep-links">{deepLinks.map((item) => <option key={item} value={item} />)}</datalist></label>
               <label className={ui.field}><span>Target Screen</span><input className={ui.input} value={sendForm.targetScreen} onChange={(event) => setSendForm((current) => ({ ...current, targetScreen: event.target.value }))} placeholder="subscription" /></label>
+              <div className="flex items-end"><button type="button" className={cn(ui.buttonBase, ui.buttonSecondary, "w-full")} onClick={createCtaFromSendForm}>Save As New CTA</button></div>
               <label className={ui.field}><span>Image URL</span><input className={ui.input} value={sendForm.image} onChange={(event) => setSendForm((current) => ({ ...current, image: event.target.value }))} /></label>
             </> : null}
             {shouldSendEmail ? <>
@@ -429,7 +477,9 @@ export function NotificationCenterPage() {
             <label className={ui.field}><span>Default Audience</span><select className={ui.input} value={templateForm.targetType} onChange={(event) => setTemplateForm((current) => ({ ...current, targetType: event.target.value }))}>{targetOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
             <label className={cn(ui.field, "lg:col-span-3")}><span>Message</span><textarea className={ui.textarea} value={templateForm.message} onChange={(event) => setTemplateForm((current) => ({ ...current, message: event.target.value }))} required /></label>
             <label className={ui.field}><span>Image URL</span><input className={ui.input} value={templateForm.image} onChange={(event) => setTemplateForm((current) => ({ ...current, image: event.target.value }))} /></label>
+            <label className={ui.field}><span>Managed CTA</span><select className={ui.input} value={templateForm.ctaConfigId} onChange={(event) => applyCtaConfig(event.target.value, "template")}><option value="">Custom CTA / None</option>{ctaConfigs.map((item) => <option key={item.id || item._id} value={item.id || item._id}>{item.name} - {item.ctaText}</option>)}</select></label>
             <label className={ui.field}><span>Deep Link</span><input className={ui.input} value={templateForm.deepLink} onChange={(event) => setTemplateForm((current) => ({ ...current, deepLink: event.target.value }))} /></label>
+            <label className={ui.field}><span>CTA Text</span><input className={ui.input} value={templateForm.ctaText} onChange={(event) => setTemplateForm((current) => ({ ...current, ctaText: event.target.value }))} /></label>
             <label className={ui.field}><span>Category</span><select className={ui.input} value={templateForm.category} onChange={(event) => setTemplateForm((current) => ({ ...current, category: event.target.value }))}>{categoryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
             <div className="flex items-end gap-3 lg:col-span-3"><button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy}>{editingTemplateId ? "Update Template" : "Save Template"}</button>{editingTemplateId ? <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => { setEditingTemplateId(""); setTemplateForm(emptyTemplate); }}>Cancel</button> : null}</div>
           </form>

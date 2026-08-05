@@ -67,6 +67,7 @@ const navItems = [
   { label: "Notifications", to: "/notifications", section: "Operations", icon: HelpIcon, moduleKey: "notifications" },
   { label: "Notification Center", to: "/notification-center", section: "Operations", icon: Bell, moduleKey: "notification-center" },
   { label: "Notification Management", to: "/notification-management", section: "Operations", icon: Bell, mainOnly: true },
+  { label: "CTA Management", to: "/cta-management", section: "Operations", icon: TagIcon, mainOnly: true },
   { label: "Contact Messages", to: "/contact-messages", section: "Operations", icon: MailIcon, moduleKey: "contact-messages" },
   { label: "Help Desk", to: "/support-tickets", section: "Operations", icon: HelpIcon, moduleKey: "support-tickets" },
   { label: "Coupons", to: "/coupons", section: "Operations", icon: TagIcon, moduleKey: "coupons" },

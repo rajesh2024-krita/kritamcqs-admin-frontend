@@ -39,6 +39,7 @@ import { NotificationsPage } from "../pages/NotificationsPage";
 import { NotificationCenterPage } from "../pages/NotificationCenterPage";
 import { EmailTemplatesPage } from "../pages/EmailTemplatesPage";
 import { EmailTemplateCatalogPage } from "../pages/EmailTemplateCatalogPage";
+import { CtaManagementPage } from "../pages/CtaManagementPage";
 import { WeakAreaManagementPage } from "../pages/WeakAreaManagementPage";
 import { MistakeManagementPage } from "../pages/MistakeManagementPage";
 import { FreeQuestionsPage } from "../pages/FreeQuestionsPage";
@@ -165,6 +166,7 @@ export function AppRoutes() {
         <Route path="auth-settings" element={<ModuleAccess moduleKey="auth-settings"><AuthSettingsPage /></ModuleAccess>} />
         <Route path="email-templates" element={<ModuleAccess moduleKey="email-templates"><EmailTemplatesPage /></ModuleAccess>} />
         <Route path="email-template-keys" element={<ModuleAccess moduleKey="email-template-keys"><EmailTemplateCatalogPage /></ModuleAccess>} />
+        <Route path="cta-management" element={<MainAdminOnly><CtaManagementPage /></MainAdminOnly>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

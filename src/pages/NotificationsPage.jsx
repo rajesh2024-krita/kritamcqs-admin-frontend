@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { emailTemplateService } from "../api/emailTemplateService";
 import { notificationService } from "../api/notificationService";
+import { ctaConfigService } from "../api/ctaConfigService";
 import { EmptyState } from "../components/common/EmptyState";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { Pagination } from "../components/tables/Pagination";
@@ -54,6 +55,8 @@ const defaultForm = {
   deliveryMode: "notification",
   templateKey: "",
   variables: "{}",
+  ctaConfigId: "",
+  ctaText: "",
   linkUrl: "",
   selectedUsers: "",
 };
@@ -85,6 +88,7 @@ export function NotificationsPage() {
   const [form, setForm] = useState(defaultForm);
   const [attachment, setAttachment] = useState(null);
   const [emailCatalog, setEmailCatalog] = useState([]);
+  const [ctaConfigs, setCtaConfigs] = useState([]);
 
   async function loadItems(nextQuery = query) {
     setLoading(true);
@@ -115,6 +119,9 @@ export function NotificationsPage() {
           }),
         );
       })
+      .catch(() => undefined);
+    ctaConfigService.list({ channel: "push", isActive: true })
+      .then((response) => setCtaConfigs(response.data || []))
       .catch(() => undefined);
   }, []);
 
@@ -163,6 +170,44 @@ export function NotificationsPage() {
     }
   }
 
+  function applyCtaConfig(id) {
+    if (!id) {
+      setForm((current) => ({ ...current, ctaConfigId: "" }));
+      return;
+    }
+    const selected = ctaConfigs.find((item) => String(item.id || item._id) === String(id));
+    if (!selected) return;
+    setForm((current) => ({
+      ...current,
+      ctaConfigId: selected.id || selected._id || "",
+      ctaText: selected.ctaText || "",
+      linkUrl: selected.ctaUrl || current.linkUrl,
+    }));
+  }
+
+  async function createCtaFromNotification() {
+    if (!form.ctaText.trim() || !form.linkUrl.trim()) {
+      toast.error("Enter CTA text and redirect URL first.");
+      return;
+    }
+    try {
+      const response = await ctaConfigService.create({
+        name: `${form.title || form.ctaText || "Push"} CTA`,
+        channel: "push",
+        ctaText: form.ctaText,
+        ctaType: "custom_url",
+        ctaUrl: form.linkUrl,
+        openIn: "app",
+      });
+      const item = response.data;
+      setCtaConfigs((current) => [item, ...current]);
+      setForm((current) => ({ ...current, ctaConfigId: item?.id || item?._id || "" }));
+      toast.success("Reusable push CTA created.");
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <form className={ui.compactPanel} onSubmit={handleSubmit}>
@@ -181,6 +226,7 @@ export function NotificationsPage() {
                 type: "update",
                 targetGroup: "all",
                 deliveryMode: "notification",
+                ctaText: "Update",
                 linkUrl: playStoreUrl,
               }))}
           >
@@ -223,6 +269,17 @@ export function NotificationsPage() {
             <input className={ui.input} placeholder="/subscription" value={form.linkUrl} onChange={(event) => setForm((current) => ({ ...current, linkUrl: event.target.value }))} />
           </label>
           <label className={ui.field}>
+            <span>Managed CTA</span>
+            <select className={ui.input} value={form.ctaConfigId} onChange={(event) => applyCtaConfig(event.target.value)}>
+              <option value="">Custom CTA / None</option>
+              {ctaConfigs.map((item) => <option key={item.id || item._id} value={item.id || item._id}>{item.name} - {item.ctaText}</option>)}
+            </select>
+          </label>
+          <label className={ui.field}>
+            <span>CTA Text</span>
+            <input className={ui.input} placeholder="Open App" value={form.ctaText} onChange={(event) => setForm((current) => ({ ...current, ctaText: event.target.value }))} />
+          </label>
+          <label className={ui.field}>
             <span>Target Screen</span>
             <select className={ui.input} value={targetScreenOptions.some((item) => item.value === form.linkUrl) ? form.linkUrl : ""} onChange={(event) => setForm((current) => ({ ...current, linkUrl: event.target.value || current.linkUrl }))}>
               {targetScreenOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
@@ -251,6 +308,9 @@ export function NotificationsPage() {
             <span>Email Variables (JSON)</span>
             <textarea className={cn(ui.input, "min-h-24")} value={form.variables} onChange={(event) => setForm((current) => ({ ...current, variables: event.target.value }))} />
           </label>
+          <div className="lg:col-span-3">
+            <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={createCtaFromNotification}>Save Redirect As New CTA</button>
+          </div>
         </div>
 
         <div className="mt-4 flex justify-end">

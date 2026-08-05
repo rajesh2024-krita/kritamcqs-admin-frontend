@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { emailTemplateService } from "../api/emailTemplateService";
+import { ctaConfigService } from "../api/ctaConfigService";
 import { ConfirmDeleteModal } from "../components/common/ConfirmDeleteModal";
 import { EmptyState } from "../components/common/EmptyState";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
@@ -93,6 +94,7 @@ const initialFormState = {
   variables: [],
   sampleData: "{}",
   isActive: true,
+  ctaConfigId: "",
   ctaEnabled: false,
   ctaText: "",
   ctaType: "none",
@@ -112,6 +114,7 @@ export function EmailTemplatesPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [catalog, setCatalog] = useState(null);
+  const [ctaConfigs, setCtaConfigs] = useState([]);
   const [preview, setPreview] = useState(null);
   const [logs, setLogs] = useState([]);
   const [audit, setAudit] = useState(null);
@@ -147,6 +150,7 @@ export function EmailTemplatesPage() {
   function isValidCtaUrl(value) {
     const url = String(value || "").trim();
     if (!url || /\s/.test(url)) return false;
+    if (/^\/[^\s]*$/.test(url)) return true;
     if (/^https?:\/\//i.test(url)) {
       try {
         const parsed = new URL(url);
@@ -165,6 +169,30 @@ export function EmailTemplatesPage() {
       ctaType: value,
       ctaUrl: selected?.url !== undefined ? selected.url : current.ctaUrl,
     }));
+  }
+
+  function ctaFieldsFromConfig(config) {
+    return {
+      ctaConfigId: config.id || config._id || "",
+      ctaEnabled: true,
+      ctaText: config.ctaText || "",
+      ctaType: config.ctaType || "none",
+      ctaUrl: config.ctaUrl || "",
+      openIn: config.openIn || "auto",
+      buttonColor: config.buttonColor || "#2563eb",
+      buttonTextColor: config.buttonTextColor || "#ffffff",
+      buttonAlignment: config.buttonAlignment || "center",
+    };
+  }
+
+  function applyManagedCta(id) {
+    if (!id) {
+      setFormState((current) => ({ ...current, ctaConfigId: "" }));
+      return;
+    }
+    const selected = ctaConfigs.find((item) => String(item.id || item._id) === String(id));
+    if (!selected) return;
+    setFormState((current) => ({ ...current, ...ctaFieldsFromConfig(selected) }));
   }
 
   function resetForm() {
@@ -192,6 +220,7 @@ export function EmailTemplatesPage() {
       variables: Array.isArray(item.variables) ? item.variables : [],
       sampleData: JSON.stringify(item.sampleData || {}, null, 2),
       isActive: item.isActive !== false,
+      ctaConfigId: item.ctaConfigId || "",
       ctaEnabled: Boolean(item.ctaEnabled),
       ctaText: item.ctaText || "",
       ctaType: item.ctaType || "none",
@@ -218,6 +247,7 @@ export function EmailTemplatesPage() {
       variables: Array.isArray(item.variables) ? item.variables : [],
       sampleData: JSON.stringify(item.sampleData || {}, null, 2),
       isActive: item.isActive !== false,
+      ctaConfigId: item.ctaConfigId || "",
       ctaEnabled: Boolean(item.ctaEnabled),
       ctaText: item.ctaText || "",
       ctaType: item.ctaType || "none",
@@ -283,6 +313,7 @@ export function EmailTemplatesPage() {
       variables: Array.isArray(formState.variables) ? formState.variables : [],
       sampleData,
       isActive: Boolean(formState.isActive),
+      ctaConfigId: formState.ctaConfigId || "",
       ctaEnabled: Boolean(formState.ctaEnabled),
       ctaText: formState.ctaText.trim(),
       ctaType: formState.ctaType || "none",
@@ -410,6 +441,11 @@ export function EmailTemplatesPage() {
     setCatalog((payload?.data ?? payload) || null);
   }
 
+  async function loadCtaConfigs() {
+    const response = await ctaConfigService.list({ channel: "email", isActive: true });
+    setCtaConfigs(response.data || []);
+  }
+
   async function loadLogs() {
     const response = await emailTemplateService.logs({ limit: 5 });
     const payload = response?.data ?? response;
@@ -426,6 +462,7 @@ export function EmailTemplatesPage() {
     await Promise.all([
       loadItems(nextQuery),
       loadCatalog(),
+      loadCtaConfigs(),
       loadAudit(),
     ]);
   }
@@ -454,6 +491,9 @@ export function EmailTemplatesPage() {
     loadLogs()
       .catch(() => undefined);
 
+    loadCtaConfigs()
+      .catch(() => undefined);
+
     loadAudit()
       .catch(() => undefined);
   }, []);
@@ -476,6 +516,33 @@ export function EmailTemplatesPage() {
     try {
       const response = await emailTemplateService.preview(item.id, {});
       setPreview({ item, ...(response.data || {}) });
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  async function createManagedCtaFromForm() {
+    if (!formState.ctaText.trim() || !isValidCtaUrl(formState.ctaUrl)) {
+      toast.error("Enter valid CTA text and URL before saving as reusable CTA.");
+      return;
+    }
+    try {
+      const response = await ctaConfigService.create({
+        name: `${formState.name || formState.ctaText || "Email CTA"} CTA`,
+        channel: "email",
+        ctaText: formState.ctaText,
+        ctaType: formState.ctaType,
+        ctaUrl: formState.ctaUrl,
+        openIn: formState.openIn,
+        buttonColor: formState.buttonColor,
+        buttonTextColor: formState.buttonTextColor,
+        buttonAlignment: formState.buttonAlignment,
+        isActive: true,
+      });
+      const item = response.data;
+      await loadCtaConfigs();
+      setFormState((current) => ({ ...current, ctaConfigId: item?.id || item?._id || "" }));
+      toast.success("Reusable CTA created.");
     } catch (error) {
       toast.error(error.message);
     }
@@ -702,6 +769,21 @@ export function EmailTemplatesPage() {
                 />
               </div>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <Field label="Managed CTA" className="md:col-span-2">
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <select className={ui.input} value={formState.ctaConfigId} onChange={(event) => applyManagedCta(event.target.value)}>
+                      <option value="">Custom CTA / None</option>
+                      {ctaConfigs.map((item) => (
+                        <option key={item.id || item._id} value={item.id || item._id}>
+                          {item.name} - {item.ctaText}
+                        </option>
+                      ))}
+                    </select>
+                    <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary, "whitespace-nowrap")} onClick={createManagedCtaFromForm}>
+                      Save As New CTA
+                    </button>
+                  </div>
+                </Field>
                 <Field label="CTA Button Text" error={formErrors.ctaText}>
                   <input className={ui.input} value={formState.ctaText} onChange={(event) => setFormState((current) => ({ ...current, ctaText: event.target.value }))} placeholder="e.g. Start Mock Test" />
                 </Field>
