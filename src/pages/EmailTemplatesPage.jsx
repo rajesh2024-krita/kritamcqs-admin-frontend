@@ -37,6 +37,51 @@ const typeOptions = [
 
 const formTypeOptions = typeOptions.filter((option) => option.value !== "all");
 
+const ctaTypeOptions = [
+  { value: "none", label: "None", url: "" },
+  { value: "custom_url", label: "Custom URL", url: "" },
+  { value: "home", label: "Home", url: "https://app.kritamcqs.com" },
+  { value: "login", label: "Login", url: "https://app.kritamcqs.com/login" },
+  { value: "register", label: "Register", url: "https://app.kritamcqs.com/register" },
+  { value: "subscription", label: "Subscription", url: "https://app.kritamcqs.com/subscription" },
+  { value: "premium_plan", label: "Premium Plan", url: "https://app.kritamcqs.com/subscription" },
+  { value: "renew_subscription", label: "Renew Subscription", url: "https://app.kritamcqs.com/subscription/renew" },
+  { value: "upgrade_plan", label: "Upgrade Plan", url: "https://app.kritamcqs.com/subscription/upgrade" },
+  { value: "payment", label: "Payment", url: "https://app.kritamcqs.com/payment" },
+  { value: "daily_test", label: "Daily Test", url: "https://app.kritamcqs.com/daily-test" },
+  { value: "mock_test", label: "Mock Test", url: "https://app.kritamcqs.com/mock-test" },
+  { value: "revision", label: "Revision", url: "https://app.kritamcqs.com/revision" },
+  { value: "pyq", label: "PYQ", url: "https://app.kritamcqs.com/pyq" },
+  { value: "leaderboard", label: "Leaderboard", url: "https://app.kritamcqs.com/leaderboard" },
+  { value: "weak_areas", label: "Weak Areas", url: "https://app.kritamcqs.com/weak-areas" },
+  { value: "mistake_book", label: "Mistake Book", url: "https://app.kritamcqs.com/mistake-book" },
+  { value: "analytics", label: "Analytics", url: "https://app.kritamcqs.com/analytics" },
+  { value: "profile", label: "Profile", url: "https://app.kritamcqs.com/profile" },
+  { value: "notifications", label: "Notifications", url: "https://app.kritamcqs.com/notifications" },
+  { value: "offers", label: "Offers", url: "https://app.kritamcqs.com/offers" },
+  { value: "referral", label: "Referral", url: "https://app.kritamcqs.com/referral" },
+  { value: "invite_friends", label: "Invite Friends", url: "https://app.kritamcqs.com/invite" },
+  { value: "contact_support", label: "Contact Support", url: "https://app.kritamcqs.com/support" },
+  { value: "faq", label: "FAQ", url: "https://kritamcqs.com/faq" },
+  { value: "privacy_policy", label: "Privacy Policy", url: "https://kritamcqs.com/privacy-policy" },
+  { value: "terms_conditions", label: "Terms & Conditions", url: "https://kritamcqs.com/terms-conditions" },
+  { value: "website", label: "Website", url: "https://kritamcqs.com" },
+  { value: "play_store", label: "Play Store", url: "https://play.google.com/store/apps/details?id=com.kritamcqs.app" },
+  { value: "app_store", label: "App Store", url: "https://apps.apple.com/app/krita-mcqs" },
+];
+
+const openInOptions = [
+  { value: "app", label: "App" },
+  { value: "website", label: "Website" },
+  { value: "auto", label: "Auto (App if installed, otherwise Website)" },
+];
+
+const alignmentOptions = [
+  { value: "left", label: "Left" },
+  { value: "center", label: "Center" },
+  { value: "right", label: "Right" },
+];
+
 const initialFormState = {
   name: "",
   key: "",
@@ -48,6 +93,14 @@ const initialFormState = {
   variables: [],
   sampleData: "{}",
   isActive: true,
+  ctaEnabled: false,
+  ctaText: "",
+  ctaType: "none",
+  ctaUrl: "",
+  openIn: "auto",
+  buttonColor: "#2563eb",
+  buttonTextColor: "#ffffff",
+  buttonAlignment: "center",
 };
 
 export function EmailTemplatesPage() {
@@ -87,6 +140,33 @@ export function EmailTemplatesPage() {
     return used.filter((name) => !allowedVariables.includes(name));
   }
 
+  function getCtaTypeLabel(type) {
+    return ctaTypeOptions.find((option) => option.value === type)?.label || type || "None";
+  }
+
+  function isValidCtaUrl(value) {
+    const url = String(value || "").trim();
+    if (!url || /\s/.test(url)) return false;
+    if (/^https?:\/\//i.test(url)) {
+      try {
+        const parsed = new URL(url);
+        return Boolean(parsed.hostname);
+      } catch {
+        return false;
+      }
+    }
+    return /^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(url);
+  }
+
+  function handleCtaTypeChange(value) {
+    const selected = ctaTypeOptions.find((option) => option.value === value);
+    setFormState((current) => ({
+      ...current,
+      ctaType: value,
+      ctaUrl: selected?.url !== undefined ? selected.url : current.ctaUrl,
+    }));
+  }
+
   function resetForm() {
     setEditingItem(null);
     setFormState(initialFormState);
@@ -112,6 +192,14 @@ export function EmailTemplatesPage() {
       variables: Array.isArray(item.variables) ? item.variables : [],
       sampleData: JSON.stringify(item.sampleData || {}, null, 2),
       isActive: item.isActive !== false,
+      ctaEnabled: Boolean(item.ctaEnabled),
+      ctaText: item.ctaText || "",
+      ctaType: item.ctaType || "none",
+      ctaUrl: item.ctaUrl || "",
+      openIn: item.openIn || "auto",
+      buttonColor: item.buttonColor || "#2563eb",
+      buttonTextColor: item.buttonTextColor || "#ffffff",
+      buttonAlignment: item.buttonAlignment || "center",
     });
     setShowForm(true);
   }
@@ -130,6 +218,14 @@ export function EmailTemplatesPage() {
       variables: Array.isArray(item.variables) ? item.variables : [],
       sampleData: JSON.stringify(item.sampleData || {}, null, 2),
       isActive: item.isActive !== false,
+      ctaEnabled: Boolean(item.ctaEnabled),
+      ctaText: item.ctaText || "",
+      ctaType: item.ctaType || "none",
+      ctaUrl: item.ctaUrl || "",
+      openIn: item.openIn || "auto",
+      buttonColor: item.buttonColor || "#2563eb",
+      buttonTextColor: item.buttonTextColor || "#ffffff",
+      buttonAlignment: item.buttonAlignment || "center",
     });
     setShowForm(true);
   }
@@ -143,6 +239,14 @@ export function EmailTemplatesPage() {
     if (!formState.htmlContent.trim() && !formState.textContent.trim()) {
       nextErrors.htmlContent = "At least one of HTML or text content is required.";
       nextErrors.textContent = "At least one of HTML or text content is required.";
+    }
+    if (formState.ctaEnabled) {
+      if (!formState.ctaText.trim()) nextErrors.ctaText = "CTA button text is required when CTA is enabled.";
+      if (!formState.ctaUrl.trim()) {
+        nextErrors.ctaUrl = "CTA URL / Deep Link is required when CTA is enabled.";
+      } else if (!isValidCtaUrl(formState.ctaUrl)) {
+        nextErrors.ctaUrl = "Enter a valid HTTPS URL or custom deep link.";
+      }
     }
     if (formState.sampleData.trim()) {
       try {
@@ -179,6 +283,14 @@ export function EmailTemplatesPage() {
       variables: Array.isArray(formState.variables) ? formState.variables : [],
       sampleData,
       isActive: Boolean(formState.isActive),
+      ctaEnabled: Boolean(formState.ctaEnabled),
+      ctaText: formState.ctaText.trim(),
+      ctaType: formState.ctaType || "none",
+      ctaUrl: formState.ctaUrl.trim(),
+      openIn: formState.openIn || "auto",
+      buttonColor: formState.buttonColor || "#2563eb",
+      buttonTextColor: formState.buttonTextColor || "#ffffff",
+      buttonAlignment: formState.buttonAlignment || "center",
     };
   }
 
@@ -442,6 +554,7 @@ export function EmailTemplatesPage() {
                   <th className={ui.tableHead}>Type</th>
                   <th className={ui.tableHead}>Module</th>
                   <th className={ui.tableHead}>Variables</th>
+                  <th className={ui.tableHead}>CTA</th>
                   <th className={ui.tableHead}>Status</th>
                   <th className={ui.tableHead}>Last Updated</th>
                   <th className={ui.tableHead}>Actions</th>
@@ -465,6 +578,19 @@ export function EmailTemplatesPage() {
                     <td className={ui.tableCell}>
                       <div className="max-w-xs truncate text-sm text-slate-500">
                         {(item.variables || []).map((name) => `{{${name}}}`).join(", ")}
+                      </div>
+                    </td>
+                    <td className={ui.tableCell}>
+                      <div className="flex max-w-xs flex-col gap-1">
+                        <span className={cn(ui.pill, item.ctaEnabled ? ui.pillSuccess : ui.pillGray)}>
+                          {item.ctaEnabled ? "Enabled" : "Disabled"}
+                        </span>
+                        {item.ctaEnabled ? (
+                          <div className="text-xs text-slate-500">
+                            {getCtaTypeLabel(item.ctaType)}
+                            {item.ctaText ? ` - ${item.ctaText}` : ""}
+                          </div>
+                        ) : null}
                       </div>
                     </td>
                     <td className={ui.tableCell}>
@@ -563,6 +689,48 @@ export function EmailTemplatesPage() {
             <Field label="Active">
               <ToggleSwitch checked={Boolean(formState.isActive)} onChange={(value) => setFormState((current) => ({ ...current, isActive: value }))} label={formState.isActive ? "Active" : "Inactive"} />
             </Field>
+            <div className="md:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <div className="text-sm font-black text-slate-900">CTA Settings</div>
+                  <div className="text-sm text-slate-500">Configure the email call-to-action button.</div>
+                </div>
+                <ToggleSwitch
+                  checked={Boolean(formState.ctaEnabled)}
+                  onChange={(value) => setFormState((current) => ({ ...current, ctaEnabled: value }))}
+                  label={formState.ctaEnabled ? "CTA Enabled" : "CTA Disabled"}
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <Field label="CTA Button Text" error={formErrors.ctaText}>
+                  <input className={ui.input} value={formState.ctaText} onChange={(event) => setFormState((current) => ({ ...current, ctaText: event.target.value }))} placeholder="e.g. Start Mock Test" />
+                </Field>
+                <Field label="CTA Type">
+                  <SelectDropdown value={formState.ctaType} onChange={handleCtaTypeChange} options={ctaTypeOptions.map(({ value, label }) => ({ value, label }))} placeholder="Select CTA type" />
+                </Field>
+                <Field label="CTA URL / Deep Link" error={formErrors.ctaUrl} className="md:col-span-2">
+                  <input className={ui.input} value={formState.ctaUrl} onChange={(event) => setFormState((current) => ({ ...current, ctaUrl: event.target.value }))} placeholder="https://app.kritamcqs.com/subscription" />
+                </Field>
+                <Field label="Open In">
+                  <SelectDropdown value={formState.openIn} onChange={(value) => setFormState((current) => ({ ...current, openIn: value }))} options={openInOptions} />
+                </Field>
+                <Field label="Button Alignment">
+                  <SelectDropdown value={formState.buttonAlignment} onChange={(value) => setFormState((current) => ({ ...current, buttonAlignment: value }))} options={alignmentOptions} />
+                </Field>
+                <Field label="Button Color">
+                  <div className="flex items-center gap-3">
+                    <input type="color" className="h-11 w-14 rounded-lg border border-slate-200 bg-white p-1" value={/^#[0-9a-f]{6}$/i.test(formState.buttonColor) ? formState.buttonColor : "#2563eb"} onChange={(event) => setFormState((current) => ({ ...current, buttonColor: event.target.value }))} />
+                    <input className={ui.input} value={formState.buttonColor} onChange={(event) => setFormState((current) => ({ ...current, buttonColor: event.target.value }))} />
+                  </div>
+                </Field>
+                <Field label="Button Text Color">
+                  <div className="flex items-center gap-3">
+                    <input type="color" className="h-11 w-14 rounded-lg border border-slate-200 bg-white p-1" value={/^#[0-9a-f]{6}$/i.test(formState.buttonTextColor) ? formState.buttonTextColor : "#ffffff"} onChange={(event) => setFormState((current) => ({ ...current, buttonTextColor: event.target.value }))} />
+                    <input className={ui.input} value={formState.buttonTextColor} onChange={(event) => setFormState((current) => ({ ...current, buttonTextColor: event.target.value }))} />
+                  </div>
+                </Field>
+              </div>
+            </div>
             <Field label="HTML Content" error={formErrors.htmlContent} className="md:col-span-2">
               <textarea className={ui.textarea} rows={6} value={formState.htmlContent} onChange={(event) => setFormState((current) => ({ ...current, htmlContent: event.target.value }))} />
             </Field>
