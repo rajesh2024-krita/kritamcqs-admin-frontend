@@ -40,35 +40,16 @@ const formTypeOptions = typeOptions.filter((option) => option.value !== "all");
 
 const ctaTypeOptions = [
   { value: "none", label: "None", url: "" },
-  { value: "custom_url", label: "Custom Deep Link", url: "" },
-  { value: "home", label: "Home", url: "/dashboard" },
-  { value: "login", label: "Login", url: "/login" },
-  { value: "register", label: "Register", url: "/login" },
-  { value: "subscription", label: "Subscription Plans", url: "/subscription" },
-  { value: "premium_plan", label: "Premium Plan", url: "/subscription" },
-  { value: "renew_subscription", label: "Renew Subscription", url: "/subscription" },
-  { value: "upgrade_plan", label: "Upgrade Plan", url: "/subscription" },
-  { value: "payment", label: "Payment", url: "/subscription" },
+  { value: "home", label: "Home", url: "/home" },
   { value: "daily_test", label: "Daily Test", url: "/daily-test" },
-  { value: "mock_test", label: "Mock Test", url: "/mock-tests" },
   { value: "revision", label: "Revision", url: "/revision" },
-  { value: "pyq", label: "PYQ", url: "/year-questions" },
-  { value: "leaderboard", label: "Leaderboard", url: "/dashboard" },
+  { value: "mock_test", label: "Mock Test", url: "/mock-tests" },
+  { value: "leaderboard", label: "Leaderboard", url: "/leaderboard" },
   { value: "weak_areas", label: "Weak Areas", url: "/weak-areas" },
-  { value: "mistake_book", label: "Mistake Book", url: "/mistakes" },
-  { value: "analytics", label: "Analytics", url: "/test-results" },
+  { value: "mistake_book", label: "Mistake Book", url: "/mistake-book" },
+  { value: "subscription", label: "Subscription", url: "/subscription" },
   { value: "profile", label: "Profile", url: "/profile" },
-  { value: "notifications", label: "Notifications", url: "/notifications" },
-  { value: "offers", label: "Offers", url: "/notifications" },
-  { value: "referral", label: "Referral", url: "/profile?ref={{referral_code}}" },
-  { value: "invite_friends", label: "Invite Friends", url: "/profile" },
-  { value: "contact_support", label: "Contact Support", url: "/help-support" },
-  { value: "faq", label: "FAQ", url: "https://kritamcqs.com/faq" },
-  { value: "privacy_policy", label: "Privacy Policy", url: "https://kritamcqs.com/privacy-policy" },
-  { value: "terms_conditions", label: "Terms & Conditions", url: "https://kritamcqs.com/terms-conditions" },
-  { value: "website", label: "Website", url: "https://kritamcqs.com" },
-  { value: "play_store", label: "Play Store", url: "https://play.google.com/store/apps/details?id=app.kritamcqs.androidapp" },
-  { value: "app_store", label: "App Store", url: "https://apps.apple.com/app/krita-mcqs" },
+  { value: "custom_url", label: "Custom URL", url: "" },
 ];
 
 const openInOptions = [
@@ -272,10 +253,13 @@ export function EmailTemplatesPage() {
     }
     if (formState.ctaEnabled) {
       if (!formState.ctaText.trim()) nextErrors.ctaText = "CTA button text is required when CTA is enabled.";
-      if (!formState.ctaUrl.trim()) {
-        nextErrors.ctaUrl = "CTA URL / Deep Link is required when CTA is enabled.";
-      } else if (!isValidCtaUrl(formState.ctaUrl)) {
-        nextErrors.ctaUrl = "Enter a valid HTTPS URL or custom deep link.";
+      if (!formState.ctaType || formState.ctaType === "none") nextErrors.ctaType = "CTA destination is required when CTA is enabled.";
+      if (formState.ctaType === "custom_url") {
+        if (!formState.ctaUrl.trim()) {
+          nextErrors.ctaUrl = "Custom URL is required.";
+        } else if (!isValidCtaUrl(formState.ctaUrl)) {
+          nextErrors.ctaUrl = "Enter a valid URL.";
+        }
       }
     }
     if (formState.sampleData.trim()) {
@@ -522,8 +506,8 @@ export function EmailTemplatesPage() {
   }
 
   async function createManagedCtaFromForm() {
-    if (!formState.ctaText.trim() || !isValidCtaUrl(formState.ctaUrl)) {
-      toast.error("Enter valid CTA text and URL before saving as reusable CTA.");
+    if (!formState.ctaText.trim() || !formState.ctaType || formState.ctaType === "none" || (formState.ctaType === "custom_url" && !isValidCtaUrl(formState.ctaUrl))) {
+      toast.error("Enter valid CTA text and destination before saving as reusable CTA.");
       return;
     }
     try {
@@ -768,6 +752,7 @@ export function EmailTemplatesPage() {
                   label={formState.ctaEnabled ? "CTA Enabled" : "CTA Disabled"}
                 />
               </div>
+              {formState.ctaEnabled ? (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Field label="Managed CTA" className="md:col-span-2">
                   <div className="flex flex-col gap-3 sm:flex-row">
@@ -787,12 +772,14 @@ export function EmailTemplatesPage() {
                 <Field label="CTA Button Text" error={formErrors.ctaText}>
                   <input className={ui.input} value={formState.ctaText} onChange={(event) => setFormState((current) => ({ ...current, ctaText: event.target.value }))} placeholder="e.g. Start Mock Test" />
                 </Field>
-                <Field label="CTA Type">
+                <Field label="CTA Destination" error={formErrors.ctaType}>
                   <SelectDropdown value={formState.ctaType} onChange={handleCtaTypeChange} options={ctaTypeOptions.map(({ value, label }) => ({ value, label }))} placeholder="Select CTA type" />
                 </Field>
-                <Field label="CTA URL / Deep Link" error={formErrors.ctaUrl} className="md:col-span-2">
-                  <input className={ui.input} value={formState.ctaUrl} onChange={(event) => setFormState((current) => ({ ...current, ctaUrl: event.target.value }))} placeholder="/subscription" />
-                </Field>
+                {formState.ctaType === "custom_url" ? (
+                  <Field label="Custom URL" error={formErrors.ctaUrl} className="md:col-span-2">
+                    <input className={ui.input} value={formState.ctaUrl} onChange={(event) => setFormState((current) => ({ ...current, ctaUrl: event.target.value }))} placeholder="https://kritamcqs.com" />
+                  </Field>
+                ) : null}
                 <Field label="Open In">
                   <SelectDropdown value={formState.openIn} onChange={(value) => setFormState((current) => ({ ...current, openIn: value }))} options={openInOptions} />
                 </Field>
@@ -812,6 +799,7 @@ export function EmailTemplatesPage() {
                   </div>
                 </Field>
               </div>
+              ) : null}
             </div>
             <Field label="HTML Content" error={formErrors.htmlContent} className="md:col-span-2">
               <textarea className={ui.textarea} rows={6} value={formState.htmlContent} onChange={(event) => setFormState((current) => ({ ...current, htmlContent: event.target.value }))} />
