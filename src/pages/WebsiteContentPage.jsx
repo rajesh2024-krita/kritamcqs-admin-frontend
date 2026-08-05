@@ -12,8 +12,8 @@ const defaultInstagramTabs = [
 const defaultContent = {
   links: {
     googlePlay: "https://play.google.com/store/apps/details?id=app.kritamcqs.androidapp",
-    dashboard: "https://app.kritamcqs.com/dashboard",
-    premium: "https://app.kritamcqs.com/subscription",
+    dashboard: "https://app.kritamcqs.com/#/dashboard",
+    premium: "https://app.kritamcqs.com/#/subscription",
     contact: "#contact",
     whatsapp: "https://wa.me/917010313880",
   },
@@ -66,7 +66,7 @@ const defaultContent = {
     title: "Your Personal Rank Improvement Dashboard",
     subtitle: "Monitor:",
     cta: "Open Dashboard",
-    ctaHref: "https://app.kritamcqs.com/dashboard",
+    ctaHref: "https://app.kritamcqs.com/#/dashboard",
     ctaLinkKey: "dashboard",
     metrics: ["Accuracy %", "Average Time", "Weak Topics", "Improvement Trend", "Predicted Score", "Daily Progress"],
   },
