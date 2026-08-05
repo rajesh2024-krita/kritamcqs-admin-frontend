@@ -1,10 +1,10 @@
 export const ctaTypeOptions = [
   { value: "none", label: "None", url: "" },
-  { value: "custom_url", label: "Custom URL", url: "" },
+  { value: "custom_url", label: "Custom Deep Link", url: "" },
   { value: "home", label: "Home", url: "/dashboard" },
   { value: "login", label: "Login", url: "/login" },
   { value: "register", label: "Register", url: "/login" },
-  { value: "subscription", label: "Subscription", url: "/subscription" },
+  { value: "subscription", label: "Subscription Plans", url: "/subscription" },
   { value: "premium_plan", label: "Premium Plan", url: "/subscription" },
   { value: "renew_subscription", label: "Renew Subscription", url: "/subscription" },
   { value: "upgrade_plan", label: "Upgrade Plan", url: "/subscription" },
@@ -27,7 +27,7 @@ export const ctaTypeOptions = [
   { value: "privacy_policy", label: "Privacy Policy", url: "https://kritamcqs.com/privacy-policy" },
   { value: "terms_conditions", label: "Terms & Conditions", url: "https://kritamcqs.com/terms-conditions" },
   { value: "website", label: "Website", url: "https://kritamcqs.com" },
-  { value: "play_store", label: "Play Store", url: "https://play.google.com/store/apps/details?id=com.kritamcqs.app" },
+  { value: "play_store", label: "Play Store", url: "https://play.google.com/store/apps/details?id=app.kritamcqs.androidapp" },
   { value: "app_store", label: "App Store", url: "https://apps.apple.com/app/krita-mcqs" },
 ];
 

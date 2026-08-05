@@ -8,7 +8,7 @@ import { SearchBar } from "../components/tables/SearchBar";
 import { useToast } from "../context/ToastContext";
 import { cn, ui } from "../ui";
 
-const deepLinkHint = "Use /subscription for app routing, https://app.kritamcqs.com/#/subscription for email/web fallback, or kritamcqs://subscription for app-only deep links.";
+const deepLinkHint = "Use /subscription for app routing, https://app.kritamcqs.com/cta?target=%2Fsubscription for email/store fallback, or kritamcqs://subscription for app-only deep links.";
 
 const defaultReminders = [
   {
