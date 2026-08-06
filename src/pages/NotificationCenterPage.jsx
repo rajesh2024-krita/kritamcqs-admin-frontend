@@ -28,9 +28,9 @@ const categoryOptions = [
 
 const deepLinks = ["/daily-test", "/mock-tests", "/revision", "/weak-areas", "/subscription", "/notifications", "/dashboard"];
 const deliveryOptions = [
-  { value: "notification", label: "Notification Only" },
+  { value: "notification", label: "Push Notification" },
   { value: "email", label: "Email Only" },
-  { value: "both", label: "Notification + Email" },
+  { value: "both", label: "Push Notification + Email" },
 ];
 
 const emptyTemplate = {
@@ -209,7 +209,7 @@ export function NotificationCenterPage() {
     const timeoutId = window.setTimeout(async () => {
       setUserLoading(true);
       try {
-        const response = await notificationService.users({ q: userSearch, targetType: sendForm.targetType, limit: 50 });
+        const response = await notificationService.users({ q: userSearch, targetType: sendForm.targetType, limit: 200 });
         if (!cancelled) setUserResults(response.data || []);
       } catch (error) {
         if (!cancelled) setMessage(error.message);

@@ -58,6 +58,16 @@ const emptyConfig = {
   reminders: defaultReminders,
 };
 
+const emptyFreeUserCta = {
+  enabled: true,
+  eyebrow: "NEET & JEE Unlock",
+  title: "Go Premium",
+  description: "Unlock unlimited questions, weak area analysis, and smart revision.",
+  imageUrl: "",
+  ctaText: "View Plans",
+  ctaLink: "/subscription",
+};
+
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
@@ -95,6 +105,7 @@ export function SubscriptionReminderCenterPage() {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(() => clone(emptyConfig));
+  const [freeUserCta, setFreeUserCta] = useState(() => clone(emptyFreeUserCta));
 
   async function load(activeTab = tab, nextQuery = query) {
     setLoading(true);
@@ -120,6 +131,12 @@ export function SubscriptionReminderCenterPage() {
   useEffect(() => {
     void load(tab, query);
   }, [tab, query.page]);
+
+  useEffect(() => {
+    subscriptionReminderService.freeUserCta()
+      .then((response) => setFreeUserCta({ ...emptyFreeUserCta, ...(response.data || {}) }))
+      .catch((error) => toast.error(error.message));
+  }, []);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -163,6 +180,17 @@ export function SubscriptionReminderCenterPage() {
     }
   }
 
+  async function saveFreeUserCta(event) {
+    event.preventDefault();
+    try {
+      const response = await subscriptionReminderService.saveFreeUserCta(freeUserCta);
+      setFreeUserCta({ ...emptyFreeUserCta, ...(response.data || {}) });
+      toast.success("Free user subscription CTA saved");
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className={ui.compactPanel}>
@@ -185,7 +213,7 @@ export function SubscriptionReminderCenterPage() {
           ))}
         </div>
         <div className="mt-5 flex flex-wrap gap-2">
-          {[["configurations", "Configurations"], ["jobs", "Reminder Jobs"], ["logs", "Delivery Logs"]].map(([key, label]) => (
+          {[["configurations", "Configurations"], ["jobs", "Reminder Jobs"], ["logs", "Delivery Logs"], ["cta", "Free User CTA"]].map(([key, label]) => (
             <button key={key} className={cn(ui.buttonBase, tab === key ? ui.buttonPrimary : ui.buttonSecondary)} onClick={() => { setTab(key); setQuery({ page: 1 }); }}>{label}</button>
           ))}
         </div>
@@ -193,15 +221,43 @@ export function SubscriptionReminderCenterPage() {
 
       {editing ? <ReminderForm form={form} setForm={setForm} editing={editing} onClose={() => setEditing(null)} onSave={save} /> : null}
 
-      <div className={ui.compactPanel}>
+      {tab !== "cta" ? <div className={ui.compactPanel}>
         <SearchBar value={search} onChange={setSearch} placeholder="Search subscription reminders..." />
-      </div>
+      </div> : null}
 
       {loading ? <LoadingSpinner label="Loading subscription reminders..." /> : null}
       {!loading && tab === "configurations" ? <ConfigurationTable items={items} onEdit={beginEdit} onAction={action} meta={meta} setQuery={setQuery} /> : null}
       {!loading && tab === "jobs" ? <JobTable items={items} onAction={action} meta={meta} setQuery={setQuery} /> : null}
       {!loading && tab === "logs" ? <LogTable items={items} meta={meta} setQuery={setQuery} /> : null}
+      {tab === "cta" ? <FreeUserCtaForm value={freeUserCta} setValue={setFreeUserCta} onSave={saveFreeUserCta} /> : null}
     </div>
+  );
+}
+
+function FreeUserCtaForm({ value, setValue, onSave }) {
+  function patch(field, nextValue) {
+    setValue((current) => ({ ...current, [field]: nextValue }));
+  }
+
+  return (
+    <form className={ui.compactPanel} onSubmit={onSave}>
+      <div className="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h3 className="text-lg font-black text-slate-900">Free User Subscription CTA</h3>
+          <p className={ui.muted}>Shown directly below the Daily Test card for free users only. Tapping it opens the configured subscription page link.</p>
+        </div>
+        <button className={cn(ui.buttonBase, ui.buttonPrimary)}><Save size={16} /> Save CTA</button>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Select label="Status" value={value.enabled ? "enabled" : "disabled"} options={["enabled", "disabled"]} onChange={(nextValue) => patch("enabled", nextValue === "enabled")} />
+        <Field label="Eyebrow" value={value.eyebrow} onChange={(nextValue) => patch("eyebrow", nextValue)} />
+        <Field label="Title" value={value.title} onChange={(nextValue) => patch("title", nextValue)} />
+        <Textarea label="Description" value={value.description} onChange={(nextValue) => patch("description", nextValue)} />
+        <Field label="Image URL" value={value.imageUrl} onChange={(nextValue) => patch("imageUrl", nextValue)} />
+        <Field label="CTA Text" value={value.ctaText} onChange={(nextValue) => patch("ctaText", nextValue)} />
+        <Field label="CTA Link" value={value.ctaLink} onChange={(nextValue) => patch("ctaLink", nextValue)} />
+      </div>
+    </form>
   );
 }
 
