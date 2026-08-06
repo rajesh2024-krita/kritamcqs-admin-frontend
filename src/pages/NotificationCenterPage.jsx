@@ -13,6 +13,7 @@ const targetOptions = [
   { value: "active", label: "Active Users" },
   { value: "inactive", label: "Inactive Users" },
   { value: "payment_pending", label: "Payment Pending Users" },
+  { value: "reminder_subscription", label: "Reminder Subscription" },
   { value: "selected", label: "Selected Users" },
 ];
 
@@ -49,6 +50,7 @@ const emptyTemplate = {
 };
 
 const emptySend = {
+  notificationType: "standard",
   templateId: "",
   campaignName: "",
   deliveryType: "notification",
@@ -73,6 +75,10 @@ const emptySend = {
   recurrence: "none",
   recurrenceInterval: 1,
   recurrenceUnit: "Days",
+  reminderStages: [
+    { id: "stage-1", name: "Reminder 1", enabled: true, delayValue: 0, delayUnit: "Minutes", title: "", message: "", emailTemplateId: "", emailTemplateKey: "", emailSubject: "", emailBody: "", ctaConfigId: "", ctaText: "", deepLink: "/subscription" },
+    { id: "stage-2", name: "Reminder 2", enabled: true, delayValue: 24, delayUnit: "Hours", title: "", message: "", emailTemplateId: "", emailTemplateKey: "", emailSubject: "", emailBody: "", ctaConfigId: "", ctaText: "", deepLink: "/subscription" },
+  ],
   action: "send",
 };
 
@@ -227,6 +233,7 @@ export function NotificationCenterPage() {
   const selectedUserSet = useMemo(() => new Set(selectedUserList), [selectedUserList]);
   const shouldSendNotification = ["notification", "both"].includes(sendForm.deliveryType);
   const shouldSendEmail = ["email", "both"].includes(sendForm.deliveryType);
+  const isReminderSubscription = sendForm.notificationType === "reminder_subscription" || sendForm.targetType === "reminder_subscription";
 
   function setSelectedUserList(values) {
     const unique = [...new Set(values.map((item) => String(item || "").trim()).filter(Boolean))];
@@ -243,6 +250,33 @@ export function NotificationCenterPage() {
 
   function removeSelectedUser(value) {
     setSelectedUserList(selectedUserList.filter((item) => item !== value));
+  }
+
+  function updateReminderStage(index, patch) {
+    setSendForm((current) => ({
+      ...current,
+      reminderStages: (current.reminderStages || []).map((stage, stageIndex) => (stageIndex === index ? { ...stage, ...patch } : stage)),
+    }));
+  }
+
+  function addReminderStage() {
+    setSendForm((current) => {
+      const nextIndex = (current.reminderStages || []).length + 1;
+      return {
+        ...current,
+        reminderStages: [
+          ...(current.reminderStages || []),
+          { id: `stage-${Date.now()}`, name: `Reminder ${nextIndex}`, enabled: true, delayValue: nextIndex === 1 ? 0 : 1, delayUnit: nextIndex === 1 ? "Minutes" : "Days", title: current.title, message: current.message, emailTemplateId: current.emailTemplateId, emailTemplateKey: current.emailTemplateKey, emailSubject: current.emailSubject, emailBody: current.emailBody, ctaConfigId: current.ctaConfigId, ctaText: current.ctaText, deepLink: current.deepLink || "/subscription" },
+        ],
+      };
+    });
+  }
+
+  function removeReminderStage(index) {
+    setSendForm((current) => ({
+      ...current,
+      reminderStages: (current.reminderStages || []).filter((_stage, stageIndex) => stageIndex !== index),
+    }));
   }
 
   function applyCtaConfig(id, target = "send") {
@@ -463,7 +497,7 @@ export function NotificationCenterPage() {
             <label className={ui.field}><span>Campaign Name</span><input className={ui.input} value={sendForm.campaignName} onChange={(event) => setSendForm((current) => ({ ...current, campaignName: event.target.value }))} placeholder="August premium announcement" /></label>
             <label className={ui.field}><span>Delivery Channel</span><select className={ui.input} value={sendForm.deliveryType} onChange={(event) => setSendForm((current) => ({ ...current, deliveryType: event.target.value }))}>{deliveryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
             <label className={ui.field}><span>Use Template</span><select className={ui.input} value={sendForm.templateId} onChange={(event) => setSendForm((current) => ({ ...current, templateId: event.target.value }))}><option value="">Custom Notification</option>{templates.filter((item) => item.status !== false).map((item) => <option key={item.id || item._id} value={item.id || item._id}>{item.name}</option>)}</select></label>
-            <label className={ui.field}><span>Target Audience</span><select className={ui.input} value={sendForm.targetType} onChange={(event) => setSendForm((current) => ({ ...current, targetType: event.target.value }))}>{targetOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+            <label className={ui.field}><span>Target Audience</span><select className={ui.input} value={sendForm.targetType} onChange={(event) => setSendForm((current) => ({ ...current, targetType: event.target.value, notificationType: event.target.value === "reminder_subscription" ? "reminder_subscription" : "standard", category: event.target.value === "reminder_subscription" ? "subscription" : current.category }))}>{targetOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
             <label className={ui.field}><span>Category</span><select className={ui.input} value={sendForm.category} onChange={(event) => setSendForm((current) => ({ ...current, category: event.target.value }))}>{categoryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
             {shouldSendNotification ? <>
               <label className={ui.field}><span>Notification Title</span><input className={ui.input} value={sendForm.title} onChange={(event) => setSendForm((current) => ({ ...current, title: event.target.value }))} required={shouldSendNotification} /></label>
@@ -482,13 +516,53 @@ export function NotificationCenterPage() {
             </> : null}
             <label className={ui.field}><span>Sound</span><select className={ui.input} value={sendForm.sound} onChange={(event) => setSendForm((current) => ({ ...current, sound: event.target.value }))}><option value="default">Default</option><option value="custom">Custom</option><option value="silent">Silent</option></select></label>
             <label className={ui.field}><span>Priority</span><select className={ui.input} value={sendForm.priority} onChange={(event) => setSendForm((current) => ({ ...current, priority: event.target.value }))}><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select></label>
-            <label className={ui.field}><span>Action</span><select className={ui.input} value={sendForm.action} onChange={(event) => setSendForm((current) => ({ ...current, action: event.target.value }))}><option value="send">Send Now</option><option value="schedule">Schedule</option><option value="draft">Save Draft</option></select></label>
+            <label className={ui.field}><span>Action</span><select className={ui.input} value={sendForm.action} onChange={(event) => setSendForm((current) => ({ ...current, action: event.target.value, recurring: event.target.value === "automate" ? true : current.recurring, recurrence: event.target.value === "automate" && current.recurrence === "none" ? "daily" : current.recurrence }))}><option value="send">Send Immediately</option><option value="schedule">Schedule</option><option value="draft">Save Draft</option><option value="automate">Automate</option></select></label>
             {sendForm.action === "schedule" ? <label className={ui.field}><span>Schedule Date</span><input className={ui.input} type="datetime-local" value={sendForm.scheduleDate} onChange={(event) => setSendForm((current) => ({ ...current, scheduleDate: event.target.value }))} required /></label> : null}
             {sendForm.action === "schedule" ? (
               <>
                 <label className={ui.field}><span>Recurring</span><select className={ui.input} value={sendForm.recurring ? sendForm.recurrence : "none"} onChange={(event) => setSendForm((current) => ({ ...current, recurring: event.target.value !== "none", recurrence: event.target.value }))}><option value="none">No Repeat</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="custom">Custom Interval</option></select></label>
                 {sendForm.recurring && sendForm.recurrence === "custom" ? <><label className={ui.field}><span>Interval</span><input className={ui.input} type="number" min="1" value={sendForm.recurrenceInterval} onChange={(event) => setSendForm((current) => ({ ...current, recurrenceInterval: event.target.value }))} /></label><label className={ui.field}><span>Interval Unit</span><select className={ui.input} value={sendForm.recurrenceUnit} onChange={(event) => setSendForm((current) => ({ ...current, recurrenceUnit: event.target.value }))}><option>Minutes</option><option>Hours</option><option>Days</option></select></label></> : null}
               </>
+            ) : null}
+            {sendForm.action === "automate" ? <label className={ui.field}><span>Automation</span><select className={ui.input} value={sendForm.recurrence === "none" ? "daily" : sendForm.recurrence} onChange={(event) => setSendForm((current) => ({ ...current, recurring: true, recurrence: event.target.value }))}><option value="daily">Every Day</option><option value="weekly">Every Week</option><option value="monthly">Every Month</option></select></label> : null}
+            {isReminderSubscription ? (
+              <div className="lg:col-span-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className={ui.eyebrow}>Reminder Subscription</div>
+                    <h3 className="text-lg font-black text-slate-950">Reminder Stages</h3>
+                  </div>
+                  <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={addReminderStage}>Add Stage</button>
+                </div>
+                <div className="space-y-4">
+                  {(sendForm.reminderStages || []).map((stage, index) => (
+                    <div key={stage.id || index} className="rounded-xl border border-amber-200 bg-white p-4">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                        <label className="flex items-center gap-2 text-sm font-black text-slate-800">
+                          <input type="checkbox" checked={stage.enabled !== false} onChange={(event) => updateReminderStage(index, { enabled: event.target.checked })} />
+                          Enable
+                        </label>
+                        <button type="button" className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => removeReminderStage(index)} disabled={(sendForm.reminderStages || []).length <= 1}>Remove</button>
+                      </div>
+                      <div className="grid gap-4 lg:grid-cols-3">
+                        <label className={ui.field}><span>Stage Name</span><input className={ui.input} value={stage.name || ""} onChange={(event) => updateReminderStage(index, { name: event.target.value })} /></label>
+                        <label className={ui.field}><span>Delay</span><input className={ui.input} type="number" min="0" value={stage.delayValue ?? 0} onChange={(event) => updateReminderStage(index, { delayValue: event.target.value })} /></label>
+                        <label className={ui.field}><span>Delay Unit</span><select className={ui.input} value={stage.delayUnit || "Hours"} onChange={(event) => updateReminderStage(index, { delayUnit: event.target.value })}><option>Minutes</option><option>Hours</option><option>Days</option></select></label>
+                        <label className={ui.field}><span>Notification Title</span><input className={ui.input} value={stage.title || ""} onChange={(event) => updateReminderStage(index, { title: event.target.value })} placeholder={sendForm.title || "Use main title"} /></label>
+                        <label className={cn(ui.field, "lg:col-span-2")}><span>Notification Message</span><input className={ui.input} value={stage.message || ""} onChange={(event) => updateReminderStage(index, { message: event.target.value })} placeholder={sendForm.message || "Use main message"} /></label>
+                        <label className={ui.field}><span>Email Template</span><select className={ui.input} value={stage.emailTemplateId || ""} onChange={(event) => {
+                          const selected = emailTemplates.find((item) => String(item.id || item.status?.templateId || item.key) === String(event.target.value));
+                          updateReminderStage(index, { emailTemplateId: event.target.value, emailTemplateKey: selected?.key || "", emailSubject: selected?.subject || stage.emailSubject || "", emailBody: selected?.htmlContent || selected?.textContent || stage.emailBody || "" });
+                        }}><option value="">Use Main Email Template</option>{emailTemplates.map((item) => <option key={item.id || item.status?.templateId || item.key} value={item.id || item.status?.templateId || item.key}>{item.name}</option>)}</select></label>
+                        <label className={cn(ui.field, "lg:col-span-2")}><span>Email Subject</span><input className={ui.input} value={stage.emailSubject || ""} onChange={(event) => updateReminderStage(index, { emailSubject: event.target.value })} placeholder={sendForm.emailSubject || "Use main email subject"} /></label>
+                        <label className={cn(ui.field, "lg:col-span-3")}><span>Email Body</span><textarea className={ui.textarea} value={stage.emailBody || ""} onChange={(event) => updateReminderStage(index, { emailBody: event.target.value })} placeholder="Leave empty to use main email body." /></label>
+                        <label className={ui.field}><span>CTA Button Text</span><input className={ui.input} value={stage.ctaText || ""} onChange={(event) => updateReminderStage(index, { ctaText: event.target.value })} placeholder={sendForm.ctaText || "Use main CTA"} /></label>
+                        <label className={cn(ui.field, "lg:col-span-2")}><span>Deep Link</span><input className={ui.input} value={stage.deepLink || ""} onChange={(event) => updateReminderStage(index, { deepLink: event.target.value })} placeholder={sendForm.deepLink || "/subscription"} /></label>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : null}
             {sendForm.targetType ? (
               <div className="lg:col-span-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
@@ -551,7 +625,7 @@ export function NotificationCenterPage() {
             {shouldSendEmail ? <div className="rounded-xl border border-slate-200 bg-slate-50 p-4"><div className={ui.eyebrow}>Email Preview</div><h3 className="text-base font-black text-slate-950">{sendForm.emailSubject || "Email subject"}</h3><div className="prose prose-sm mt-3 max-w-none text-slate-700" dangerouslySetInnerHTML={{ __html: sendForm.emailBody || "<p>Select an email template to preview.</p>" }} /></div> : null}
           </div>
           <div className="mt-5 flex justify-end">
-            <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy}>{busy ? "Working..." : sendForm.action === "send" ? "Send Immediately" : sendForm.action === "schedule" ? "Schedule Campaign" : "Save Draft"}</button>
+            <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy}>{busy ? "Working..." : sendForm.action === "send" ? "Send Immediately" : sendForm.action === "schedule" ? "Schedule Campaign" : sendForm.action === "automate" ? "Save Automation" : "Save Draft"}</button>
           </div>
         </form>
       ) : null}
