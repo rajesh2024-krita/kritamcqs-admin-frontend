@@ -17,12 +17,6 @@ const defaultReminders = [
     enabled: true,
     delayAmount: 0,
     delayUnit: "Minutes",
-    inApp: {
-      title: "You're Almost There",
-      message: "Your Krita NEET JEE Premium purchase was not completed. Unlock 6 months of preparation with 7,000+ MCQs, 10 years of PYQs, weak-area tracking and weekly NEET/JEE-pattern mock tests for ₹499.",
-      ctaText: "Complete My Purchase",
-      ctaAction: "/subscription",
-    },
     push: {
       title: "Your Premium Access Is Waiting",
       message: "Complete your ₹499 purchase and unlock 6 months of 7,000+ MCQs, PYQs and weekly NEET/JEE-pattern mock tests.",
@@ -42,12 +36,6 @@ const defaultReminders = [
     enabled: true,
     delayAmount: 24,
     delayUnit: "Hours",
-    inApp: {
-      title: "Improve Your Weak NEET Topics",
-      message: "Don't stop after identifying your weak chapters. Unlock complete practice, PYQs and weekly mock tests for ₹499 for 6 months.",
-      ctaText: "Unlock Premium",
-      ctaAction: "/subscription",
-    },
     push: {
       title: "Improve Your Weak NEET Topics",
       message: "Don't stop after identifying your weak chapters. Unlock complete practice, PYQs and weekly mock tests for ₹499 for 6 months.",
@@ -84,7 +72,6 @@ function normalizeForm(item) {
     reminders: reminders.map((reminder, index) => ({
       ...defaultReminders[index % defaultReminders.length],
       ...reminder,
-      inApp: { ...defaultReminders[index % defaultReminders.length].inApp, ...(reminder.inApp || {}) },
       push: { ...defaultReminders[index % defaultReminders.length].push, ...(reminder.push || {}) },
       email: { ...defaultReminders[index % defaultReminders.length].email, ...(reminder.email || {}) },
     })),
@@ -202,7 +189,7 @@ export function SubscriptionReminderPage() {
           <div>
             <div className={ui.eyebrow}>Subscription Management</div>
             <h2 className="text-xl font-black tracking-tight text-slate-900">Subscription Reminder</h2>
-            <p className={ui.muted}>Configure abandoned checkout recovery with in-app, push, and email templates.</p>
+            <p className={ui.muted}>Configure abandoned checkout recovery with push notifications and email templates.</p>
           </div>
           <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={() => beginEdit()}>
             <Plus size={16} /> New Template
@@ -328,7 +315,6 @@ function ReminderForm({ form, setForm, editing, onClose, onSave }) {
 
             <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
               <div className="space-y-4">
-                <TemplateSection title="In-App Notification" reminder={reminder.inApp} onChange={(field, value) => patchReminder(index, `inApp.${field}`, value)} ctaLabel="CTA Action / Deep Link" />
                 <TemplateSection title="Push Notification" reminder={reminder.push} onChange={(field, value) => patchReminder(index, `push.${field}`, value)} ctaLabel="CTA Action / Deep Link" />
                 <EmailSection reminder={reminder.email} onChange={(field, value) => patchReminder(index, `email.${field}`, value)} />
               </div>
@@ -375,8 +361,7 @@ function PreviewPanel({ reminder }) {
     <div className="sticky top-24 h-fit rounded-lg border border-sky-100 bg-white p-4">
       <div className="mb-3 flex items-center gap-2 text-sm font-black text-slate-900"><Eye size={16} /> Preview</div>
       <div className="space-y-4">
-        <PreviewCard title="In-App" headline={reminder.inApp.title} message={reminder.inApp.message} cta={reminder.inApp.ctaText} />
-        <PreviewCard title="Push" headline={reminder.push.title} message={reminder.push.message} cta={reminder.push.ctaText} compact />
+        <PreviewCard title="Push and Notification Center" headline={reminder.push.title} message={reminder.push.message} cta={reminder.push.ctaText} compact />
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
           <div className="text-xs font-black uppercase tracking-wider text-slate-500">Email</div>
           <h5 className="mt-2 text-sm font-black text-slate-950">{reminder.email.subject}</h5>
