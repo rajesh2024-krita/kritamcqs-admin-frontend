@@ -23,6 +23,10 @@ export const notificationService = {
     const response = await http.get("/admin/notifications/users", { params });
     return response.data;
   },
+  async audiences() {
+    const response = await http.get("/admin/notifications/audiences");
+    return response.data;
+  },
   async createTemplate(payload) {
     const response = await http.post("/admin/notifications/templates", payload);
     return response.data;
@@ -39,6 +43,10 @@ export const notificationService = {
     const response = await http.post("/admin/notifications/send", payload);
     return response.data;
   },
+  async test(payload) {
+    const response = await http.post("/admin/notifications/test", payload);
+    return response.data;
+  },
   async scheduled() {
     const response = await http.get("/admin/notifications/scheduled");
     return response.data;
@@ -49,6 +57,14 @@ export const notificationService = {
   },
   async cancelScheduled(id) {
     const response = await http.delete(`/admin/notifications/scheduled/${id}`);
+    return response.data;
+  },
+  async pauseScheduled(id) {
+    const response = await http.post(`/admin/notifications/scheduled/${id}/pause`);
+    return response.data;
+  },
+  async resumeScheduled(id) {
+    const response = await http.post(`/admin/notifications/scheduled/${id}/resume`);
     return response.data;
   },
   async processScheduled() {

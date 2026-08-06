@@ -12,6 +12,7 @@ const targetOptions = [
   { value: "jee", label: "JEE Users" },
   { value: "active", label: "Active Users" },
   { value: "inactive", label: "Inactive Users" },
+  { value: "payment_pending", label: "Payment Pending Users" },
   { value: "selected", label: "Selected Users" },
 ];
 
@@ -68,7 +69,26 @@ const emptySend = {
   sound: "default",
   priority: "high",
   scheduleDate: "",
+  recurring: false,
+  recurrence: "none",
+  recurrenceInterval: 1,
+  recurrenceUnit: "Days",
   action: "send",
+};
+
+const emptyTest = {
+  deliveryType: "both",
+  testTarget: "admin",
+  title: "Krita test notification",
+  message: "This is a test notification from Krita MCQs.",
+  deepLink: "/notifications",
+  emailTemplateId: "",
+  emailTemplateKey: "",
+  emailSubject: "Krita test email",
+  emailBody: "<p>This is a test email from Krita MCQs.</p>",
+  selectedUsers: "",
+  testEmail: "",
+  category: "custom",
 };
 
 function toInputDate(value) {
@@ -108,6 +128,7 @@ export function NotificationCenterPage() {
   const [history, setHistory] = useState([]);
   const [scheduled, setScheduled] = useState([]);
   const [stats, setStats] = useState(null);
+  const [audiences, setAudiences] = useState([]);
   const [userSearch, setUserSearch] = useState("");
   const [userResults, setUserResults] = useState([]);
   const [userLoading, setUserLoading] = useState(false);
@@ -115,16 +136,18 @@ export function NotificationCenterPage() {
   const [editingTemplateId, setEditingTemplateId] = useState("");
   const [editingCampaignId, setEditingCampaignId] = useState("");
   const [sendForm, setSendForm] = useState(emptySend);
+  const [testForm, setTestForm] = useState(emptyTest);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function loadAll() {
-    const [templateResponse, historyResponse, scheduledResponse, statsResponse, ctaResponse] = await Promise.all([
+    const [templateResponse, historyResponse, scheduledResponse, statsResponse, ctaResponse, audienceResponse] = await Promise.all([
       notificationService.templates(),
       notificationService.history({ limit: 50 }),
       notificationService.scheduled(),
       notificationService.stats(),
       ctaConfigService.list({ channel: "push", isActive: true }),
+      notificationService.audiences(),
     ]);
     setTemplates(templateResponse.data || []);
     try {
@@ -137,6 +160,7 @@ export function NotificationCenterPage() {
     setScheduled(scheduledResponse.data || []);
     setStats(statsResponse.data || null);
     setCtaConfigs(ctaResponse.data || []);
+    setAudiences(audienceResponse.data || []);
   }
 
   useEffect(() => {
@@ -181,12 +205,11 @@ export function NotificationCenterPage() {
   }, [activeEmailTemplate]);
 
   useEffect(() => {
-    if (sendForm.targetType !== "selected") return;
     let cancelled = false;
     const timeoutId = window.setTimeout(async () => {
       setUserLoading(true);
       try {
-        const response = await notificationService.users({ q: userSearch, limit: 12 });
+        const response = await notificationService.users({ q: userSearch, targetType: sendForm.targetType, limit: 50 });
         if (!cancelled) setUserResults(response.data || []);
       } catch (error) {
         if (!cancelled) setMessage(error.message);
@@ -212,6 +235,10 @@ export function NotificationCenterPage() {
 
   function addSelectedUser(user) {
     setSelectedUserList([...selectedUserList, user.id || user.email || user.mobile]);
+  }
+
+  function selectVisibleUsers() {
+    setSelectedUserList([...selectedUserList, ...userResults.map((user) => user.id || user.email || user.mobile)]);
   }
 
   function removeSelectedUser(value) {
@@ -336,6 +363,47 @@ export function NotificationCenterPage() {
     }
   }
 
+  async function pauseSchedule(id) {
+    setBusy(true);
+    try {
+      await notificationService.pauseScheduled(id);
+      await loadAll();
+      setMessage("Scheduled notification paused.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resumeSchedule(id) {
+    setBusy(true);
+    try {
+      await notificationService.resumeScheduled(id);
+      await loadAll();
+      setMessage("Scheduled notification resumed.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sendTestNotification(event) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage("");
+    try {
+      const response = await notificationService.test(testForm);
+      await loadAll();
+      setMessage(deliverySummaryMessage(response, "Test notification processed."));
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function processScheduled() {
     setBusy(true);
     try {
@@ -364,12 +432,13 @@ export function NotificationCenterPage() {
       </section>
 
       <section className={ui.panel}>
-        <div className="grid gap-3 md:grid-cols-5">
+        <div className="grid gap-3 md:grid-cols-6">
           {[
             ["send", "Send Notification"],
             ["templates", "Templates"],
             ["scheduled", "Scheduled"],
             ["history", "History"],
+            ["test", "Testing"],
             ["stats", "Stats"],
           ].map(([key, label]) => (
             <button key={key} type="button" className={cn(ui.buttonBase, tab === key ? ui.buttonPrimary : ui.buttonSecondary)} onClick={() => setTab(key)}>
@@ -382,6 +451,14 @@ export function NotificationCenterPage() {
       {tab === "send" ? (
         <form className={ui.panel} onSubmit={sendNotification}>
           <h2 className="mb-4 text-xl font-black text-slate-900">{editingCampaignId ? "Edit Campaign" : "Create Campaign"}</h2>
+          <div className="mb-4 grid gap-3 md:grid-cols-4">
+            {audiences.map((item) => (
+              <button key={item.value} type="button" className={cn("rounded-xl border px-4 py-3 text-left", sendForm.targetType === item.value ? "border-sky-300 bg-sky-50" : "border-slate-200 bg-slate-50")} onClick={() => setSendForm((current) => ({ ...current, targetType: item.value }))}>
+                <span className={ui.eyebrow}>{targetOptions.find((option) => option.value === item.value)?.label || item.value}</span>
+                <span className="mt-1 block text-2xl font-black text-slate-900">{item.count || 0}</span>
+              </button>
+            ))}
+          </div>
           <div className="grid gap-4 lg:grid-cols-3">
             <label className={ui.field}><span>Campaign Name</span><input className={ui.input} value={sendForm.campaignName} onChange={(event) => setSendForm((current) => ({ ...current, campaignName: event.target.value }))} placeholder="August premium announcement" /></label>
             <label className={ui.field}><span>Delivery Channel</span><select className={ui.input} value={sendForm.deliveryType} onChange={(event) => setSendForm((current) => ({ ...current, deliveryType: event.target.value }))}>{deliveryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
@@ -407,12 +484,18 @@ export function NotificationCenterPage() {
             <label className={ui.field}><span>Priority</span><select className={ui.input} value={sendForm.priority} onChange={(event) => setSendForm((current) => ({ ...current, priority: event.target.value }))}><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select></label>
             <label className={ui.field}><span>Action</span><select className={ui.input} value={sendForm.action} onChange={(event) => setSendForm((current) => ({ ...current, action: event.target.value }))}><option value="send">Send Now</option><option value="schedule">Schedule</option><option value="draft">Save Draft</option></select></label>
             {sendForm.action === "schedule" ? <label className={ui.field}><span>Schedule Date</span><input className={ui.input} type="datetime-local" value={sendForm.scheduleDate} onChange={(event) => setSendForm((current) => ({ ...current, scheduleDate: event.target.value }))} required /></label> : null}
-            {sendForm.targetType === "selected" ? (
+            {sendForm.action === "schedule" ? (
+              <>
+                <label className={ui.field}><span>Recurring</span><select className={ui.input} value={sendForm.recurring ? sendForm.recurrence : "none"} onChange={(event) => setSendForm((current) => ({ ...current, recurring: event.target.value !== "none", recurrence: event.target.value }))}><option value="none">No Repeat</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="custom">Custom Interval</option></select></label>
+                {sendForm.recurring && sendForm.recurrence === "custom" ? <><label className={ui.field}><span>Interval</span><input className={ui.input} type="number" min="1" value={sendForm.recurrenceInterval} onChange={(event) => setSendForm((current) => ({ ...current, recurrenceInterval: event.target.value }))} /></label><label className={ui.field}><span>Interval Unit</span><select className={ui.input} value={sendForm.recurrenceUnit} onChange={(event) => setSendForm((current) => ({ ...current, recurrenceUnit: event.target.value }))}><option>Minutes</option><option>Hours</option><option>Days</option></select></label></> : null}
+              </>
+            ) : null}
+            {sendForm.targetType ? (
               <div className="lg:col-span-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
                 <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
                   <div className="space-y-3">
                     <label className={ui.field}>
-                      <span>Search Particular User</span>
+                      <span>Search / Select Users</span>
                       <input className={ui.input} placeholder="Search name, email, mobile, or user id" value={userSearch} onChange={(event) => setUserSearch(event.target.value)} />
                     </label>
                     <div className="max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white">
@@ -442,8 +525,12 @@ export function NotificationCenterPage() {
                     </div>
                   </div>
                   <div className="space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={selectVisibleUsers} disabled={!userResults.length}>Select Visible</button>
+                      <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => setSelectedUserList([])} disabled={!selectedUserList.length}>Clear Selected</button>
+                    </div>
                     <label className={ui.field}>
-                      <span>Selected Users For Test Push</span>
+                      <span>Selected Users</span>
                       <textarea className={ui.textarea} placeholder="User IDs, emails, or mobiles separated by comma/new line" value={sendForm.selectedUsers} onChange={(event) => setSendForm((current) => ({ ...current, selectedUsers: event.target.value }))} />
                     </label>
                     <div className="flex flex-wrap gap-2">
@@ -500,11 +587,34 @@ export function NotificationCenterPage() {
             item.campaignName || item.title || item.emailSubject,
             item.deliveryType || "notification",
             item.targetType,
-            item.scheduleDate ? toInputDate(item.scheduleDate).replace("T", " ") : "-",
+            `${item.scheduleDate ? toInputDate(item.scheduleDate).replace("T", " ") : "-"}${item.recurring ? ` | ${item.recurrence}${item.recurrence === "custom" ? ` ${item.recurrenceInterval} ${item.recurrenceUnit}` : ""}` : ""}`,
             item.status,
-            ["pending", "draft"].includes(item.status) ? <div key={item.id || item._id} className="flex flex-wrap gap-2"><button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => editCampaign(item)}>Edit</button><button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => cancelSchedule(item.id || item._id)}>Cancel</button></div> : "-",
+            <div key={item.id || item._id} className="flex flex-wrap gap-2">
+              {["pending", "draft", "paused"].includes(item.status) ? <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => editCampaign(item)}>Edit</button> : null}
+              {item.status === "pending" ? <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => pauseSchedule(item.id || item._id)}>Pause</button> : null}
+              {item.status === "paused" ? <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => resumeSchedule(item.id || item._id)}>Resume</button> : null}
+              {["pending", "draft", "paused"].includes(item.status) ? <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => cancelSchedule(item.id || item._id)}>Delete</button> : null}
+            </div>,
           ])} />
         </section>
+      ) : null}
+
+      {tab === "test" ? (
+        <form className={ui.panel} onSubmit={sendTestNotification}>
+          <h2 className="mb-4 text-xl font-black text-slate-900">Notification Testing</h2>
+          <div className="grid gap-4 lg:grid-cols-3">
+            <label className={ui.field}><span>Delivery Channel</span><select className={ui.input} value={testForm.deliveryType} onChange={(event) => setTestForm((current) => ({ ...current, deliveryType: event.target.value }))}>{deliveryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+            <label className={ui.field}><span>Test Target</span><select className={ui.input} value={testForm.testTarget} onChange={(event) => setTestForm((current) => ({ ...current, testTarget: event.target.value }))}><option value="admin">Current Admin Device</option><option value="selected">Test User</option><option value="email">Specific Email</option></select></label>
+            <label className={ui.field}><span>Test User</span><input className={ui.input} value={testForm.selectedUsers} onChange={(event) => setTestForm((current) => ({ ...current, selectedUsers: event.target.value }))} placeholder="User id, email, or mobile" /></label>
+            <label className={ui.field}><span>Specific Email</span><input className={ui.input} type="email" value={testForm.testEmail} onChange={(event) => setTestForm((current) => ({ ...current, testEmail: event.target.value }))} placeholder="test@example.com" /></label>
+            <label className={ui.field}><span>Push Title</span><input className={ui.input} value={testForm.title} onChange={(event) => setTestForm((current) => ({ ...current, title: event.target.value }))} /></label>
+            <label className={cn(ui.field, "lg:col-span-2")}><span>Push Message</span><input className={ui.input} value={testForm.message} onChange={(event) => setTestForm((current) => ({ ...current, message: event.target.value }))} /></label>
+            <label className={ui.field}><span>Deep Link</span><input className={ui.input} value={testForm.deepLink} onChange={(event) => setTestForm((current) => ({ ...current, deepLink: event.target.value }))} /></label>
+            <label className={cn(ui.field, "lg:col-span-2")}><span>Email Subject</span><input className={ui.input} value={testForm.emailSubject} onChange={(event) => setTestForm((current) => ({ ...current, emailSubject: event.target.value }))} /></label>
+            <label className={cn(ui.field, "lg:col-span-3")}><span>Email Body</span><textarea className={ui.textarea} value={testForm.emailBody} onChange={(event) => setTestForm((current) => ({ ...current, emailBody: event.target.value }))} /></label>
+          </div>
+          <div className="mt-5 flex justify-end"><button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy}>{busy ? "Sending..." : "Send Test"}</button></div>
+        </form>
       ) : null}
 
       {tab === "history" ? (

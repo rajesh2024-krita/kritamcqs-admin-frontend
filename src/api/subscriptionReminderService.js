@@ -1,6 +1,14 @@
 import { http } from "./http";
 
 export const subscriptionReminderService = {
+  async freeUserCta() {
+    const response = await http.get("/admin/free-user-subscription-cta");
+    return response.data;
+  },
+  async saveFreeUserCta(payload) {
+    const response = await http.put("/admin/free-user-subscription-cta", payload);
+    return response.data;
+  },
   async stats() {
     const response = await http.get("/admin/subscription-reminder/statistics");
     return response.data;

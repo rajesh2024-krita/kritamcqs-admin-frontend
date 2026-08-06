@@ -63,6 +63,16 @@ const emptyConfig = {
   reminders: defaultReminders,
 };
 
+const emptyFreeUserCta = {
+  enabled: true,
+  eyebrow: "NEET & JEE Unlock",
+  title: "Go Premium",
+  description: "Unlock unlimited questions, weak area analysis, and smart revision.",
+  imageUrl: "",
+  ctaText: "View Plans",
+  ctaLink: "/subscription",
+};
+
 function normalizeForm(item) {
   if (!item) return structuredClone(emptyConfig);
   const reminders = Array.isArray(item.reminders) && item.reminders.length ? item.reminders : defaultReminders;
@@ -96,6 +106,7 @@ export function SubscriptionReminderPage() {
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState(() => structuredClone(emptyConfig));
+  const [freeUserCta, setFreeUserCta] = useState(emptyFreeUserCta);
 
   async function load(activeTab = tab, nextQuery = query) {
     setLoading(true);
@@ -120,9 +131,22 @@ export function SubscriptionReminderPage() {
     }
   }
 
+  async function loadFreeUserCta() {
+    try {
+      const response = await subscriptionReminderService.freeUserCta();
+      setFreeUserCta({ ...emptyFreeUserCta, ...(response.data || {}) });
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
   useEffect(() => {
     void load(tab, query);
   }, [tab, query.page]);
+
+  useEffect(() => {
+    void loadFreeUserCta();
+  }, []);
 
   useEffect(() => {
     const id = window.setTimeout(() => {
@@ -151,6 +175,17 @@ export function SubscriptionReminderPage() {
       setEditing(null);
       setForm(structuredClone(emptyConfig));
       await load("configuration", { page: 1 });
+    } catch (error) {
+      toast.error(error.message);
+    }
+  }
+
+  async function saveFreeUserCta(event) {
+    event.preventDefault();
+    try {
+      const response = await subscriptionReminderService.saveFreeUserCta(freeUserCta);
+      setFreeUserCta({ ...emptyFreeUserCta, ...(response.data || {}) });
+      toast.success("Free user subscription CTA saved");
     } catch (error) {
       toast.error(error.message);
     }
@@ -209,6 +244,26 @@ export function SubscriptionReminderPage() {
           ))}
         </div>
       </div>
+
+      <form className={ui.compactPanel} onSubmit={saveFreeUserCta}>
+        <div className="mb-4 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className={ui.eyebrow}>Dashboard Premium CTA</div>
+            <h3 className="text-lg font-black text-slate-900">Free User Subscription Card</h3>
+            <p className={ui.muted}>Shown below the Daily Test card only for free users. Tapping it opens subscription plans.</p>
+          </div>
+          <button className={cn(ui.buttonBase, ui.buttonPrimary)}><Save size={16} /> Save CTA</button>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          <Select label="Status" value={freeUserCta.enabled ? "enabled" : "disabled"} options={["enabled", "disabled"]} onChange={(value) => setFreeUserCta((current) => ({ ...current, enabled: value === "enabled" }))} />
+          <Field label="Eyebrow" value={freeUserCta.eyebrow} onChange={(value) => setFreeUserCta((current) => ({ ...current, eyebrow: value }))} />
+          <Field label="Title" value={freeUserCta.title} onChange={(value) => setFreeUserCta((current) => ({ ...current, title: value }))} />
+          <Textarea label="Description" value={freeUserCta.description} onChange={(value) => setFreeUserCta((current) => ({ ...current, description: value }))} />
+          <Field label="Image URL" value={freeUserCta.imageUrl} onChange={(value) => setFreeUserCta((current) => ({ ...current, imageUrl: value }))} />
+          <Field label="CTA Text" value={freeUserCta.ctaText} onChange={(value) => setFreeUserCta((current) => ({ ...current, ctaText: value }))} />
+          <Field label="CTA Link" value={freeUserCta.ctaLink} onChange={(value) => setFreeUserCta((current) => ({ ...current, ctaLink: value }))} />
+        </div>
+      </form>
 
       {editing ? <ReminderForm form={form} setForm={setForm} editing={editing} onClose={() => setEditing(null)} onSave={save} /> : null}
 
