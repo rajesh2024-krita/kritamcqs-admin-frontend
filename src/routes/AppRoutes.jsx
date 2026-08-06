@@ -57,7 +57,7 @@ import { AuditLogsPage } from "../pages/audit/AuditLogsPage";
 import { AIConfigurationPage } from "../pages/settings/AIConfigurationPage";
 import { MicrosoftClarityPage } from "../pages/settings/MicrosoftClarityPage";
 import { ThirdPartyScriptsPage } from "../pages/ThirdPartyScriptsPage";
-import { SubscriptionReminderPage } from "../pages/SubscriptionReminderPage";
+import { SubscriptionReminderCenterPage } from "../pages/SubscriptionReminderCenterPage";
 import { NationalCompetitionsPage } from "../pages/NationalCompetitionsPage";
 import { useAuth } from "../context/AuthContext";
 import { canViewModule, firstAllowedModulePath, isEmployee } from "../config/adminPermissions";
@@ -135,7 +135,7 @@ export function AppRoutes() {
         <Route path="subscription-free-cards" element={<ModuleAccess moduleKey="subscription-free-cards"><SubscriptionFreeCardsPage /></ModuleAccess>} />
         <Route path="subscription-stat-cards" element={<ModuleAccess moduleKey="subscription-stat-cards"><SubscriptionStatCardsPage /></ModuleAccess>} />
         <Route path="subscription-page-builder" element={<ModuleAccess moduleKey="subscription-page-builder"><SubscriptionPageBuilderPage /></ModuleAccess>} />
-        <Route path="subscription-reminder" element={<MainAdminOnly><SubscriptionReminderPage /></MainAdminOnly>} />
+        <Route path="subscription-reminder" element={<MainAdminOnly><SubscriptionReminderCenterPage /></MainAdminOnly>} />
         <Route path="dashboard-carousel" element={<ModuleAccess moduleKey="dashboard-carousel"><DashboardCarouselPage /></ModuleAccess>} />
         <Route path="app-usage" element={<ModuleAccess moduleKey="app-usage"><Suspense fallback={<LoadingSpinner label="Loading app usage..." />}><AppUsageAnalyticsPage /></Suspense></ModuleAccess>} />
         <Route path="offer-timer-management" element={<MainAdminOnly><OfferTimerManagementPage /></MainAdminOnly>} />

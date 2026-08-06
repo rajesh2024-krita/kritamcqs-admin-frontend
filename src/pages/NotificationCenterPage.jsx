@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { notificationService } from "../api/notificationService";
 import { emailTemplateService } from "../api/emailTemplateService";
 import { ctaConfigService } from "../api/ctaConfigService";
-import { subscriptionReminderService } from "../api/subscriptionReminderService";
 import { cn, ui } from "../ui";
 
 const targetOptions = [
@@ -77,39 +76,6 @@ const emptySend = {
   action: "send",
 };
 
-const defaultReminderStages = [
-  {
-    id: "immediate",
-    name: "Reminder 1 - Immediate",
-    enabled: true,
-    delayAmount: 0,
-    delayUnit: "Minutes",
-    push: { title: "Your Premium Access Is Waiting", message: "Complete your purchase and unlock premium practice.", ctaText: "Complete Purchase", ctaAction: "/subscription" },
-    email: { subject: "Complete your Krita Premium purchase", body: "<p>Hi {{StudentName}},</p><p>Your Premium access is waiting. Complete your purchase to continue.</p>", ctaText: "Complete Purchase", ctaUrl: "/subscription" },
-  },
-  {
-    id: "after-24-hours",
-    name: "Reminder 2 - After 24 Hours",
-    enabled: true,
-    delayAmount: 24,
-    delayUnit: "Hours",
-    push: { title: "Your Premium Plan Is Still Waiting", message: "Finish your subscription and continue your NEET/JEE practice.", ctaText: "Unlock Premium", ctaAction: "/subscription" },
-    email: { subject: "Your Krita Premium plan is still waiting", body: "<p>Hi {{StudentName}},</p><p>You can still complete your subscription and unlock Premium access.</p>", ctaText: "Unlock Premium", ctaUrl: "/subscription" },
-  },
-];
-
-const emptyReminderConfig = {
-  reminderName: "Premium Checkout Recovery",
-  status: "enabled",
-  channels: "Both",
-  platform: "Both",
-  applicablePlan: "Premium",
-  targetUsers: "all",
-  priority: 100,
-  maximumReminderCount: 2,
-  reminders: defaultReminderStages,
-};
-
 const emptyTest = {
   deliveryType: "both",
   testTarget: "admin",
@@ -154,19 +120,6 @@ function deliverySummaryMessage(response, fallback = "Notification request compl
   return parts.length ? parts.join(" | ") : response?.message || fallback;
 }
 
-function cloneReminderConfig(source = emptyReminderConfig) {
-  return {
-    ...emptyReminderConfig,
-    ...source,
-    reminders: (Array.isArray(source.reminders) && source.reminders.length ? source.reminders : defaultReminderStages).map((stage, index) => ({
-      ...(defaultReminderStages[index] || defaultReminderStages[0]),
-      ...stage,
-      push: { ...((defaultReminderStages[index] || defaultReminderStages[0]).push || {}), ...(stage.push || {}) },
-      email: { ...((defaultReminderStages[index] || defaultReminderStages[0]).email || {}), ...(stage.email || {}) },
-    })),
-  };
-}
-
 export function NotificationCenterPage() {
   const [tab, setTab] = useState("send");
   const [templates, setTemplates] = useState([]);
@@ -184,9 +137,6 @@ export function NotificationCenterPage() {
   const [editingCampaignId, setEditingCampaignId] = useState("");
   const [sendForm, setSendForm] = useState(emptySend);
   const [testForm, setTestForm] = useState(emptyTest);
-  const [reminderConfigId, setReminderConfigId] = useState("");
-  const [reminderForm, setReminderForm] = useState(() => cloneReminderConfig());
-  const [reminderStats, setReminderStats] = useState(null);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -210,18 +160,12 @@ export function NotificationCenterPage() {
     setScheduled(scheduledResponse.data || []);
     setStats(statsResponse.data || null);
     setCtaConfigs(ctaResponse.data || []);
-    setAudiences((audienceResponse.data || []).filter((item) => item.value !== "reminder_subscription"));
+    setAudiences(audienceResponse.data || []);
   }
 
   useEffect(() => {
     loadAll().catch((error) => setMessage(error.message));
   }, []);
-
-  useEffect(() => {
-    if (tab === "reminder-subscription") {
-      loadReminderSubscription().catch((error) => setMessage(error.message));
-    }
-  }, [tab]);
 
   const activeTemplate = useMemo(
     () => templates.find((item) => String(item.id || item._id) === String(sendForm.templateId)),
@@ -299,66 +243,6 @@ export function NotificationCenterPage() {
 
   function removeSelectedUser(value) {
     setSelectedUserList(selectedUserList.filter((item) => item !== value));
-  }
-
-  async function loadReminderSubscription() {
-    const [configResponse, statsResponse] = await Promise.all([
-      subscriptionReminderService.configurations({ page: 1, limit: 1 }),
-      subscriptionReminderService.stats(),
-    ]);
-    const item = (configResponse.data || [])[0];
-    setReminderConfigId(item?.id || item?._id || "");
-    setReminderForm(cloneReminderConfig(item || emptyReminderConfig));
-    setReminderStats(statsResponse.data || null);
-  }
-
-  function updateReminderStage(index, patch) {
-    setReminderForm((current) => ({
-      ...current,
-      reminders: (current.reminders || []).map((stage, stageIndex) => (stageIndex === index ? { ...stage, ...patch } : stage)),
-    }));
-  }
-
-  function updateReminderStagePush(index, patch) {
-    setReminderForm((current) => ({
-      ...current,
-      reminders: (current.reminders || []).map((stage, stageIndex) => (stageIndex === index ? { ...stage, push: { ...(stage.push || {}), ...patch } } : stage)),
-    }));
-  }
-
-  function updateReminderStageEmail(index, patch) {
-    setReminderForm((current) => ({
-      ...current,
-      reminders: (current.reminders || []).map((stage, stageIndex) => (stageIndex === index ? { ...stage, email: { ...(stage.email || {}), ...patch } } : stage)),
-    }));
-  }
-
-  function addReminderStage() {
-    setReminderForm((current) => {
-      const nextIndex = (current.reminders || []).length + 1;
-      return {
-        ...current,
-        reminders: [
-          ...(current.reminders || []),
-          {
-            id: `custom-${Date.now()}`,
-            name: `Reminder ${nextIndex}`,
-            enabled: true,
-            delayAmount: 1,
-            delayUnit: "Days",
-            push: { title: "", message: "", ctaText: "Open", ctaAction: "/subscription" },
-            email: { subject: "", body: "", ctaText: "Open", ctaUrl: "/subscription" },
-          },
-        ],
-      };
-    });
-  }
-
-  function removeReminderStage(index) {
-    setReminderForm((current) => ({
-      ...current,
-      reminders: (current.reminders || []).filter((_stage, stageIndex) => stageIndex !== index),
-    }));
   }
 
   function applyCtaConfig(id, target = "send") {
@@ -533,34 +417,6 @@ export function NotificationCenterPage() {
     }
   }
 
-  async function saveReminderSubscription(event) {
-    event.preventDefault();
-    const enabledCount = (reminderForm.reminders || []).filter((item) => item.enabled !== false).length;
-    const payload = {
-      ...reminderForm,
-      channels: "Both",
-      maximumReminderCount: enabledCount || 1,
-    };
-    setBusy(true);
-    setMessage("");
-    try {
-      const response = reminderConfigId
-        ? await subscriptionReminderService.updateConfiguration(reminderConfigId, payload)
-        : await subscriptionReminderService.createConfiguration(payload);
-      const item = response.data;
-      const id = item?.id || item?._id || reminderConfigId;
-      if (id) {
-        await subscriptionReminderService.setConfigurationStatus(id, payload.status === "disabled" ? "disabled" : "enabled");
-      }
-      await loadReminderSubscription();
-      setMessage(payload.status === "disabled" ? "Reminder Subscription disabled." : "Reminder Subscription configuration saved.");
-    } catch (error) {
-      setMessage(error.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <section className={ui.panel}>
@@ -576,10 +432,9 @@ export function NotificationCenterPage() {
       </section>
 
       <section className={ui.panel}>
-        <div className="grid gap-3 md:grid-cols-7">
+        <div className="grid gap-3 md:grid-cols-6">
           {[
             ["send", "Send Notification"],
-            ["reminder-subscription", "Reminder Subscription"],
             ["templates", "Templates"],
             ["scheduled", "Scheduled"],
             ["history", "History"],
@@ -697,81 +552,6 @@ export function NotificationCenterPage() {
           </div>
           <div className="mt-5 flex justify-end">
             <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy}>{busy ? "Working..." : sendForm.action === "send" ? "Send Immediately" : sendForm.action === "schedule" ? "Schedule Campaign" : "Save Draft"}</button>
-          </div>
-        </form>
-      ) : null}
-
-      {tab === "reminder-subscription" ? (
-        <form className={ui.panel} onSubmit={saveReminderSubscription}>
-          <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <div className={ui.eyebrow}>Automatic Workflow</div>
-              <h2 className="text-xl font-black text-slate-900">Reminder Subscription</h2>
-              <p className={ui.muted}>Triggered when a user abandons, cancels, or fails a subscription payment.</p>
-            </div>
-            <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-800">
-              <input
-                type="checkbox"
-                checked={reminderForm.status !== "disabled"}
-                onChange={(event) => setReminderForm((current) => ({ ...current, status: event.target.checked ? "enabled" : "disabled" }))}
-              />
-              {reminderForm.status === "disabled" ? "Disabled" : "Enabled"}
-            </label>
-          </div>
-
-          <div className="mb-5 grid gap-3 md:grid-cols-5">
-            {[["Pending", reminderStats?.pendingReminders], ["Push Today", reminderStats?.notificationSentToday], ["Emails Today", reminderStats?.emailSentToday], ["Converted", reminderStats?.convertedUsers], ["Conversion", `${reminderStats?.conversionRate || 0}%`]].map(([label, value]) => (
-              <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                <div className={ui.eyebrow}>{label}</div>
-                <div className="mt-1 text-2xl font-black text-slate-900">{value ?? 0}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid gap-4 lg:grid-cols-3">
-            <label className={ui.field}><span>Workflow Name</span><input className={ui.input} value={reminderForm.reminderName} onChange={(event) => setReminderForm((current) => ({ ...current, reminderName: event.target.value }))} required /></label>
-            <label className={ui.field}><span>Platform</span><select className={ui.input} value={reminderForm.platform} onChange={(event) => setReminderForm((current) => ({ ...current, platform: event.target.value }))}><option>Both</option><option>Android</option><option>iOS</option><option>Web</option></select></label>
-            <label className={ui.field}><span>Applicable Plan</span><input className={ui.input} value={reminderForm.applicablePlan || ""} onChange={(event) => setReminderForm((current) => ({ ...current, applicablePlan: event.target.value }))} placeholder="Premium" /></label>
-          </div>
-
-          <div className="mt-5 space-y-4">
-            {(reminderForm.reminders || []).map((stage, index) => (
-              <div key={stage.id || index} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                  <label className="flex items-center gap-2 text-sm font-black text-slate-800">
-                    <input type="checkbox" checked={stage.enabled !== false} onChange={(event) => updateReminderStage(index, { enabled: event.target.checked })} />
-                    {stage.name || `Reminder ${index + 1}`}
-                  </label>
-                  <button type="button" className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => removeReminderStage(index)} disabled={(reminderForm.reminders || []).length <= 1}>Remove</button>
-                </div>
-                <div className="grid gap-4 lg:grid-cols-3">
-                  <label className={ui.field}><span>Stage Name</span><input className={ui.input} value={stage.name || ""} onChange={(event) => updateReminderStage(index, { name: event.target.value })} /></label>
-                  <label className={ui.field}><span>Delay</span><input className={ui.input} type="number" min="0" value={stage.delayAmount ?? 0} onChange={(event) => updateReminderStage(index, { delayAmount: event.target.value })} /></label>
-                  <label className={ui.field}><span>Delay Unit</span><select className={ui.input} value={stage.delayUnit || "Hours"} onChange={(event) => updateReminderStage(index, { delayUnit: event.target.value })}><option>Minutes</option><option>Hours</option><option>Days</option></select></label>
-                  <label className={ui.field}><span>Push Template</span><select className={ui.input} value="" onChange={(event) => {
-                    const selected = templates.find((item) => String(item.id || item._id) === String(event.target.value));
-                    if (selected) updateReminderStagePush(index, { title: selected.title || "", message: selected.message || "", ctaText: selected.ctaText || stage.push?.ctaText || "", ctaAction: selected.deepLink || stage.push?.ctaAction || "/subscription" });
-                  }}><option value="">Select Push Template</option>{templates.filter((item) => item.status !== false).map((item) => <option key={item.id || item._id} value={item.id || item._id}>{item.name}</option>)}</select></label>
-                  <label className={ui.field}><span>Notification Title</span><input className={ui.input} value={stage.push?.title || ""} onChange={(event) => updateReminderStagePush(index, { title: event.target.value })} required={stage.enabled !== false} /></label>
-                  <label className={ui.field}><span>CTA Button</span><input className={ui.input} value={stage.push?.ctaText || ""} onChange={(event) => updateReminderStagePush(index, { ctaText: event.target.value })} placeholder="Complete Purchase" /></label>
-                  <label className={cn(ui.field, "lg:col-span-3")}><span>Notification Message</span><textarea className={ui.textarea} value={stage.push?.message || ""} onChange={(event) => updateReminderStagePush(index, { message: event.target.value })} required={stage.enabled !== false} /></label>
-                  <label className={ui.field}><span>CTA Action / Deep Link</span><input className={ui.input} value={stage.push?.ctaAction || "/subscription"} onChange={(event) => updateReminderStagePush(index, { ctaAction: event.target.value })} /></label>
-                  <label className={ui.field}><span>Email Template</span><select className={ui.input} value="" onChange={(event) => {
-                    const selected = emailTemplates.find((item) => String(item.id || item.status?.templateId || item.key) === String(event.target.value));
-                    if (selected) updateReminderStageEmail(index, { subject: selected.subject || "", body: selected.htmlContent || selected.textContent || "" });
-                  }}><option value="">Select Email Template</option>{emailTemplates.map((item) => <option key={item.id || item.status?.templateId || item.key} value={item.id || item.status?.templateId || item.key}>{item.name}</option>)}</select></label>
-                  <label className={ui.field}><span>Email CTA Text</span><input className={ui.input} value={stage.email?.ctaText || ""} onChange={(event) => updateReminderStageEmail(index, { ctaText: event.target.value })} /></label>
-                  <label className={cn(ui.field, "lg:col-span-2")}><span>Email Subject</span><input className={ui.input} value={stage.email?.subject || ""} onChange={(event) => updateReminderStageEmail(index, { subject: event.target.value })} required={stage.enabled !== false} /></label>
-                  <label className={ui.field}><span>Email CTA URL</span><input className={ui.input} value={stage.email?.ctaUrl || "/subscription"} onChange={(event) => updateReminderStageEmail(index, { ctaUrl: event.target.value })} /></label>
-                  <label className={cn(ui.field, "lg:col-span-3")}><span>Email Content</span><textarea className={cn(ui.textarea, "min-h-44")} value={stage.email?.body || ""} onChange={(event) => updateReminderStageEmail(index, { body: event.target.value })} required={stage.enabled !== false} /></label>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-5 flex flex-wrap justify-between gap-3">
-            <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={addReminderStage}>Add Reminder Stage</button>
-            <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy}>{busy ? "Saving..." : "Save Reminder Subscription"}</button>
           </div>
         </form>
       ) : null}
