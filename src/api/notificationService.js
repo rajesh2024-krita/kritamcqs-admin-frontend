@@ -75,4 +75,28 @@ export const notificationService = {
     const response = await http.get("/admin/notifications/history", { params });
     return response.data;
   },
+  async paymentCancelledAuto() {
+    const response = await http.get("/admin/notifications/payment-cancelled-auto");
+    return response.data;
+  },
+  async createPaymentCancelledAuto(payload) {
+    const response = await http.post("/admin/notifications/payment-cancelled-auto", payload);
+    return response.data;
+  },
+  async updatePaymentCancelledAuto(id, payload) {
+    const response = await http.put(`/admin/notifications/payment-cancelled-auto/${id}`, payload);
+    return response.data;
+  },
+  async setPaymentCancelledAutoStatus(id, status) {
+    const response = await http.patch(`/admin/notifications/payment-cancelled-auto/${id}/status`, { status });
+    return response.data;
+  },
+  async deletePaymentCancelledAuto(id) {
+    const response = await http.delete(`/admin/notifications/payment-cancelled-auto/${id}`);
+    return response.data;
+  },
+  async paymentCancelledAutoLogs(params = {}) {
+    const response = await http.get("/admin/notifications/payment-cancelled-auto/logs", { params });
+    return response.data;
+  },
 };

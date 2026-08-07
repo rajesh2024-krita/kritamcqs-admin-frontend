@@ -91,6 +91,50 @@ const emptyTest = {
   category: "custom",
 };
 
+const defaultPaymentCancelledReminders = [
+  {
+    id: "immediate",
+    name: "Reminder 1 - Immediate",
+    enabled: true,
+    delayValue: 0,
+    delayUnit: "Minutes",
+    title: "Your premium payment was not completed",
+    message: "You can still complete your subscription and continue your preparation without interruption.",
+    image: "",
+    deepLink: "/subscription",
+    ctaConfigId: "",
+    ctaText: "Complete Payment",
+    emailTemplateId: "",
+    emailTemplateKey: "notification_reminder",
+    emailSubject: "Complete your Krita MCQs premium payment",
+    emailBody: "<p>Hi {{user_name}},</p><p>Your premium payment was not completed. You can still finish the payment and continue learning.</p><p><a href=\"{{payment_link}}\">Complete Payment</a></p>",
+  },
+  {
+    id: "after-24-hours",
+    name: "Reminder 2 - 24 Hours",
+    enabled: true,
+    delayValue: 24,
+    delayUnit: "Hours",
+    title: "Your premium plan is still waiting",
+    message: "Complete your payment to unlock premium practice, mock tests, and revision tools.",
+    image: "",
+    deepLink: "/subscription",
+    ctaConfigId: "",
+    ctaText: "Resume Payment",
+    emailTemplateId: "",
+    emailTemplateKey: "notification_reminder",
+    emailSubject: "Your Krita MCQs premium plan is still waiting",
+    emailBody: "<p>Hi {{user_name}},</p><p>Your premium plan is still waiting. Complete your payment to unlock all premium features.</p><p><a href=\"{{payment_link}}\">Resume Payment</a></p>",
+  },
+];
+
+const emptyPaymentCancelledAuto = {
+  name: "Payment Cancelled Auto Notification",
+  status: "disabled",
+  priority: 10,
+  reminders: defaultPaymentCancelledReminders,
+};
+
 function toInputDate(value) {
   if (!value) return "";
   const date = new Date(value);
@@ -127,6 +171,9 @@ export function NotificationCenterPage() {
   const [ctaConfigs, setCtaConfigs] = useState([]);
   const [history, setHistory] = useState([]);
   const [scheduled, setScheduled] = useState([]);
+  const [paymentAutoConfigs, setPaymentAutoConfigs] = useState([]);
+  const [paymentAutoLogs, setPaymentAutoLogs] = useState([]);
+  const [paymentAutoPendingJobs, setPaymentAutoPendingJobs] = useState(0);
   const [stats, setStats] = useState(null);
   const [audiences, setAudiences] = useState([]);
   const [userSearch, setUserSearch] = useState("");
@@ -137,17 +184,20 @@ export function NotificationCenterPage() {
   const [editingCampaignId, setEditingCampaignId] = useState("");
   const [sendForm, setSendForm] = useState(emptySend);
   const [testForm, setTestForm] = useState(emptyTest);
+  const [paymentAutoForm, setPaymentAutoForm] = useState(emptyPaymentCancelledAuto);
+  const [editingPaymentAutoId, setEditingPaymentAutoId] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function loadAll() {
-    const [templateResponse, historyResponse, scheduledResponse, statsResponse, ctaResponse, audienceResponse] = await Promise.all([
+    const [templateResponse, historyResponse, scheduledResponse, statsResponse, ctaResponse, audienceResponse, paymentAutoResponse] = await Promise.all([
       notificationService.templates(),
       notificationService.history({ limit: 50 }),
       notificationService.scheduled(),
       notificationService.stats(),
       ctaConfigService.list({ channel: "push", isActive: true }),
       notificationService.audiences(),
+      notificationService.paymentCancelledAuto(),
     ]);
     setTemplates(templateResponse.data || []);
     try {
@@ -161,6 +211,9 @@ export function NotificationCenterPage() {
     setStats(statsResponse.data || null);
     setCtaConfigs(ctaResponse.data || []);
     setAudiences(audienceResponse.data || []);
+    setPaymentAutoConfigs(paymentAutoResponse.data?.configs || []);
+    setPaymentAutoLogs(paymentAutoResponse.data?.logs || []);
+    setPaymentAutoPendingJobs(Number(paymentAutoResponse.data?.pendingJobs || 0));
   }
 
   useEffect(() => {
@@ -417,6 +470,90 @@ export function NotificationCenterPage() {
     }
   }
 
+  function normalizePaymentAutoForm(item = {}) {
+    return {
+      ...emptyPaymentCancelledAuto,
+      ...item,
+      reminders: Array.isArray(item.reminders) && item.reminders.length ? item.reminders : defaultPaymentCancelledReminders,
+    };
+  }
+
+  function patchPaymentAuto(key, value) {
+    setPaymentAutoForm((current) => ({ ...current, [key]: value }));
+  }
+
+  function patchPaymentAutoReminder(index, patch) {
+    setPaymentAutoForm((current) => ({
+      ...current,
+      reminders: current.reminders.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)),
+    }));
+  }
+
+  function addPaymentAutoReminder() {
+    setPaymentAutoForm((current) => ({
+      ...current,
+      reminders: [
+        ...current.reminders,
+        {
+          ...defaultPaymentCancelledReminders[1],
+          id: `reminder-${Date.now()}`,
+          name: `Reminder ${current.reminders.length + 1}`,
+          delayValue: 48,
+          delayUnit: "Hours",
+        },
+      ],
+    }));
+  }
+
+  function removePaymentAutoReminder(index) {
+    setPaymentAutoForm((current) => ({ ...current, reminders: current.reminders.filter((_, itemIndex) => itemIndex !== index) }));
+  }
+
+  async function savePaymentAuto(event) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage("");
+    try {
+      if (editingPaymentAutoId) await notificationService.updatePaymentCancelledAuto(editingPaymentAutoId, paymentAutoForm);
+      else await notificationService.createPaymentCancelledAuto(paymentAutoForm);
+      setPaymentAutoForm(emptyPaymentCancelledAuto);
+      setEditingPaymentAutoId("");
+      await loadAll();
+      setMessage("Payment Cancelled Auto Notification saved.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function togglePaymentAuto(item) {
+    setBusy(true);
+    try {
+      await notificationService.setPaymentCancelledAutoStatus(item.id || item._id, item.status === "enabled" ? "disabled" : "enabled");
+      await loadAll();
+      setMessage("Payment Cancelled Auto Notification status updated.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deletePaymentAuto(id) {
+    if (!window.confirm("Delete this Payment Cancelled Auto Notification?")) return;
+    setBusy(true);
+    try {
+      await notificationService.deletePaymentCancelledAuto(id);
+      await loadAll();
+      setMessage("Payment Cancelled Auto Notification deleted.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <section className={ui.panel}>
@@ -432,11 +569,12 @@ export function NotificationCenterPage() {
       </section>
 
       <section className={ui.panel}>
-        <div className="grid gap-3 md:grid-cols-6">
+        <div className="grid gap-3 md:grid-cols-7">
           {[
             ["send", "Send Notification"],
             ["templates", "Templates"],
             ["scheduled", "Scheduled"],
+            ["payment-auto", "Payment Cancelled"],
             ["history", "History"],
             ["test", "Testing"],
             ["stats", "Stats"],
@@ -596,6 +734,99 @@ export function NotificationCenterPage() {
               {["pending", "draft", "paused"].includes(item.status) ? <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => cancelSchedule(item.id || item._id)}>Delete</button> : null}
             </div>,
           ])} />
+        </section>
+      ) : null}
+
+      {tab === "payment-auto" ? (
+        <section className={ui.panel}>
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <h2 className="text-xl font-black text-slate-900">Payment Cancelled Auto Notification</h2>
+              <p className={ui.muted}>Automatically send Email, In-App Notification, and FCM push after cancelled, failed, closed, or abandoned payments.</p>
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-black text-slate-700">
+              Pending Jobs: {paymentAutoPendingJobs}
+            </div>
+          </div>
+
+          <form onSubmit={savePaymentAuto} className="mb-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+            <div className="grid gap-4 lg:grid-cols-4">
+              <label className={ui.field}><span>Name</span><input className={ui.input} value={paymentAutoForm.name} onChange={(event) => patchPaymentAuto("name", event.target.value)} required /></label>
+              <label className={ui.field}><span>Status</span><select className={ui.input} value={paymentAutoForm.status} onChange={(event) => patchPaymentAuto("status", event.target.value)}><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></label>
+              <label className={ui.field}><span>Priority</span><input className={ui.input} type="number" min="1" max="100" value={paymentAutoForm.priority} onChange={(event) => patchPaymentAuto("priority", Number(event.target.value || 10))} /></label>
+              <div className="flex items-end"><button type="button" className={cn(ui.buttonBase, ui.buttonSecondary, "w-full")} onClick={addPaymentAutoReminder}>Add Reminder</button></div>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              {paymentAutoForm.reminders.map((reminder, index) => {
+                const activeEmailTemplateForReminder = emailTemplates.find((item) => String(item.id || item.status?.templateId || item.key) === String(reminder.emailTemplateId));
+                return (
+                  <div key={reminder.id || index} className="rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                      <label className="inline-flex items-center gap-2 text-sm font-black text-slate-700">
+                        <input className={ui.checkbox} type="checkbox" checked={reminder.enabled !== false} onChange={(event) => patchPaymentAutoReminder(index, { enabled: event.target.checked })} />
+                        {reminder.name || `Reminder ${index + 1}`}
+                      </label>
+                      {paymentAutoForm.reminders.length > 1 ? <button type="button" className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => removePaymentAutoReminder(index)}>Remove</button> : null}
+                    </div>
+                    <div className="grid gap-4 lg:grid-cols-4">
+                      <label className={ui.field}><span>Stage Name</span><input className={ui.input} value={reminder.name} onChange={(event) => patchPaymentAutoReminder(index, { name: event.target.value })} /></label>
+                      <label className={ui.field}><span>Delay</span><input className={ui.input} type="number" min="0" value={reminder.delayValue} onChange={(event) => patchPaymentAutoReminder(index, { delayValue: Number(event.target.value || 0) })} /></label>
+                      <label className={ui.field}><span>Delay Unit</span><select className={ui.input} value={reminder.delayUnit} onChange={(event) => patchPaymentAutoReminder(index, { delayUnit: event.target.value })}><option>Minutes</option><option>Hours</option><option>Days</option></select></label>
+                      <label className={ui.field}><span>Deep Link</span><input className={ui.input} value={reminder.deepLink} onChange={(event) => patchPaymentAutoReminder(index, { deepLink: event.target.value })} /></label>
+                      <label className={ui.field}><span>Push Title</span><input className={ui.input} value={reminder.title} onChange={(event) => patchPaymentAutoReminder(index, { title: event.target.value })} required /></label>
+                      <label className={cn(ui.field, "lg:col-span-3")}><span>Push Message</span><textarea className={ui.textarea} value={reminder.message} onChange={(event) => patchPaymentAutoReminder(index, { message: event.target.value })} required /></label>
+                      <label className={ui.field}><span>Image URL</span><input className={ui.input} value={reminder.image || ""} onChange={(event) => patchPaymentAutoReminder(index, { image: event.target.value })} /></label>
+                      <label className={ui.field}><span>CTA Text</span><input className={ui.input} value={reminder.ctaText || ""} onChange={(event) => patchPaymentAutoReminder(index, { ctaText: event.target.value })} /></label>
+                      <label className={ui.field}><span>Email Template</span><select className={ui.input} value={reminder.emailTemplateId || ""} onChange={(event) => {
+                        const selected = emailTemplates.find((item) => String(item.id || item.status?.templateId || item.key) === String(event.target.value));
+                        patchPaymentAutoReminder(index, {
+                          emailTemplateId: event.target.value,
+                          emailTemplateKey: selected?.key || reminder.emailTemplateKey || "",
+                          emailSubject: selected?.subject || reminder.emailSubject || "",
+                          emailBody: selected?.htmlContent || selected?.textContent || reminder.emailBody || "",
+                        });
+                      }}><option value="">Use custom email content</option>{emailTemplates.map((item) => <option key={item.id || item.status?.templateId || item.key} value={item.id || item.status?.templateId || item.key}>{item.name || item.key}</option>)}</select></label>
+                      <label className={ui.field}><span>Template Key</span><input className={ui.input} value={reminder.emailTemplateKey || activeEmailTemplateForReminder?.key || ""} onChange={(event) => patchPaymentAutoReminder(index, { emailTemplateKey: event.target.value })} /></label>
+                      <label className={cn(ui.field, "lg:col-span-2")}><span>Email Subject</span><input className={ui.input} value={reminder.emailSubject} onChange={(event) => patchPaymentAutoReminder(index, { emailSubject: event.target.value })} required /></label>
+                      <label className={cn(ui.field, "lg:col-span-4")}><span>Email Body</span><textarea className={cn(ui.textarea, "min-h-44")} value={reminder.emailBody} onChange={(event) => patchPaymentAutoReminder(index, { emailBody: event.target.value })} required /></label>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-5 flex justify-end gap-3">
+              {editingPaymentAutoId ? <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => { setEditingPaymentAutoId(""); setPaymentAutoForm(emptyPaymentCancelledAuto); }}>Cancel</button> : null}
+              <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy}>{busy ? "Saving..." : editingPaymentAutoId ? "Update Auto Notification" : "Create Auto Notification"}</button>
+            </div>
+          </form>
+
+          <SimpleTable columns={["Name", "Status", "Reminder Count", "Last Trigger", "Created", "Updated", "Actions"]} rows={paymentAutoConfigs.map((item) => [
+            item.name,
+            item.status === "enabled" ? "Enabled" : "Disabled",
+            item.reminderCount || item.reminders?.filter((reminder) => reminder.enabled !== false).length || 0,
+            item.lastTriggerAt ? toInputDate(item.lastTriggerAt).replace("T", " ") : "-",
+            item.createdAt ? toInputDate(item.createdAt).replace("T", " ") : "-",
+            item.updatedAt ? toInputDate(item.updatedAt).replace("T", " ") : "-",
+            <div key={item.id || item._id} className="flex flex-wrap gap-2">
+              <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => { setEditingPaymentAutoId(item.id || item._id); setPaymentAutoForm(normalizePaymentAutoForm(item)); }}>Edit</button>
+              <button className={cn(ui.buttonBase, item.status === "enabled" ? ui.buttonSecondary : ui.buttonPrimary)} onClick={() => togglePaymentAuto(item)}>{item.status === "enabled" ? "Disable" : "Enable"}</button>
+              <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => deletePaymentAuto(item.id || item._id)}>Delete</button>
+            </div>,
+          ])} />
+
+          <div className="mt-6">
+            <h3 className="mb-3 text-lg font-black text-slate-900">Recent Logs</h3>
+            <SimpleTable columns={["Event", "Stage", "User", "Payment Ref", "Status", "Created"]} rows={paymentAutoLogs.map((item) => [
+              item.eventType || "-",
+              item.stageName || "-",
+              item.userId || "-",
+              item.paymentReference || "-",
+              item.status || item.reason || "-",
+              item.createdAt ? toInputDate(item.createdAt).replace("T", " ") : "-",
+            ])} />
+          </div>
         </section>
       ) : null}
 
