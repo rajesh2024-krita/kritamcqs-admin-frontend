@@ -53,7 +53,6 @@ const navItems = [
   { label: "Free User Cards", to: "/subscription-free-cards", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscription-free-cards" },
   { label: "Subscription Stats", to: "/subscription-stat-cards", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscription-stat-cards" },
   { label: "Page Builder", to: "/subscription-page-builder", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscription-page-builder" },
-  { label: "Subscription Reminder", to: "/subscription-reminder", section: "Subscription Management", icon: Bell, mainOnly: true },
   { label: "Dashboard Carousel", to: "/dashboard-carousel", section: "Operations", icon: OverviewIcon, moduleKey: "dashboard-carousel" },
   { label: "Analytics", to: "/app-usage", section: "Operations", icon: DashboardIcon, moduleKey: "app-usage" },
   { label: "Offer Timer Management", to: "/offer-timer-management", section: "Operations", icon: TagIcon, mainOnly: true },
