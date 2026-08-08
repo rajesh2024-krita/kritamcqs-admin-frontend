@@ -44,6 +44,7 @@ import { WeakAreaManagementPage } from "../pages/WeakAreaManagementPage";
 import { MistakeManagementPage } from "../pages/MistakeManagementPage";
 import { FreeQuestionsPage } from "../pages/FreeQuestionsPage";
 import { DashboardCarouselPage } from "../pages/DashboardCarouselPage";
+import { DynamicCtaCardsPage } from "../pages/DynamicCtaCardsPage";
 import { SubscriptionPageBuilderPage } from "../pages/SubscriptionPageBuilderPage";
 import { WebsiteContentPage } from "../pages/WebsiteContentPage";
 import { PolicyManagementPage } from "../pages/PolicyManagementPage";
@@ -135,6 +136,7 @@ export function AppRoutes() {
         <Route path="subscription-stat-cards" element={<ModuleAccess moduleKey="subscription-stat-cards"><SubscriptionStatCardsPage /></ModuleAccess>} />
         <Route path="subscription-page-builder" element={<ModuleAccess moduleKey="subscription-page-builder"><SubscriptionPageBuilderPage /></ModuleAccess>} />
         <Route path="dashboard-carousel" element={<ModuleAccess moduleKey="dashboard-carousel"><DashboardCarouselPage /></ModuleAccess>} />
+        <Route path="app-cta-cards" element={<MainAdminOnly><DynamicCtaCardsPage /></MainAdminOnly>} />
         <Route path="app-usage" element={<ModuleAccess moduleKey="app-usage"><Suspense fallback={<LoadingSpinner label="Loading app usage..." />}><AppUsageAnalyticsPage /></Suspense></ModuleAccess>} />
         <Route path="offer-timer-management" element={<MainAdminOnly><OfferTimerManagementPage /></MainAdminOnly>} />
         <Route path="website-content" element={<MainAdminOnly><WebsiteContentPage /></MainAdminOnly>} />

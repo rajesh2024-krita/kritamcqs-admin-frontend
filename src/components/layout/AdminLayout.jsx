@@ -54,6 +54,7 @@ const navItems = [
   { label: "Subscription Stats", to: "/subscription-stat-cards", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscription-stat-cards" },
   { label: "Page Builder", to: "/subscription-page-builder", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscription-page-builder" },
   { label: "Dashboard Carousel", to: "/dashboard-carousel", section: "Operations", icon: OverviewIcon, moduleKey: "dashboard-carousel" },
+  { label: "App CTA Cards", to: "/app-cta-cards", section: "Operations", icon: TagIcon, mainOnly: true },
   { label: "Analytics", to: "/app-usage", section: "Operations", icon: DashboardIcon, moduleKey: "app-usage" },
   { label: "Offer Timer Management", to: "/offer-timer-management", section: "Operations", icon: TagIcon, mainOnly: true },
   { label: "Website Content", to: "/website-content", section: "Operations", icon: SettingsIcon, mainOnly: true },
