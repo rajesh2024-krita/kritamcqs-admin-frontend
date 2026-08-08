@@ -27,6 +27,10 @@ export const notificationService = {
     const response = await http.get("/admin/notifications/audiences");
     return response.data;
   },
+  async audienceCount(payload) {
+    const response = await http.post("/admin/notifications/audience-count", payload);
+    return response.data;
+  },
   async createTemplate(payload) {
     const response = await http.post("/admin/notifications/templates", payload);
     return response.data;
@@ -69,6 +73,30 @@ export const notificationService = {
   },
   async processScheduled() {
     const response = await http.post("/admin/notifications/process-scheduled");
+    return response.data;
+  },
+  async automations() {
+    const response = await http.get("/admin/notifications/automations");
+    return response.data;
+  },
+  async createAutomation(payload) {
+    const response = await http.post("/admin/notifications/automations", payload);
+    return response.data;
+  },
+  async updateAutomation(id, payload) {
+    const response = await http.put(`/admin/notifications/automations/${id}`, payload);
+    return response.data;
+  },
+  async setAutomationStatus(id, payload) {
+    const response = await http.patch(`/admin/notifications/automations/${id}/status`, payload);
+    return response.data;
+  },
+  async deleteAutomation(id) {
+    const response = await http.delete(`/admin/notifications/automations/${id}`);
+    return response.data;
+  },
+  async automationHistory(id, params = {}) {
+    const response = await http.get(`/admin/notifications/automations/${id}/history`, { params });
     return response.data;
   },
   async history(params = {}) {

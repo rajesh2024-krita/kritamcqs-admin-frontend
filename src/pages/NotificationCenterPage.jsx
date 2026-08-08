@@ -32,6 +32,20 @@ const deliveryOptions = [
   { value: "email", label: "Email Only" },
   { value: "both", label: "Push Notification + Email" },
 ];
+const automationChannelOptions = [
+  { value: "in_app", label: "In-App Notification" },
+  { value: "push", label: "Push Notification" },
+  { value: "email", label: "Email" },
+];
+const weekDayOptions = [
+  { value: 0, label: "Sunday" },
+  { value: 1, label: "Monday" },
+  { value: 2, label: "Tuesday" },
+  { value: 3, label: "Wednesday" },
+  { value: 4, label: "Thursday" },
+  { value: 5, label: "Friday" },
+  { value: 6, label: "Saturday" },
+];
 
 const emptyTemplate = {
   name: "",
@@ -91,6 +105,33 @@ const emptyTest = {
   category: "custom",
 };
 
+const emptyAutomation = {
+  campaignName: "",
+  scheduleType: "weekly",
+  weeklyDays: [1],
+  monthlyDay: 1,
+  scheduleTime: "09:00",
+  timezone: "Asia/Kolkata",
+  deliveryChannels: ["in_app", "push"],
+  title: "",
+  message: "",
+  image: "",
+  deepLink: "/notifications",
+  ctaConfigId: "",
+  ctaText: "",
+  targetScreen: "",
+  emailTemplateId: "",
+  emailTemplateKey: "",
+  emailSubject: "",
+  emailBody: "",
+  targetType: "all",
+  selectedUsers: "",
+  category: "custom",
+  sound: "default",
+  priority: "high",
+  automationEnabled: true,
+};
+
 function toInputDate(value) {
   if (!value) return "";
   const date = new Date(value);
@@ -120,6 +161,25 @@ function deliverySummaryMessage(response, fallback = "Notification request compl
   return parts.length ? parts.join(" | ") : response?.message || fallback;
 }
 
+function channelLabel(channels = [], fallback = "") {
+  const values = Array.isArray(channels) ? channels : [];
+  if (values.length) {
+    return values
+      .map((value) => automationChannelOptions.find((item) => item.value === value)?.label || value)
+      .join(" + ");
+  }
+  if (fallback === "email") return "Email";
+  if (fallback === "both") return "In-App + Push + Email";
+  return "In-App + Push";
+}
+
+function formatDateTime(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString();
+}
+
 export function NotificationCenterPage() {
   const [tab, setTab] = useState("send");
   const [templates, setTemplates] = useState([]);
@@ -127,6 +187,10 @@ export function NotificationCenterPage() {
   const [ctaConfigs, setCtaConfigs] = useState([]);
   const [history, setHistory] = useState([]);
   const [scheduled, setScheduled] = useState([]);
+  const [automations, setAutomations] = useState([]);
+  const [automationHistory, setAutomationHistory] = useState([]);
+  const [automationTimezone, setAutomationTimezone] = useState("Asia/Kolkata");
+  const [automationAudienceCount, setAutomationAudienceCount] = useState(0);
   const [stats, setStats] = useState(null);
   const [audiences, setAudiences] = useState([]);
   const [userSearch, setUserSearch] = useState("");
@@ -137,17 +201,20 @@ export function NotificationCenterPage() {
   const [editingCampaignId, setEditingCampaignId] = useState("");
   const [sendForm, setSendForm] = useState(emptySend);
   const [testForm, setTestForm] = useState(emptyTest);
+  const [automationForm, setAutomationForm] = useState(emptyAutomation);
+  const [editingAutomationId, setEditingAutomationId] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function loadAll() {
-    const [templateResponse, historyResponse, scheduledResponse, statsResponse, ctaResponse, audienceResponse] = await Promise.all([
+    const [templateResponse, historyResponse, scheduledResponse, statsResponse, ctaResponse, audienceResponse, automationResponse] = await Promise.all([
       notificationService.templates(),
       notificationService.history({ limit: 50 }),
       notificationService.scheduled(),
       notificationService.stats(),
       ctaConfigService.list({ channel: "push", isActive: true }),
       notificationService.audiences(),
+      notificationService.automations(),
     ]);
     setTemplates(templateResponse.data || []);
     try {
@@ -158,6 +225,8 @@ export function NotificationCenterPage() {
     }
     setHistory(historyResponse.data || []);
     setScheduled(scheduledResponse.data || []);
+    setAutomations(automationResponse.data || []);
+    setAutomationTimezone(automationResponse.timezone || "Asia/Kolkata");
     setStats(statsResponse.data || null);
     setCtaConfigs(ctaResponse.data || []);
     setAudiences(audienceResponse.data || []);
@@ -170,6 +239,9 @@ export function NotificationCenterPage() {
   const currentCampaignForm = sendForm;
   const setCurrentCampaignForm = setSendForm;
   const currentEditingCampaignId = editingCampaignId;
+  const automationShouldInApp = automationForm.deliveryChannels.includes("in_app");
+  const automationShouldPush = automationForm.deliveryChannels.includes("push");
+  const automationShouldEmail = automationForm.deliveryChannels.includes("email");
 
   const activeTemplate = useMemo(
     () => templates.find((item) => String(item.id || item._id) === String(currentCampaignForm.templateId)),
@@ -179,6 +251,10 @@ export function NotificationCenterPage() {
   const activeEmailTemplate = useMemo(
     () => emailTemplates.find((item) => String(item.id || item.status?.templateId || item.key) === String(currentCampaignForm.emailTemplateId)),
     [emailTemplates, currentCampaignForm.emailTemplateId],
+  );
+  const activeAutomationEmailTemplate = useMemo(
+    () => emailTemplates.find((item) => String(item.id || item.status?.templateId || item.key) === String(automationForm.emailTemplateId)),
+    [emailTemplates, automationForm.emailTemplateId],
   );
 
   useEffect(() => {
@@ -207,6 +283,35 @@ export function NotificationCenterPage() {
       emailBody: activeEmailTemplate.htmlContent || activeEmailTemplate.textContent || "",
     }));
   }, [activeEmailTemplate, setCurrentCampaignForm]);
+
+  useEffect(() => {
+    if (!activeAutomationEmailTemplate) return;
+    setAutomationForm((current) => ({
+      ...current,
+      emailTemplateKey: activeAutomationEmailTemplate.key || "",
+      emailSubject: activeAutomationEmailTemplate.subject || "",
+      emailBody: activeAutomationEmailTemplate.htmlContent || activeAutomationEmailTemplate.textContent || "",
+    }));
+  }, [activeAutomationEmailTemplate]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const response = await notificationService.audienceCount({
+          targetType: automationForm.targetType,
+          selectedUsers: automationForm.selectedUsers,
+        });
+        if (!cancelled) setAutomationAudienceCount(response.data?.count || 0);
+      } catch (error) {
+        if (!cancelled) setMessage(error.message);
+      }
+    }, 250);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeoutId);
+    };
+  }, [automationForm.targetType, automationForm.selectedUsers]);
 
   useEffect(() => {
     let cancelled = false;
@@ -423,6 +528,110 @@ export function NotificationCenterPage() {
     }
   }
 
+  function toggleAutomationChannel(channel) {
+    setAutomationForm((current) => {
+      const currentSet = new Set(current.deliveryChannels);
+      if (currentSet.has(channel)) currentSet.delete(channel);
+      else currentSet.add(channel);
+      return { ...current, deliveryChannels: [...currentSet] };
+    });
+  }
+
+  function toggleAutomationDay(day) {
+    setAutomationForm((current) => {
+      const currentSet = new Set(current.weeklyDays.map(Number));
+      if (currentSet.has(day)) currentSet.delete(day);
+      else currentSet.add(day);
+      return { ...current, weeklyDays: [...currentSet].sort((left, right) => left - right) };
+    });
+  }
+
+  function automationPayload() {
+    return {
+      ...automationForm,
+      action: "automate",
+      timezone: automationForm.timezone || automationTimezone,
+      monthlyDay: Number(automationForm.monthlyDay || 1),
+      weeklyDays: automationForm.weeklyDays.map(Number),
+      selectedUsers: automationForm.selectedUsers,
+    };
+  }
+
+  async function saveAutomation(event) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage("");
+    try {
+      const payload = automationPayload();
+      if (editingAutomationId) await notificationService.updateAutomation(editingAutomationId, payload);
+      else await notificationService.createAutomation(payload);
+      setAutomationForm({ ...emptyAutomation, timezone: automationTimezone });
+      setEditingAutomationId("");
+      await loadAll();
+      setMessage("Automated notification saved.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function editAutomation(item) {
+    setEditingAutomationId(item.id || item._id);
+    setAutomationForm({
+      ...emptyAutomation,
+      ...item,
+      timezone: item.timezone || automationTimezone,
+      weeklyDays: Array.isArray(item.weeklyDays) && item.weeklyDays.length ? item.weeklyDays.map(Number) : [1],
+      monthlyDay: item.monthlyDay || 1,
+      deliveryChannels: Array.isArray(item.deliveryChannels) && item.deliveryChannels.length ? item.deliveryChannels : ["in_app", "push"],
+      selectedUsers: Array.isArray(item.selectedUsers) ? item.selectedUsers.join("\n") : item.selectedUsers || "",
+      automationEnabled: item.automationEnabled !== false && item.status !== "paused",
+    });
+    setTab("automated");
+  }
+
+  async function setAutomationStatus(item, enabled) {
+    setBusy(true);
+    try {
+      await notificationService.setAutomationStatus(item.id || item._id, { enabled });
+      await loadAll();
+      setMessage(enabled ? "Automation enabled." : "Automation disabled.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function deleteAutomation(item) {
+    const ok = window.confirm("Are you sure you want to delete this automated notification? This will stop all future scheduled notifications.");
+    if (!ok) return;
+    setBusy(true);
+    try {
+      await notificationService.deleteAutomation(item.id || item._id);
+      await loadAll();
+      setMessage("Automated notification deleted.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function showAutomationHistory(item) {
+    setBusy(true);
+    try {
+      const response = await notificationService.automationHistory(item.id || item._id, { limit: 20 });
+      setAutomationHistory(response.data || []);
+      setMessage(`Loaded execution history for ${item.campaignName || item.title || "automation"}.`);
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <section className={ui.panel}>
@@ -438,10 +647,11 @@ export function NotificationCenterPage() {
       </section>
 
       <section className={ui.panel}>
-        <div className="grid gap-3 md:grid-cols-6">
+        <div className="grid gap-3 md:grid-cols-7">
           {[
             ["send", "Send Notification"],
             ["templates", "Templates"],
+            ["automated", "Scheduled / Automated Notifications"],
             ["scheduled", "Scheduled"],
             ["history", "History"],
             ["test", "Testing"],
@@ -589,6 +799,121 @@ export function NotificationCenterPage() {
             item.status === false ? "Inactive" : "Active",
             <div className="flex gap-2" key={item.id || item._id}><button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => { setEditingTemplateId(item.id || item._id); setTemplateForm({ ...emptyTemplate, ...item }); }}>Edit</button><button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={async () => { await notificationService.deleteTemplate(item.id || item._id); await loadAll(); }}>Delete</button></div>,
           ])} />
+        </section>
+      ) : null}
+
+      {tab === "automated" ? (
+        <section className="flex flex-col gap-6">
+          <form className={ui.panel} onSubmit={saveAutomation}>
+            <div className={ui.sectionHead}>
+              <div>
+                <h2 className="text-xl font-black text-slate-900">{editingAutomationId ? "Edit Automated Notification" : "Create Automated Notification"}</h2>
+                <p className={ui.muted}>Timezone: {automationForm.timezone || automationTimezone}</p>
+              </div>
+              {editingAutomationId ? <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => { setEditingAutomationId(""); setAutomationForm({ ...emptyAutomation, timezone: automationTimezone }); }}>Cancel Edit</button> : null}
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-3">
+              <label className={ui.field}><span>Notification Name</span><input className={ui.input} value={automationForm.campaignName} onChange={(event) => setAutomationForm((current) => ({ ...current, campaignName: event.target.value }))} required /></label>
+              <label className={ui.field}><span>Schedule Type</span><select className={ui.input} value={automationForm.scheduleType} onChange={(event) => setAutomationForm((current) => ({ ...current, scheduleType: event.target.value }))}><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></label>
+              <label className={ui.field}><span>Time</span><input className={ui.input} type="time" value={automationForm.scheduleTime} onChange={(event) => setAutomationForm((current) => ({ ...current, scheduleTime: event.target.value }))} required /></label>
+
+              {automationForm.scheduleType === "weekly" ? (
+                <div className="lg:col-span-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                  <div className={ui.eyebrow}>Weekly Days</div>
+                  <div className="grid gap-2 md:grid-cols-4 lg:grid-cols-7">
+                    {weekDayOptions.map((day) => (
+                      <label key={day.value} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
+                        <input type="checkbox" className={ui.checkbox} checked={automationForm.weeklyDays.map(Number).includes(day.value)} onChange={() => toggleAutomationDay(day.value)} />
+                        {day.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <label className={ui.field}><span>Day Of Month</span><input className={ui.input} type="number" min="1" max="31" value={automationForm.monthlyDay} onChange={(event) => setAutomationForm((current) => ({ ...current, monthlyDay: event.target.value }))} required /></label>
+              )}
+
+              <div className="lg:col-span-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className={ui.eyebrow}>Delivery Type</div>
+                <div className="grid gap-2 md:grid-cols-3">
+                  {automationChannelOptions.map((channel) => (
+                    <label key={channel.value} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
+                      <input type="checkbox" className={ui.checkbox} checked={automationForm.deliveryChannels.includes(channel.value)} onChange={() => toggleAutomationChannel(channel.value)} />
+                      {channel.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <label className={ui.field}><span>Target Audience</span><select className={ui.input} value={automationForm.targetType} onChange={(event) => setAutomationForm((current) => ({ ...current, targetType: event.target.value }))}>{targetOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+              <div className="rounded-xl border border-sky-100 bg-sky-50 px-4 py-3">
+                <div className={ui.eyebrow}>Audience Count</div>
+                <div className="text-2xl font-black text-slate-900">{automationAudienceCount}</div>
+              </div>
+              <label className={ui.field}><span>Enable Automation</span><select className={ui.input} value={automationForm.automationEnabled ? "enabled" : "disabled"} onChange={(event) => setAutomationForm((current) => ({ ...current, automationEnabled: event.target.value === "enabled" }))}><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></label>
+              {automationForm.targetType === "selected" ? <label className={cn(ui.field, "lg:col-span-3")}><span>Selected Users</span><textarea className={ui.textarea} value={automationForm.selectedUsers} onChange={(event) => setAutomationForm((current) => ({ ...current, selectedUsers: event.target.value }))} placeholder="User IDs, emails, or mobiles separated by comma/new line" /></label> : null}
+
+              {(automationShouldInApp || automationShouldPush) ? (
+                <>
+                  <label className={ui.field}><span>Notification Title</span><input className={ui.input} value={automationForm.title} onChange={(event) => setAutomationForm((current) => ({ ...current, title: event.target.value }))} required={automationShouldInApp || automationShouldPush} /></label>
+                  <label className={cn(ui.field, "lg:col-span-2")}><span>Notification Message</span><textarea className={ui.textarea} value={automationForm.message} onChange={(event) => setAutomationForm((current) => ({ ...current, message: event.target.value }))} required={automationShouldInApp || automationShouldPush} /></label>
+                  <label className={ui.field}><span>Deep Link</span><input className={ui.input} list="notification-deep-links" value={automationForm.deepLink} onChange={(event) => setAutomationForm((current) => ({ ...current, deepLink: event.target.value }))} /></label>
+                  <label className={ui.field}><span>CTA Text</span><input className={ui.input} value={automationForm.ctaText} onChange={(event) => setAutomationForm((current) => ({ ...current, ctaText: event.target.value }))} /></label>
+                  <label className={ui.field}><span>Category</span><select className={ui.input} value={automationForm.category} onChange={(event) => setAutomationForm((current) => ({ ...current, category: event.target.value }))}>{categoryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
+                </>
+              ) : null}
+
+              {automationShouldEmail ? (
+                <>
+                  <label className={ui.field}><span>Email Template</span><select className={ui.input} value={automationForm.emailTemplateId} onChange={(event) => setAutomationForm((current) => ({ ...current, emailTemplateId: event.target.value }))}><option value="">Custom Email</option>{emailTemplates.map((item) => <option key={item.id || item.status?.templateId || item.key} value={item.id || item.status?.templateId || item.key}>{item.name || item.key}</option>)}</select></label>
+                  <label className={cn(ui.field, "lg:col-span-2")}><span>Email Subject</span><input className={ui.input} value={automationForm.emailSubject} onChange={(event) => setAutomationForm((current) => ({ ...current, emailSubject: event.target.value }))} required={automationShouldEmail} /></label>
+                  <label className={cn(ui.field, "lg:col-span-3")}><span>Email Body / Template</span><textarea className={ui.textarea} value={automationForm.emailBody} onChange={(event) => setAutomationForm((current) => ({ ...current, emailBody: event.target.value }))} required={automationShouldEmail} /></label>
+                </>
+              ) : null}
+            </div>
+
+            <div className="mt-5 flex justify-end">
+              <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy}>{busy ? "Saving..." : editingAutomationId ? "Update Automation" : "Save Automation"}</button>
+            </div>
+          </form>
+
+          <section className={ui.panel}>
+            <SimpleTable columns={["Notification Name", "Schedule Type", "Schedule", "Target Audience", "Audience Count", "Delivery Type", "Status", "Last Sent", "Next Send", "Actions"]} rows={automations.map((item) => [
+              item.campaignName || item.title || item.emailSubject,
+              item.scheduleType,
+              item.scheduleLabel || "-",
+              targetOptions.find((option) => option.value === item.targetType)?.label || item.targetType,
+              item.audienceCount || 0,
+              channelLabel(item.deliveryChannels, item.deliveryType),
+              item.automationEnabled === false || item.status === "paused" ? "Disabled" : "Enabled",
+              formatDateTime(item.lastSentAt || item.sentAt),
+              formatDateTime(item.nextSendAt || item.scheduleDate),
+              <div key={item.id || item._id} className="flex flex-wrap gap-2">
+                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => editAutomation(item)}>Edit</button>
+                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => setAutomationStatus(item, item.automationEnabled === false || item.status === "paused")}>{item.automationEnabled === false || item.status === "paused" ? "Enable" : "Disable"}</button>
+                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => showAutomationHistory(item)}>History</button>
+                <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => deleteAutomation(item)}>Delete</button>
+              </div>,
+            ])} />
+          </section>
+
+          {automationHistory.length ? (
+            <section className={ui.panel}>
+              <h2 className="mb-4 text-xl font-black text-slate-900">Automation Execution History</h2>
+              <SimpleTable columns={["Automation", "Scheduled", "Executed", "Audience", "Targeted", "Success", "Failed", "Channels", "Status"]} rows={automationHistory.map((item) => [
+                item.campaignName,
+                formatDateTime(item.scheduledFor),
+                formatDateTime(item.executedAt || item.sentAt),
+                item.targetType,
+                Number(item.sentCount || 0) + Number(item.emailSentCount || 0) + Number(item.noTokenCount || 0) + Number(item.emailSkippedCount || 0),
+                Number(item.successCount || 0) + Number(item.emailSentCount || 0),
+                Number(item.failedCount || 0) + Number(item.emailFailedCount || 0) + Number(item.emailSkippedCount || 0),
+                channelLabel(item.deliveryChannels, item.deliveryType),
+                item.status,
+              ])} />
+            </section>
+          ) : null}
         </section>
       ) : null}
 
