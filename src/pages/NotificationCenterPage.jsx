@@ -130,6 +130,7 @@ const emptyAutomation = {
   sound: "default",
   priority: "high",
   automationEnabled: true,
+  logsEnabled: true,
 };
 
 function toInputDate(value) {
@@ -587,6 +588,7 @@ export function NotificationCenterPage() {
       deliveryChannels: Array.isArray(item.deliveryChannels) && item.deliveryChannels.length ? item.deliveryChannels : ["in_app", "push"],
       selectedUsers: Array.isArray(item.selectedUsers) ? item.selectedUsers.join("\n") : item.selectedUsers || "",
       automationEnabled: item.automationEnabled !== false && item.status !== "paused",
+      logsEnabled: item.logsEnabled !== false,
     });
     setTab("automated");
   }
@@ -852,6 +854,7 @@ export function NotificationCenterPage() {
                 <div className="text-2xl font-black text-slate-900">{automationAudienceCount}</div>
               </div>
               <label className={ui.field}><span>Enable Automation</span><select className={ui.input} value={automationForm.automationEnabled ? "enabled" : "disabled"} onChange={(event) => setAutomationForm((current) => ({ ...current, automationEnabled: event.target.value === "enabled" }))}><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></label>
+              <label className={ui.field}><span>Execution Logs</span><select className={ui.input} value={automationForm.logsEnabled ? "enabled" : "disabled"} onChange={(event) => setAutomationForm((current) => ({ ...current, logsEnabled: event.target.value === "enabled" }))}><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></label>
               {automationForm.targetType === "selected" ? <label className={cn(ui.field, "lg:col-span-3")}><span>Selected Users</span><textarea className={ui.textarea} value={automationForm.selectedUsers} onChange={(event) => setAutomationForm((current) => ({ ...current, selectedUsers: event.target.value }))} placeholder="User IDs, emails, or mobiles separated by comma/new line" /></label> : null}
 
               {(automationShouldInApp || automationShouldPush) ? (
@@ -879,7 +882,7 @@ export function NotificationCenterPage() {
           </form>
 
           <section className={ui.panel}>
-            <SimpleTable columns={["Notification Name", "Schedule Type", "Schedule", "Target Audience", "Audience Count", "Delivery Type", "Status", "Last Sent", "Next Send", "Actions"]} rows={automations.map((item) => [
+            <SimpleTable columns={["Notification Name", "Schedule Type", "Schedule", "Target Audience", "Audience Count", "Delivery Type", "Status", "Logs", "Last Sent", "Next Send", "Actions"]} rows={automations.map((item) => [
               item.campaignName || item.title || item.emailSubject,
               item.scheduleType,
               item.scheduleLabel || "-",
@@ -887,12 +890,13 @@ export function NotificationCenterPage() {
               item.audienceCount || 0,
               channelLabel(item.deliveryChannels, item.deliveryType),
               item.automationEnabled === false || item.status === "paused" ? "Disabled" : "Enabled",
+              item.logsEnabled === false ? "Disabled" : "Enabled",
               formatDateTime(item.lastSentAt || item.sentAt),
               formatDateTime(item.nextSendAt || item.scheduleDate),
               <div key={item.id || item._id} className="flex flex-wrap gap-2">
                 <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => editAutomation(item)}>Edit</button>
                 <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => setAutomationStatus(item, item.automationEnabled === false || item.status === "paused")}>{item.automationEnabled === false || item.status === "paused" ? "Enable" : "Disable"}</button>
-                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => showAutomationHistory(item)}>History</button>
+                {item.logsEnabled === false ? null : <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => showAutomationHistory(item)}>History</button>}
                 <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => deleteAutomation(item)}>Delete</button>
               </div>,
             ])} />
