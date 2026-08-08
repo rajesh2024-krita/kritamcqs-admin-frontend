@@ -130,7 +130,6 @@ const emptyAutomation = {
   sound: "default",
   priority: "high",
   automationEnabled: true,
-  logsEnabled: true,
 };
 
 function toInputDate(value) {
@@ -178,7 +177,52 @@ function formatDateTime(value) {
   if (!value) return "-";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "-";
-  return date.toLocaleString();
+  return date.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function sameKolkataDate(left, right) {
+  const options = { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" };
+  return left.toLocaleDateString("en-CA", options) === right.toLocaleDateString("en-CA", options);
+}
+
+function formatNextSend(value, now = new Date()) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  const time = date.toLocaleTimeString("en-IN", { timeZone: "Asia/Kolkata", hour: "numeric", minute: "2-digit" });
+  if (sameKolkataDate(date, now)) return `Today, ${time}`;
+  return date.toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function formatRemaining(value, now = new Date()) {
+  if (!value) return "-";
+  const date = new Date(value);
+  const diff = date.getTime() - now.getTime();
+  if (!Number.isFinite(diff)) return "-";
+  if (diff <= 0) return "Due now";
+  const totalMinutes = Math.ceil(diff / 60000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  const parts = [];
+  if (days) parts.push(`${days} day${days === 1 ? "" : "s"}`);
+  if (hours) parts.push(`${hours} hour${hours === 1 ? "" : "s"}`);
+  if (minutes || !parts.length) parts.push(`${minutes} minute${minutes === 1 ? "" : "s"}`);
+  return parts.slice(0, 3).join(" ");
 }
 
 export function NotificationCenterPage() {
@@ -189,9 +233,9 @@ export function NotificationCenterPage() {
   const [history, setHistory] = useState([]);
   const [scheduled, setScheduled] = useState([]);
   const [automations, setAutomations] = useState([]);
-  const [automationHistory, setAutomationHistory] = useState([]);
   const [automationTimezone, setAutomationTimezone] = useState("Asia/Kolkata");
   const [automationAudienceCount, setAutomationAudienceCount] = useState(0);
+  const [nowTick, setNowTick] = useState(() => new Date());
   const [stats, setStats] = useState(null);
   const [audiences, setAudiences] = useState([]);
   const [userSearch, setUserSearch] = useState("");
@@ -235,6 +279,11 @@ export function NotificationCenterPage() {
 
   useEffect(() => {
     loadAll().catch((error) => setMessage(error.message));
+  }, []);
+
+  useEffect(() => {
+    const intervalId = window.setInterval(() => setNowTick(new Date()), 30000);
+    return () => window.clearInterval(intervalId);
   }, []);
 
   const currentCampaignForm = sendForm;
@@ -588,7 +637,6 @@ export function NotificationCenterPage() {
       deliveryChannels: Array.isArray(item.deliveryChannels) && item.deliveryChannels.length ? item.deliveryChannels : ["in_app", "push"],
       selectedUsers: Array.isArray(item.selectedUsers) ? item.selectedUsers.join("\n") : item.selectedUsers || "",
       automationEnabled: item.automationEnabled !== false && item.status !== "paused",
-      logsEnabled: item.logsEnabled !== false,
     });
     setTab("automated");
   }
@@ -614,19 +662,6 @@ export function NotificationCenterPage() {
       await notificationService.deleteAutomation(item.id || item._id);
       await loadAll();
       setMessage("Automated notification deleted.");
-    } catch (error) {
-      setMessage(error.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function showAutomationHistory(item) {
-    setBusy(true);
-    try {
-      const response = await notificationService.automationHistory(item.id || item._id, { limit: 20 });
-      setAutomationHistory(response.data || []);
-      setMessage(`Loaded execution history for ${item.campaignName || item.title || "automation"}.`);
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -854,7 +889,6 @@ export function NotificationCenterPage() {
                 <div className="text-2xl font-black text-slate-900">{automationAudienceCount}</div>
               </div>
               <label className={ui.field}><span>Enable Automation</span><select className={ui.input} value={automationForm.automationEnabled ? "enabled" : "disabled"} onChange={(event) => setAutomationForm((current) => ({ ...current, automationEnabled: event.target.value === "enabled" }))}><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></label>
-              <label className={ui.field}><span>Execution Logs</span><select className={ui.input} value={automationForm.logsEnabled ? "enabled" : "disabled"} onChange={(event) => setAutomationForm((current) => ({ ...current, logsEnabled: event.target.value === "enabled" }))}><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></label>
               {automationForm.targetType === "selected" ? <label className={cn(ui.field, "lg:col-span-3")}><span>Selected Users</span><textarea className={ui.textarea} value={automationForm.selectedUsers} onChange={(event) => setAutomationForm((current) => ({ ...current, selectedUsers: event.target.value }))} placeholder="User IDs, emails, or mobiles separated by comma/new line" /></label> : null}
 
               {(automationShouldInApp || automationShouldPush) ? (
@@ -882,42 +916,22 @@ export function NotificationCenterPage() {
           </form>
 
           <section className={ui.panel}>
-            <SimpleTable columns={["Notification Name", "Schedule Type", "Schedule", "Target Audience", "Audience Count", "Delivery Type", "Status", "Logs", "Last Sent", "Next Send", "Actions"]} rows={automations.map((item) => [
+            <SimpleTable columns={["Notification Name", "Schedule", "Target Audience", "Audience Count", "Delivery Type", "Status", "Next Send", "Time Remaining", "Actions"]} rows={automations.map((item) => [
               item.campaignName || item.title || item.emailSubject,
-              item.scheduleType,
               item.scheduleLabel || "-",
               targetOptions.find((option) => option.value === item.targetType)?.label || item.targetType,
               item.audienceCount || 0,
               channelLabel(item.deliveryChannels, item.deliveryType),
               item.automationEnabled === false || item.status === "paused" ? "Disabled" : "Enabled",
-              item.logsEnabled === false ? "Disabled" : "Enabled",
-              formatDateTime(item.lastSentAt || item.sentAt),
-              formatDateTime(item.nextSendAt || item.scheduleDate),
+              formatNextSend(item.nextScheduledAt || item.nextSendAt || item.scheduleDate, nowTick),
+              formatRemaining(item.nextScheduledAt || item.nextSendAt || item.scheduleDate, nowTick),
               <div key={item.id || item._id} className="flex flex-wrap gap-2">
                 <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => editAutomation(item)}>Edit</button>
                 <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => setAutomationStatus(item, item.automationEnabled === false || item.status === "paused")}>{item.automationEnabled === false || item.status === "paused" ? "Enable" : "Disable"}</button>
-                {item.logsEnabled === false ? null : <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => showAutomationHistory(item)}>History</button>}
                 <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => deleteAutomation(item)}>Delete</button>
               </div>,
             ])} />
           </section>
-
-          {automationHistory.length ? (
-            <section className={ui.panel}>
-              <h2 className="mb-4 text-xl font-black text-slate-900">Automation Execution History</h2>
-              <SimpleTable columns={["Automation", "Scheduled", "Executed", "Audience", "Targeted", "Success", "Failed", "Channels", "Status"]} rows={automationHistory.map((item) => [
-                item.campaignName,
-                formatDateTime(item.scheduledFor),
-                formatDateTime(item.executedAt || item.sentAt),
-                item.targetType,
-                Number(item.sentCount || 0) + Number(item.emailSentCount || 0) + Number(item.noTokenCount || 0) + Number(item.emailSkippedCount || 0),
-                Number(item.successCount || 0) + Number(item.emailSentCount || 0),
-                Number(item.failedCount || 0) + Number(item.emailFailedCount || 0) + Number(item.emailSkippedCount || 0),
-                channelLabel(item.deliveryChannels, item.deliveryType),
-                item.status,
-              ])} />
-            </section>
-          ) : null}
         </section>
       ) : null}
 
