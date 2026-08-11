@@ -25,6 +25,12 @@ export const userService = {
     const response = await http.get("/admin/users/migration/logs");
     return response.data;
   },
+  async exportUsers(payload = {}) {
+    const response = await http.post("/admin/users/export", payload, {
+      responseType: "blob",
+    });
+    return response;
+  },
   async getOverview(id) {
     const response = await service.getById(`${id}/overview`);
     return response;

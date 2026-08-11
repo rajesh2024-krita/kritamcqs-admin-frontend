@@ -16,7 +16,7 @@ import { SearchBar } from "../../components/tables/SearchBar";
 import { useToast } from "../../context/ToastContext";
 import { cn, ui } from "../../ui";
 import { formatDate } from "../../utils/format";
-import { EditIcon, EyeIcon, PlusIcon, RefreshIcon, TrashIcon, XIcon } from "../../components/common/AdminIcons";
+import { DownloadIcon, EditIcon, EyeIcon, PlusIcon, RefreshIcon, TrashIcon, XIcon } from "../../components/common/AdminIcons";
 
 const defaultForm = {
   mobile: "",
@@ -52,6 +52,25 @@ const loginProviderLabels = {
   FACEBOOK: "Facebook",
 };
 
+const examAudienceOptions = [
+  { value: "", label: "All Exams" },
+  { value: "NEET", label: "NEET" },
+  { value: "JEE", label: "JEE" },
+];
+
+const exportOptions = [
+  { value: "filtered", label: "Export Filtered Users" },
+  { value: "all", label: "Export All Users" },
+  { value: "selected", label: "Export Selected Users" },
+  { value: "mobile", label: "Export Users with Mobile Number" },
+  { value: "google", label: "Export Google Login Users" },
+  { value: "email", label: "Export Email & Password Users" },
+  { value: "apple", label: "Export Apple Login Users" },
+  { value: "neet", label: "Export NEET Users" },
+  { value: "jee", label: "Export JEE Users" },
+  { value: "date_range", label: "Export by Date Range" },
+];
+
 function resolveLoginProvider(user) {
   const explicit = String(user?.loginProvider || "").toUpperCase();
   if (explicit && explicit !== "EMAIL") return explicit;
@@ -82,6 +101,12 @@ export function UsersPage() {
   const [overviewLoading, setOverviewLoading] = useState(false);
   const [query, setQuery] = useState({ page: 1, limit: 10 });
   const [loginProviderFilter, setLoginProviderFilter] = useState("");
+  const [examAudienceFilter, setExamAudienceFilter] = useState("");
+  const [mobileAvailableFilter, setMobileAvailableFilter] = useState(false);
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
+  const [exportType, setExportType] = useState("filtered");
+  const [exporting, setExporting] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [detailsOpen, setDetailsOpen] = useState(false);
   const [overview, setOverview] = useState(null);
@@ -159,20 +184,41 @@ export function UsersPage() {
     ];
   }, [overview, revisionTotalCount]);
 
-  function userListParams(nextQuery = query, nextSearch = search, nextProvider = loginProviderFilter) {
+  function userListParams(
+    nextQuery = query,
+    nextSearch = search,
+    nextProvider = loginProviderFilter,
+    nextExamAudience = examAudienceFilter,
+    nextMobileAvailable = mobileAvailableFilter,
+    nextFromDate = fromDate,
+    nextToDate = toDate,
+  ) {
     const provider = String(nextProvider || "").trim();
-    return {
+    const params = {
       ...nextQuery,
       search: nextSearch,
       loginProvider: provider || undefined,
       provider: provider || undefined,
     };
+    if (nextExamAudience) params.examAudience = nextExamAudience;
+    if (nextMobileAvailable) params.mobileAvailable = true;
+    if (nextFromDate) params.fromDate = nextFromDate;
+    if (nextToDate) params.toDate = nextToDate;
+    return params;
   }
 
-  async function loadUsers(nextQuery = query, nextSearch = search, nextProvider = loginProviderFilter) {
+  async function loadUsers(
+    nextQuery = query,
+    nextSearch = search,
+    nextProvider = loginProviderFilter,
+    nextExamAudience = examAudienceFilter,
+    nextMobileAvailable = mobileAvailableFilter,
+    nextFromDate = fromDate,
+    nextToDate = toDate,
+  ) {
     setLoading(true);
     try {
-      const response = await userService.list(userListParams(nextQuery, nextSearch, nextProvider));
+      const response = await userService.list(userListParams(nextQuery, nextSearch, nextProvider, nextExamAudience, nextMobileAvailable, nextFromDate, nextToDate));
       setUsers(response.data || []);
       setMeta(response.meta);
       setSelectedIds([]);
@@ -213,7 +259,7 @@ export function UsersPage() {
       await loadUsers({ ...query, page: 1 });
     }, 5000);
     return () => window.clearInterval(interval);
-  }, [hasProcessingMigration, query.limit, query.page, search, loginProviderFilter]);
+  }, [hasProcessingMigration, query.limit, query.page, search, loginProviderFilter, examAudienceFilter, mobileAvailableFilter, fromDate, toDate]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -225,7 +271,7 @@ export function UsersPage() {
     }, 250);
 
     return () => window.clearTimeout(timeout);
-  }, [search, loginProviderFilter]);
+  }, [search, loginProviderFilter, examAudienceFilter, mobileAvailableFilter, fromDate, toDate]);
 
   function openCreate() {
     setEditingUser(null);
@@ -444,6 +490,58 @@ export function UsersPage() {
     loadUsers(nextQuery, search, provider);
   }
 
+  function applyFilters(overrides = {}) {
+    const nextQuery = { ...query, page: 1 };
+    setSelectedIds([]);
+    setQuery(nextQuery);
+    loadUsers(
+      nextQuery,
+      overrides.search ?? search,
+      overrides.provider ?? loginProviderFilter,
+      overrides.examAudience ?? examAudienceFilter,
+      overrides.mobileAvailable ?? mobileAvailableFilter,
+      overrides.fromDate ?? fromDate,
+      overrides.toDate ?? toDate,
+    );
+  }
+
+  async function handleExportUsers() {
+    if (exportType === "selected" && !selectedIds.length) {
+      toast.error("Select at least one user to export");
+      return;
+    }
+    if (exportType === "date_range" && !fromDate && !toDate) {
+      toast.error("Select a from date or to date");
+      return;
+    }
+
+    setExporting(true);
+    try {
+      const response = await userService.exportUsers({
+        ...userListParams({ ...query, page: 1, limit: meta?.total || 500 }),
+        exportType,
+        selectedIds,
+      });
+      const blob = new Blob([response.data], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const stamp = new Date().toISOString().slice(0, 10);
+      link.href = url;
+      link.download = `users-export-${stamp}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success("Users export downloaded");
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <div className="rounded-sm border border-white/60 bg-white/85 p-5 shadow-xl shadow-slate-200/60 backdrop-blur-xl">
@@ -482,6 +580,60 @@ export function UsersPage() {
             </select>
           </label>
           <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+            Exam
+            <select
+              className={ui.input}
+              value={examAudienceFilter}
+              onChange={(event) => {
+                const examAudience = event.target.value;
+                setExamAudienceFilter(examAudience);
+                applyFilters({ examAudience });
+              }}
+            >
+              {examAudienceOptions.map((option) => (
+                <option key={option.value || "all"} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+            <input
+              type="checkbox"
+              checked={mobileAvailableFilter}
+              onChange={(event) => {
+                const mobileAvailable = event.target.checked;
+                setMobileAvailableFilter(mobileAvailable);
+                applyFilters({ mobileAvailable });
+              }}
+            />
+            Mobile
+          </label>
+          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+            From
+            <input
+              className={ui.input}
+              type="date"
+              value={fromDate}
+              onChange={(event) => setFromDate(event.target.value)}
+            />
+          </label>
+          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+            To
+            <input
+              className={ui.input}
+              type="date"
+              value={toDate}
+              onChange={(event) => setToDate(event.target.value)}
+            />
+          </label>
+          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+            Export
+            <select className={ui.input} value={exportType} onChange={(event) => setExportType(event.target.value)}>
+              {exportOptions.map((option) => (
+                <option key={option.value} value={option.value}>{option.label}</option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
             Rows
             <select className={ui.input} value={query.limit} onChange={handleLimitChange}>
               {[10, 25, 50, 100, 200, 500].map((limit) => (
@@ -494,6 +646,10 @@ export function UsersPage() {
             setQuery(nextQuery);
             loadUsers(nextQuery);
           }}>Search</button>
+          <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={handleExportUsers} disabled={exporting}>
+            <DownloadIcon size={16} />
+            {exporting ? "Exporting..." : "Export Users"}
+          </button>
         </div>
       </div>
 
