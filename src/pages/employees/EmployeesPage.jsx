@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { employeeService } from "../../api/employeeService";
+import { followUpService } from "../../api/followUpService";
 import { ConfirmDeleteModal } from "../../components/common/ConfirmDeleteModal";
 import { EditIcon, PlusIcon, TrashIcon } from "../../components/common/AdminIcons";
 import { ToggleSwitch } from "../../components/forms/ToggleSwitch";
@@ -34,6 +35,7 @@ export function EmployeesPage() {
   const [editing, setEditing] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [followUpSummary, setFollowUpSummary] = useState({});
 
   const filteredItems = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -46,6 +48,8 @@ export function EmployeesPage() {
     try {
       const response = await employeeService.list({ limit: 100, search });
       setItems(response.data || []);
+      const summary = await followUpService.employeeSummary();
+      setFollowUpSummary(Object.fromEntries((summary.data || []).map((item) => [item.id, item])));
     } finally {
       setLoading(false);
     }
@@ -133,13 +137,14 @@ export function EmployeesPage() {
         <div className="mt-4 overflow-x-auto rounded-sm border border-slate-200 bg-white">
           <table className="min-w-full divide-y divide-slate-100 text-sm">
             <thead className="bg-slate-50 text-left text-xs font-black uppercase tracking-[0.18em] text-slate-500">
-              <tr><th className="px-4 py-3">Employee</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Permissions</th><th className="px-4 py-3">Actions</th></tr>
+              <tr><th className="px-4 py-3">Employee</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Follow-Ups</th><th className="px-4 py-3">Permissions</th><th className="px-4 py-3">Actions</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredItems.map((item) => (
                 <tr key={item.id}>
                   <td className="px-4 py-3"><strong>{item.name}</strong><div className="text-xs text-slate-500">{item.email}</div></td>
                   <td className="px-4 py-3">{item.isActive !== false ? "Active" : "Deactivated"}</td>
+                  <td className="px-4 py-3 text-xs"><b>{followUpSummary[item.id]?.totalFollowUps || 0} total</b><div className="mt-1 text-slate-500">Pending {followUpSummary[item.id]?.followUpCounts?.Pending || 0} · Progress {followUpSummary[item.id]?.followUpCounts?.Progress || 0} · Completed {followUpSummary[item.id]?.followUpCounts?.Completed || 0} · Cancelled {followUpSummary[item.id]?.followUpCounts?.Cancelled || 0}</div></td>
                   <td className="px-4 py-3 text-xs text-slate-600">{MODULES.filter((module) => item.modulePermissions?.[module.key]?.view).map((module) => module.label).join(", ") || "No modules"}</td>
                   <td className="px-4 py-3">
                     <div className="flex flex-wrap gap-2">
@@ -150,7 +155,7 @@ export function EmployeesPage() {
                   </td>
                 </tr>
               ))}
-              {!loading && filteredItems.length === 0 ? <tr><td className="px-4 py-6 text-slate-500" colSpan={4}>No employees found.</td></tr> : null}
+              {!loading && filteredItems.length === 0 ? <tr><td className="px-4 py-6 text-slate-500" colSpan={5}>No employees found.</td></tr> : null}
             </tbody>
           </table>
         </div>

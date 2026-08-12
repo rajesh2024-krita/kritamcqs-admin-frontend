@@ -18,6 +18,9 @@ import { ListStylesPage } from "../pages/listStyles/ListStylesPage";
 import { QuestionsPage } from "../pages/questions/QuestionsPage";
 import { KatexAuditPage } from "../pages/questions/KatexAuditPage";
 import { UsersPage } from "../pages/users/UsersPage";
+import { UserManagementPage } from "../pages/users/UserManagementPage";
+import { FollowUpsPage } from "../pages/followUps/FollowUpsPage";
+import { FollowUpDetailsPage } from "../pages/followUps/FollowUpDetailsPage";
 import { SubscriptionsPage } from "../pages/SubscriptionsPage";
 import { SubscriptionPlansPage } from "../pages/SubscriptionPlansPage";
 import { SubscriptionFreeCardsPage } from "../pages/SubscriptionFreeCardsPage";
@@ -130,6 +133,9 @@ export function AppRoutes() {
         <Route path="free-mock-tests" element={<ModuleAccess moduleKey="free-mock-tests"><MockTestsPage freeOnly /></ModuleAccess>} />
         <Route path="free-questions" element={<ModuleAccess moduleKey="free-questions"><FreeQuestionsPage /></ModuleAccess>} />
         <Route path="users" element={<ModuleAccess moduleKey="users"><UsersPage /></ModuleAccess>} />
+        <Route path="user-management" element={<ModuleAccess moduleKey="user-management"><UserManagementPage /></ModuleAccess>} />
+        <Route path="follow-ups" element={<ModuleAccess moduleKey="follow-ups"><FollowUpsPage /></ModuleAccess>} />
+        <Route path="follow-ups/:id" element={<ModuleAccess moduleKey="follow-ups"><FollowUpDetailsPage /></ModuleAccess>} />
         <Route path="subscriptions" element={<ModuleAccess moduleKey="subscriptions"><SubscriptionsPage /></ModuleAccess>} />
         <Route path="subscription-plans" element={<ModuleAccess moduleKey="subscription-plans"><SubscriptionPlansPage /></ModuleAccess>} />
         <Route path="subscription-free-cards" element={<ModuleAccess moduleKey="subscription-free-cards"><SubscriptionFreeCardsPage /></ModuleAccess>} />
