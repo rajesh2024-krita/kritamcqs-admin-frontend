@@ -17,6 +17,10 @@ export const appUsageService = {
     const response = await http.get("/admin/app-usage/users", { params });
     return response.data;
   },
+  async userAnalytics(params = {}) {
+    const response = await http.get("/admin/app-usage/user-analytics", { params });
+    return response.data;
+  },
   async sessions(params = {}) {
     const response = await http.get("/admin/app-usage/sessions", { params });
     return response.data;
@@ -49,6 +53,19 @@ export const appUsageService = {
     const query = new URLSearchParams(params).toString();
     const base = http.defaults.baseURL || "";
     return `${base}/admin/app-usage/export${query ? `?${query}` : ""}`;
+  },
+  async exportFile(params = {}) {
+    const response = await http.get("/admin/app-usage/export", { params, responseType: "blob" });
+    const disposition = response.headers?.["content-disposition"] || "";
+    const fileName = disposition.match(/filename="?([^";]+)"?/i)?.[1] || "user-analytics.xlsx";
+    const url = window.URL.createObjectURL(response.data);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = fileName;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.URL.revokeObjectURL(url);
   },
   async deleteLogs(payload) {
     const response = await http.delete("/admin/app-usage/logs", { data: payload });

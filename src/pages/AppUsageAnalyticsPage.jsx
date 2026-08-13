@@ -21,6 +21,7 @@ const providerOptions = ["Google", "Apple", "Email", "Phone", "Guest", "Facebook
 const sessionStatusOptions = ["Active", "Completed", "Force Closed", "Crashed"];
 const tabs = [
   { key: "overview", label: "Overview" },
+  { key: "userAnalytics", label: "User Analytics" },
   { key: "users", label: "Users" },
   { key: "devices", label: "Devices" },
   { key: "sessions", label: "Sessions" },
@@ -31,6 +32,31 @@ const tabs = [
 ];
 
 const tableConfigs = {
+  userAnalytics: {
+    service: appUsageService.userAnalytics,
+    defaultSortBy: "timestamp",
+    columns: [
+      { key: "eventTimestamp", label: "Activity Date & Time", sortable: true, fixed: true, render: (row) => formatDateTime(row.eventTimestamp) },
+      { key: "name", label: "User", sortable: true, render: (row) => row.name || row.userId || "-" },
+      { key: "email", label: "Email", sortable: true, render: (row) => row.email || "-" },
+      { key: "mobile", label: "Mobile", render: (row) => row.mobile || "-" },
+      { key: "eventType", label: "Activity", sortable: true, render: (row) => <StatusBadge value={row.eventType || "-"} /> },
+      { key: "screen", label: "Page / Screen", sortable: true, render: (row) => row.screen || "-" },
+      { key: "action", label: "Action", render: (row) => row.action || row.componentName || "-" },
+      { key: "visitCount", label: "Visits", sortable: false },
+      { key: "totalSessions", label: "Sessions", sortable: false },
+      { key: "totalTimeSpentSeconds", label: "Time Spent", render: (row) => formatSeconds(row.totalTimeSpentSeconds) },
+      { key: "totalSpent", label: "Total Spent", render: (row) => `${row.currency || ""} ${Number(row.totalSpent || 0).toFixed(2)}`.trim() },
+      { key: "transactionCount", label: "Transactions" },
+      { key: "latestTransactionId", label: "Latest Transaction", render: (row) => row.latestTransactionId || "-" },
+      { key: "latestTransactionAt", label: "Transaction Time", render: (row) => formatDateTime(row.latestTransactionAt) },
+      { key: "platform", label: "Platform", render: (row) => row.platform || "-" },
+      { key: "deviceModel", label: "Device", render: (row) => row.deviceModel || "-" },
+      { key: "registeredAt", label: "Registered", render: (row) => formatDateTime(row.registeredAt) },
+      { key: "lastLoginAt", label: "Last Login", render: (row) => formatDateTime(row.lastLoginAt) },
+      { key: "userType", label: "Plan", render: (row) => <StatusBadge value={row.userType || "-"} /> },
+    ],
+  },
   users: {
     service: appUsageService.users,
     defaultSortBy: "lastActive",
@@ -154,7 +180,7 @@ export function AppUsageAnalyticsPage() {
   const [tableLoading, setTableLoading] = useState(false);
   const [settings, setSettings] = useState({ enabled: false, automaticCleanupEnabled: false, retentionDays: 90, retentionNeverDelete: false, sessionTimeoutMinutes: 30 });
   const [analytics, setAnalytics] = useState({ summary: {}, pages: [], clicks: [], dailyActive: [], hourly: [], platform: [], users: [], recent: [] });
-  const [filters, setFilters] = useState({ days: 7, platform: "all", plan: "all", eventType: "all", screen: "", appVersion: "", androidVersion: "", deviceBrand: "", deviceModel: "", networkType: "", sessionStatus: "all" });
+  const [filters, setFilters] = useState({ days: 7, from: "", to: "", platform: "all", plan: "all", eventType: "all", screen: "", appVersion: "", androidVersion: "", deviceBrand: "", deviceModel: "", networkType: "", sessionStatus: "all" });
   const [tableSearch, setTableSearch] = useState("");
   const debouncedSearch = useDebouncedValue(tableSearch);
   const [tableState, setTableState] = useState(() => Object.fromEntries(Object.keys(tableConfigs).map((key) => [key, { rows: [], meta: null, page: 1, limit: 25, sortBy: tableConfigs[key].defaultSortBy, sortOrder: "desc" }])));
@@ -214,12 +240,12 @@ export function AppUsageAnalyticsPage() {
 
   useEffect(() => {
     void loadOverview();
-  }, [query.days, query.platform, query.plan, query.eventType, query.screen, query.appVersion, query.androidVersion, query.deviceBrand, query.deviceModel, query.networkType, query.sessionStatus]);
+  }, [query.days, query.from, query.to, query.platform, query.plan, query.eventType, query.screen, query.appVersion, query.androidVersion, query.deviceBrand, query.deviceModel, query.networkType, query.sessionStatus]);
 
   useEffect(() => {
     if (!tableConfigs[activeTab]) return;
     void loadTable(activeTab, { page: 1 });
-  }, [activeTab, query.days, query.platform, query.plan, query.eventType, query.screen, query.appVersion, query.androidVersion, query.deviceBrand, query.deviceModel, query.networkType, query.sessionStatus, debouncedSearch]);
+  }, [activeTab, query.days, query.from, query.to, query.platform, query.plan, query.eventType, query.screen, query.appVersion, query.androidVersion, query.deviceBrand, query.deviceModel, query.networkType, query.sessionStatus, debouncedSearch]);
 
   useEffect(() => {
     if (!activityUser) return;
@@ -294,7 +320,7 @@ export function AppUsageAnalyticsPage() {
             <p className={ui.muted}>Compact analytics, paginated tables, retention controls, and exports.</p>
           </div>
           <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:w-auto">
-            <select className={ui.input} value={filters.days} onChange={(event) => updateFilters({ days: Number(event.target.value) })}>
+            <select className={ui.input} value={filters.days} onChange={(event) => updateFilters({ days: Number(event.target.value), from: "", to: "" })}>
               {dateRangeOptions.map((days) => <option key={days} value={days}>Last {days} {days === 1 ? "day" : "days"}</option>)}
             </select>
             <select className={ui.input} value={filters.platform} onChange={(event) => updateFilters({ platform: event.target.value })}>
@@ -319,6 +345,8 @@ export function AppUsageAnalyticsPage() {
         <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
           <summary className="flex cursor-pointer items-center gap-2 text-sm font-bold text-slate-700"><Filter size={16} /> More filters</summary>
           <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+            <label className="text-xs font-bold text-slate-600">From date & time<input className={cn(ui.input, "mt-1")} type="datetime-local" value={filters.from} onChange={(event) => updateFilters({ from: event.target.value })} /></label>
+            <label className="text-xs font-bold text-slate-600">To date & time<input className={cn(ui.input, "mt-1")} type="datetime-local" value={filters.to} onChange={(event) => updateFilters({ to: event.target.value })} /></label>
             <select className={ui.input} value={filters.eventType} onChange={(event) => updateFilters({ eventType: event.target.value })}>
               <option value="all">All event types</option>
               <option value="Login">Login</option>
@@ -668,18 +696,27 @@ function ActivitySkeleton() {
 
 function ServerTable({ config, loading, search, setSearch, state, onChange, exportQuery, tabKey, onRowClick }) {
   const sortLabel = state.sortOrder === "asc" ? "ASC" : "DESC";
+  const [exporting, setExporting] = useState(false);
+  async function exportComplete() {
+    setExporting(true);
+    try {
+      await appUsageService.exportFile({ ...exportQuery, search, dataset: tabKey === "sessions" ? "sessions" : tabKey === "userAnalytics" || tabKey === "users" ? "user-analytics" : "events", format: "xlsx" });
+    } finally {
+      setExporting(false);
+    }
+  }
   return (
     <section className={ui.panel}>
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <label className="relative max-w-md flex-1">
           <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-          <input className={cn(ui.input, "pl-9")} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search table..." />
+          <input className={cn(ui.input, "pl-9")} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search user, email, mobile, activity, page..." />
         </label>
         <div className="flex flex-wrap items-center gap-2">
           <select className={ui.input} value={state.limit} onChange={(event) => onChange({ page: 1, limit: Number(event.target.value) })}>
             {pageSizeOptions.map((limit) => <option key={limit} value={limit}>{limit} rows</option>)}
           </select>
-          <a className={cn(ui.buttonBase, ui.buttonSecondary)} href={appUsageService.exportUrl({ ...exportQuery, dataset: tabKey === "sessions" ? "sessions" : "events", format: "csv" })}><Download size={16} /> Export</a>
+          <button type="button" disabled={exporting} className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => void exportComplete()}><Download size={16} /> {exporting ? "Exporting..." : "Export Complete"}</button>
         </div>
       </div>
       <div className={cn(ui.tableWrap, "mt-4")}>
