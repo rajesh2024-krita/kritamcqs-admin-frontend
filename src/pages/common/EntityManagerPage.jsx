@@ -123,6 +123,23 @@ export function EntityManagerPage({
     [fields, formState, lookups],
   );
 
+  // Group fields into sections for better organization
+  const groupedFields = useMemo(() => {
+    const groups = {};
+    const ungrouped = [];
+    
+    visibleFields.forEach(field => {
+      if (field.section) {
+        if (!groups[field.section]) groups[field.section] = [];
+        groups[field.section].push(field);
+      } else {
+        ungrouped.push(field);
+      }
+    });
+    
+    return { groups, ungrouped };
+  }, [visibleFields]);
+
   async function loadItems(nextQuery = query) {
     setLoading(true);
     try {
@@ -558,6 +575,10 @@ export function EntityManagerPage({
     }
   }
 
+  // Custom compact input styles - using standard text sizes
+  const compactInput = "w-full px-2.5 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-xs placeholder:text-slate-400 disabled:bg-slate-100 disabled:cursor-not-allowed";
+  const compactTextarea = "w-full px-2.5 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-xs placeholder:text-slate-400 resize-y min-h-[60px] disabled:bg-slate-100 disabled:cursor-not-allowed";
+
   function renderInput(field) {
     const value = formState[field.name];
     if (field.type === "select") {
@@ -574,7 +595,7 @@ export function EntityManagerPage({
       );
     }
     if (field.type === "textarea") {
-      return <textarea className={ui.textarea} value={value} onChange={(event) => setFormState((current) => ({ ...current, [field.name]: event.target.value }))} />;
+      return <textarea className={compactTextarea} value={value} onChange={(event) => setFormState((current) => ({ ...current, [field.name]: event.target.value }))} />;
     }
     if (field.type === "switch") {
       return (
@@ -587,7 +608,7 @@ export function EntityManagerPage({
     }
     if (field.type === "checkbox") {
       return (
-        <div className="pt-2">
+        <div className="pt-1">
           <ToggleSwitch
             checked={Boolean(value)}
             onChange={(nextValue) => setFormState((current) => ({ ...current, [field.name]: nextValue }))}
@@ -601,9 +622,9 @@ export function EntityManagerPage({
     }
     if (field.type === "image-upload") {
       return (
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <input
-            className={ui.input}
+            className={compactInput}
             type="text"
             value={value ?? ""}
             placeholder={field.placeholder || "Paste image URL"}
@@ -619,9 +640,9 @@ export function EntityManagerPage({
             }}
           />
           {owningFields[field.name] ? <div className="text-xs text-slate-500">Owning external image URL...</div> : null}
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
             <input
-              className={ui.input}
+              className="flex-1 min-w-[120px] px-2 py-1 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
               type="file"
               accept={field.accept || "image/*"}
               onChange={(event) =>
@@ -633,18 +654,18 @@ export function EntityManagerPage({
             />
             <button
               type="button"
-              className={cn(ui.buttonBase, ui.buttonSecondary)}
+              className="inline-flex items-center px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-xs font-medium text-slate-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={!selectedFiles[field.name] || uploadingFields[field.name]}
               onClick={() => void handleFieldUpload(field)}
             >
-              {uploadingFields[field.name] ? "Uploading..." : "Upload Image"}
+              {uploadingFields[field.name] ? "Uploading..." : "Upload"}
             </button>
           </div>
           {value ? (
             <img
               src={resolveImageSource(value)}
               alt={`${field.label} preview`}
-              className="max-h-28 rounded-sm border border-slate-200 object-contain"
+              className="max-h-20 rounded border border-slate-200 object-contain"
             />
           ) : null}
         </div>
@@ -652,7 +673,7 @@ export function EntityManagerPage({
     }
     return (
       <input
-        className={ui.input}
+        className={compactInput}
         type={field.type || "text"}
         disabled={field.disabled}
         value={value ?? ""}
@@ -662,154 +683,324 @@ export function EntityManagerPage({
     );
   }
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div className="rounded-sm border border-white/60 bg-white/85 p-5 shadow-xl shadow-slate-200/60 backdrop-blur-xl">
-        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <div className="mb-2 text-[11px] font-black uppercase tracking-[0.28em] text-blue-700">Entity Management</div>
-            <p className="text-slate-500">{description}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex items-center rounded-sm bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-blue-700">{meta?.total ?? items.length} records</div>
-            {headerActions}
-            {effectiveCanCreate ? <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={openCreate}>
-              <PlusIcon size={16} />
-              Create {title.slice(0, -1) || title}
-            </button> : null}
-          </div>
-        </div>
-      </div>
+  // Helper to render form fields with responsive grid
+  function renderFormFields() {
+    const { groups, ungrouped } = groupedFields;
+    const groupKeys = Object.keys(groups);
 
-      <div className="flex flex-col gap-4 rounded-sm border border-white/60 bg-white/85 p-5 shadow-xl shadow-slate-200/60 backdrop-blur-xl lg:flex-row lg:items-end lg:justify-between">
-        <div>
-          <div className="mb-2 text-[11px] font-black uppercase tracking-[0.28em] text-blue-700">Workspace Filters</div>
-          <SearchBar value={search} onChange={setSearch} placeholder={searchPlaceholder || `Search ${title.toLowerCase()}...`} />
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          {filters.map((filter) => (
-            <label key={filter.name} className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-              {filter.label}
-              {filter.type === "text" || filter.type === "date" ? (
-                <input
-                  className={ui.input}
-                  type={filter.type}
-                  value={filterValues[filter.name] || ""}
-                  placeholder={filter.placeholder}
-                  onChange={(event) => {
-                    const nextValue = event.target.value;
-                    setFilterValues((current) => ({ ...current, [filter.name]: nextValue }));
-                    setSelectedIds([]);
-                    setQuery((current) => ({ ...current, page: 1 }));
-                  }}
-                />
-              ) : (
-                <select
-                  className={ui.input}
-                  value={filterValues[filter.name] || ""}
-                  onChange={(event) => {
-                    const nextValue = event.target.value;
-                    setFilterValues((current) => ({ ...current, [filter.name]: nextValue }));
-                    setSelectedIds([]);
-                    setQuery((current) => ({ ...current, page: 1 }));
-                  }}
-                >
-                  <option value="">{filter.placeholder || "All"}</option>
-                  {(typeof filter.options === "function" ? filter.options(lookups, filterValues) : filter.options || []).map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
-                  ))}
-                </select>
-              )}
-            </label>
+    if (groupKeys.length > 0) {
+      return (
+        <div className="space-y-4">
+          {groupKeys.map((sectionName) => (
+            <div key={sectionName} className="space-y-2">
+              <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wider border-b border-slate-100 pb-1">
+                {sectionName}
+              </h4>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {groups[sectionName].map((field) => (
+                  <Field 
+                    key={field.name} 
+                    label={field.label} 
+                    error={errors[field.name]} 
+                    className={field.full ? "sm:col-span-2" : ""}
+                  >
+                    {renderInput(field)}
+                  </Field>
+                ))}
+              </div>
+            </div>
           ))}
-          {effectiveCanDelete && effectiveCanBulkDelete && selectedIds.length > 0 ? (
-            <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setBulkDeleteOpen(true)}>
-              <TrashIcon size={16} />
-              Delete Selected ({selectedIds.length})
-            </button>
-          ) : null}
-          {service?.exportRecords ? (
-            <>
-              <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => handleExport("filtered", "csv")}>
-                Export Filtered CSV
+          
+          {ungrouped.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-xs font-semibold text-slate-600 uppercase tracking-wider border-b border-slate-100 pb-1">
+                Additional Info
+              </h4>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {ungrouped.map((field) => (
+                  <Field 
+                    key={field.name} 
+                    label={field.label} 
+                    error={errors[field.name]} 
+                    className={field.full ? "sm:col-span-2" : ""}
+                  >
+                    {renderInput(field)}
+                  </Field>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        {visibleFields.map((field) => (
+          <Field 
+            key={field.name} 
+            label={field.label} 
+            error={errors[field.name]} 
+            className={field.full ? "sm:col-span-2" : ""}
+          >
+            {renderInput(field)}
+          </Field>
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2.5">
+      {/* Header - Ultra Compact */}
+      <div className="bg-white rounded-lg border border-slate-200/60 px-4 py-2.5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg shadow-indigo-500/25">
+              <span className="text-white text-xs font-bold">{title.slice(0, 2).toUpperCase()}</span>
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-slate-900">{title}</h1>
+              <p className="text-xs text-slate-500">{description}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-sm font-medium text-indigo-700">
+              {meta?.total ?? items.length}
+            </span>
+            {headerActions}
+            {effectiveCanCreate && (
+              <button 
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-xs font-medium rounded-lg transition-all shadow-sm shadow-indigo-500/25"
+                onClick={openCreate}
+              >
+                <PlusIcon size={12} />
+                New
               </button>
-              <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => handleExport("filtered", "xlsx")}>
-                Export Filtered XLSX
-              </button>
-              <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => handleExport("all", "csv")}>
-                Export All CSV
-              </button>
-              <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => handleExport("all", "xlsx")}>
-                Export All XLSX
-              </button>
-            </>
-          ) : null}
-          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-            Rows
-            <select className={ui.input} value={query.limit} onChange={handleLimitChange}>
-              {[10, 25, 50, 100, 200, 500].map((limit) => (
-                <option key={limit} value={limit}>{limit}</option>
-              ))}
-            </select>
-          </label>
-          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => loadItems({ ...query, page: 1 })}>
-            <RefreshIcon size={16} />
-            Refresh Results
-          </button>
-          {filters.length ? (
-            <button className={cn(ui.buttonBase, ui.buttonGhost)} type="button" onClick={resetFilters}>
-              Reset Filters
-            </button>
-          ) : null}
+            )}
+          </div>
         </div>
       </div>
 
+      {/* Filters - Ultra Compact */}
+      <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm overflow-hidden">
+        {/* Search Bar - Always on top */}
+        <div className="px-3 pt-2 pb-1.5 border-b border-slate-100">
+          <SearchBar 
+            value={search} 
+            onChange={setSearch} 
+            placeholder={searchPlaceholder || `Search ${title.toLowerCase()}...`} 
+          />
+        </div>
+
+        {/* Filters and Actions */}
+        <div className="px-3 py-2">
+          <div className="flex flex-col gap-2">
+            {/* Filters Row */}
+            {filters.length > 0 && (
+              <div className="flex items-start gap-1.5">
+                <span className="text-sm font-medium text-slate-400 uppercase tracking-wider mt-0.5 flex-shrink-0">
+                  Filters:
+                </span>
+                <div className="flex-1 min-w-0 overflow-x-auto pb-1">
+                  <div className="flex flex-wrap items-center gap-1">
+                    {filters.map((filter) => (
+                      <div 
+                        key={filter.name} 
+                        className="flex items-center gap-0.5 bg-slate-50 rounded px-1.5 py-0.5 border border-slate-200/50 whitespace-nowrap"
+                      >
+                        <span className="text-sm font-medium text-slate-500 uppercase tracking-wider">
+                          {filter.label}:
+                        </span>
+                        {filter.type === "text" || filter.type === "date" ? (
+                          <input
+                            className="px-1 py-0.5 text-xs bg-transparent border-0 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 rounded min-w-[60px] max-w-[120px]"
+                            type={filter.type}
+                            value={filterValues[filter.name] || ""}
+                            placeholder={filter.placeholder}
+                            onChange={(event) => {
+                              const nextValue = event.target.value;
+                              setFilterValues((current) => ({ ...current, [filter.name]: nextValue }));
+                              setSelectedIds([]);
+                              setQuery((current) => ({ ...current, page: 1 }));
+                            }}
+                          />
+                        ) : (
+                          <select
+                            className="px-1 py-0.5 text-xs bg-transparent border-0 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 rounded cursor-pointer max-w-[140px]"
+                            value={filterValues[filter.name] || ""}
+                            onChange={(event) => {
+                              const nextValue = event.target.value;
+                              setFilterValues((current) => ({ ...current, [filter.name]: nextValue }));
+                              setSelectedIds([]);
+                              setQuery((current) => ({ ...current, page: 1 }));
+                            }}
+                          >
+                            <option value="">{filter.placeholder || "All"}</option>
+                            {(typeof filter.options === "function" ? filter.options(lookups, filterValues) : filter.options || []).map((option) => (
+                              <option key={option.value} value={option.value}>{option.label}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Actions Row */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-0.5 border-t border-slate-100/50">
+              {/* Left side: Clear and Export */}
+              <div className="flex items-center gap-1">
+                {filters.length > 0 && (
+                  <button 
+                    className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-sm text-slate-400 hover:text-slate-600 transition-colors hover:bg-slate-50 rounded"
+                    type="button" 
+                    onClick={resetFilters}
+                  >
+                    <span className="text-xs">✕</span>
+                    Clear all
+                  </button>
+                )}
+
+                {service?.exportRecords && (
+                  <div className="flex items-center gap-0.5 ml-1">
+                    <span className="text-sm text-slate-400">Export:</span>
+                    <button 
+                      className="px-1.5 py-0.5 bg-slate-50 hover:bg-slate-100 text-slate-600 text-sm font-medium rounded transition-colors border border-slate-200/50"
+                      type="button" 
+                      onClick={() => handleExport("filtered", "csv")}
+                    >
+                      CSV
+                    </button>
+                    <button 
+                      className="px-1.5 py-0.5 bg-slate-50 hover:bg-slate-100 text-slate-600 text-sm font-medium rounded transition-colors border border-slate-200/50"
+                      type="button" 
+                      onClick={() => handleExport("filtered", "xlsx")}
+                    >
+                      XLSX
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Right side: Bulk actions, limit, refresh, count */}
+              <div className="flex flex-wrap items-center gap-1 ml-auto">
+                {effectiveCanDelete && effectiveCanBulkDelete && selectedIds.length > 0 && (
+                  <button 
+                    className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-sm font-medium rounded transition-colors"
+                    onClick={() => setBulkDeleteOpen(true)}
+                  >
+                    <TrashIcon size={10} />
+                    Delete {selectedIds.length}
+                  </button>
+                )}
+
+                <div className="flex items-center gap-0.5">
+                  <span className="text-sm text-slate-400">Show:</span>
+                  <select 
+                    className="px-1.5 py-0.5 text-sm bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all cursor-pointer"
+                    value={query.limit} 
+                    onChange={handleLimitChange}
+                  >
+                    {[10, 25, 50, 100, 200, 500].map((limit) => (
+                      <option key={limit} value={limit}>{limit}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <button 
+                  className="inline-flex items-center gap-2 px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-sm font-medium rounded transition-colors"
+                  onClick={() => loadItems({ ...query, page: 1 })}
+                >
+                  <RefreshIcon size={14} />
+                  Refresh
+                </button>
+
+                <span className="text-sm text-slate-400 ml-1">
+                  {meta?.total ?? items.length} {meta?.total === 1 ? 'record' : 'records'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Table - Ultra Compact */}
       {loading ? <LoadingSpinner /> : null}
       {!loading && items.length === 0 ? <EmptyState title={`No ${title.toLowerCase()} found`} description="Adjust the search or add a new record." /> : null}
       {!loading && items.length > 0 ? (
         <>
           {sortable ? (
-            <div className="overflow-x-auto rounded-sm border border-slate-200 bg-white">
-              <table className="min-w-full divide-y divide-slate-100 text-sm">
-                <thead className="bg-slate-50 text-left text-xs font-black uppercase tracking-[0.18em] text-slate-500">
-                  <tr>
-                    <th className="px-4 py-3">Sort</th>
-                    {columns.map((column) => <th key={column.key} className="px-4 py-3">{column.label}</th>)}
-                    {(effectiveCanEdit || effectiveCanDelete) ? <th className="px-4 py-3">Actions</th> : null}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {items.map((row) => (
-                    <tr
-                      key={row.id}
-                      draggable
-                      onDragStart={() => setDraggedId(String(row.id))}
-                      onDragOver={(event) => event.preventDefault()}
-                      onDrop={() => handleDropOnRow(String(row.id))}
-                      className={cn("cursor-move bg-white", draggedId === String(row.id) && "opacity-50")}
-                    >
-                      <td className="whitespace-nowrap px-4 py-3 text-slate-500">Drag</td>
+            <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-100">
+                  <thead className="bg-slate-50/50">
+                    <tr>
+                      <th className="px-2.5 py-1.5 text-left">
+                        <span className="text-sm font-bold uppercase tracking-wider text-slate-400">Sort</span>
+                      </th>
                       {columns.map((column) => (
-                        <td key={column.key} className="px-4 py-3 align-top text-slate-700">
-                          {column.render ? column.render(row) : row[column.key]}
-                        </td>
+                        <th key={column.key} className="px-2.5 py-1.5 text-left">
+                          <span className="text-sm font-bold uppercase tracking-wider text-slate-400">{column.label}</span>
+                        </th>
                       ))}
-                      {(effectiveCanEdit || effectiveCanDelete) ? <td className="px-4 py-3">
-                        <div className="flex flex-wrap items-center gap-3">
-                          {effectiveCanEdit ? <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openEdit(row)}>
-                            <EditIcon size={16} />
-                            Edit
-                          </button> : null}
-                          {effectiveCanDelete ? <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteItem(row)}>
-                            <TrashIcon size={16} />
-                            Delete
-                          </button> : null}
-                        </div>
-                      </td> : null}
+                      {(effectiveCanEdit || effectiveCanDelete) && (
+                        <th className="px-2.5 py-1.5 text-right">
+                          <span className="text-sm font-bold uppercase tracking-wider text-slate-400">Actions</span>
+                        </th>
+                      )}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {items.map((row) => (
+                      <tr
+                        key={row.id}
+                        draggable
+                        onDragStart={() => setDraggedId(String(row.id))}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={() => handleDropOnRow(String(row.id))}
+                        className={cn(
+                          "bg-white hover:bg-slate-50/50 transition-colors cursor-move",
+                          draggedId === String(row.id) && "opacity-50"
+                        )}
+                      >
+                        <td className="px-2.5 py-1.5">
+                          <span className="text-xs text-slate-400">↕</span>
+                        </td>
+                        {columns.map((column) => (
+                          <td key={column.key} className="px-2.5 py-1.5 text-xs text-slate-700">
+                            {column.render ? column.render(row) : row[column.key]}
+                          </td>
+                        ))}
+                        {(effectiveCanEdit || effectiveCanDelete) && (
+                          <td className="px-2.5 py-1.5 text-right">
+                            <div className="flex items-center justify-end gap-0.5">
+                              {effectiveCanEdit && (
+                                <button 
+                                  className="p-0.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                                  onClick={() => openEdit(row)}
+                                >
+                                  <EditIcon size={14}  />
+                                </button>
+                              )}
+                              {effectiveCanDelete && (
+                                <button 
+                                  className="p-0.5 text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                                  onClick={() => setDeleteItem(row)}
+                                >
+                                  <TrashIcon size={14} />
+                                </button>
+                              )}
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ) : (
             <DataTable
@@ -820,15 +1011,23 @@ export function EntityManagerPage({
               onToggleRow={toggleRowSelection}
               onToggleAllRows={toggleAllSelection}
               renderActions={(effectiveCanEdit || effectiveCanDelete) ? (row) => (
-                <div className="flex flex-wrap items-center gap-3">
-                  {effectiveCanEdit ? <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openEdit(row)}>
-                    <EditIcon size={16} />
-                    Edit
-                  </button> : null}
-                  {effectiveCanDelete ? <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteItem(row)}>
-                    <TrashIcon size={16} />
-                    Delete
-                  </button> : null}
+                <div className="flex items-center justify-end gap-2">
+                  {effectiveCanEdit && (
+                    <button 
+                      className="p-0.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                      onClick={() => openEdit(row)}
+                    >
+                      <EditIcon size={16} />
+                    </button>
+                  )}
+                  {effectiveCanDelete && (
+                    <button 
+                      className="p-0.5 text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                      onClick={() => setDeleteItem(row)}
+                    >
+                      <TrashIcon size={16} />
+                    </button>
+                  )}
                 </div>
               ) : null}
             />
@@ -837,24 +1036,21 @@ export function EntityManagerPage({
         </>
       ) : null}
 
-      {showForm ? (
+      {/* Form Modal */}
+      {showForm && (
         <EntityFormWrapper
           title={editingItem ? `Edit ${title}` : `Create ${title}`}
           subtitle="Fill the required fields and save changes."
           onCancel={() => setShowForm(false)}
           onSubmit={handleSubmit}
-          submitLabel={editingItem ? "Save Changes" : "Create"}
+          submitLabel={editingItem ? "Save" : "Create"}
           modalClassName={renderFormPreview ? "overflow-hidden" : ""}
           formClassName={renderFormPreview ? "min-h-0" : ""}
         >
           {renderFormPreview ? (
-            <div className="grid h-[calc(90vh-190px)] min-h-0 grid-cols-1 gap-6 overflow-hidden xl:grid-cols-[minmax(0,1fr)_360px]">
-              <div className="grid min-h-0 grid-cols-1 content-start gap-4 overflow-y-auto pr-1 md:grid-cols-2">
-                {visibleFields.map((field) => (
-                  <Field key={field.name} label={field.label} error={errors[field.name]} className={field.full ? ui.fieldFull : ""}>
-                    {renderInput(field)}
-                  </Field>
-                ))}
+            <div className="grid h-[calc(90vh-190px)] min-h-0 grid-cols-1 gap-4 overflow-hidden xl:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="min-h-0 overflow-y-auto pr-1">
+                {renderFormFields()}
               </div>
               <div className="min-h-0 overflow-y-auto pr-1">
                 {renderFormPreview({
@@ -872,17 +1068,14 @@ export function EntityManagerPage({
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {visibleFields.map((field) => (
-                <Field key={field.name} label={field.label} error={errors[field.name]} className={field.full ? ui.fieldFull : ""}>
-                  {renderInput(field)}
-                </Field>
-              ))}
+            <div className="max-h-[60vh] overflow-y-auto pr-1">
+              {renderFormFields()}
             </div>
           )}
         </EntityFormWrapper>
-      ) : null}
+      )}
 
+      {/* Delete Confirmation Modals */}
       <ConfirmDeleteModal
         open={Boolean(deleteItem)}
         title={`Delete ${title.slice(0, -1)}`}

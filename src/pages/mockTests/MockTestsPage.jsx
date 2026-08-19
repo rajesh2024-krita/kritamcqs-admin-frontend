@@ -13,6 +13,7 @@ import { SearchBar } from "../../components/tables/SearchBar";
 import { useToast } from "../../context/ToastContext";
 import { cn, ui } from "../../ui";
 import { EditIcon, PlusIcon, RefreshIcon, TrashIcon } from "../../components/common/AdminIcons";
+import { Award, Calendar, Clock, Download, Layers, RotateCw, Settings, Users, Zap } from "lucide-react";
 
 const PRESET_CONFIG = {
   NEET_REAL: {
@@ -176,6 +177,11 @@ const defaultGenerationSchedule = {
   titlePrefix: "Premium Auto Mock",
 };
 
+const defaultGenerationSchedules = {
+  NEET: { ...defaultGenerationSchedule, examType: "NEET" },
+  JEE: { ...defaultGenerationSchedule, examType: "JEE" },
+};
+
 function buildFormFromItem(item) {
   return {
     title: item.title || "",
@@ -316,7 +322,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
   const [patternBlueprints, setPatternBlueprints] = useState([]);
   const [blueprintEditor, setBlueprintEditor] = useState(null);
   const [savingBlueprint, setSavingBlueprint] = useState(false);
-  const [generationSchedule, setGenerationSchedule] = useState(defaultGenerationSchedule);
+  const [generationSchedules, setGenerationSchedules] = useState(defaultGenerationSchedules);
   const [generationLogs, setGenerationLogs] = useState([]);
   const [savingGenerationSchedule, setSavingGenerationSchedule] = useState(false);
   const [runningGenerationNow, setRunningGenerationNow] = useState(false);
@@ -345,18 +351,12 @@ export function MockTestsPage({ freeOnly = false } = {}) {
     () => subjects.filter((item) => autoForm.examType === "BOTH" || item.examType === autoForm.examType),
     [subjects, autoForm.examType],
   );
-  const scheduleExamSubjects = useMemo(
-    () => subjects.filter((item) => generationSchedule.examType === "BOTH" || item.examType === generationSchedule.examType),
-    [subjects, generationSchedule.examType],
-  );
-  const scheduleChapters = useMemo(() => {
-    const selectedSubjects = new Set((generationSchedule.subjectIds || []).map(String));
-    return chapters.filter((item) => {
-      if (generationSchedule.examType !== "BOTH" && item.examType && item.examType !== generationSchedule.examType) return false;
-      if (!selectedSubjects.size) return true;
-      return selectedSubjects.has(String(item.subjectId?.id || item.subjectId));
-    });
-  }, [chapters, generationSchedule.examType, generationSchedule.subjectIds]);
+  function updateGenerationSchedule(examType, updater) {
+    setGenerationSchedules((current) => ({
+      ...current,
+      [examType]: typeof updater === "function" ? updater(current[examType]) : updater,
+    }));
+  }
 
   function buildListParams(nextQuery = query) {
     return {
@@ -390,16 +390,21 @@ export function MockTestsPage({ freeOnly = false } = {}) {
         mockTestService.getMarkingSettings(),
         mockTestService.listPatternBlueprints(),
         mockTestService.getGenerationSchedule(),
-        mockTestService.listGenerationLogs({ limit: 10 }),
+        mockTestService.listGenerationLogs({ limit: 100 }),
       ]);
       setSubjects(subjectsResponse.data || []);
       setChapters(chaptersResponse.data || []);
       setPatternBlueprints(patternBlueprintsResponse.data || []);
-      setGenerationSchedule({
-        ...defaultGenerationSchedule,
-        ...(scheduleResponse.data || {}),
-        includedQuestionIdsText: (scheduleResponse.data?.includedQuestionIds || []).join(", "),
-      });
+      const schedules = Array.isArray(scheduleResponse.data) ? scheduleResponse.data : [scheduleResponse.data].filter(Boolean);
+      setGenerationSchedules(Object.fromEntries(["NEET", "JEE"].map((examType) => {
+        const schedule = schedules.find((item) => item.examType === examType) || {};
+        return [examType, {
+          ...defaultGenerationSchedules[examType],
+          ...schedule,
+          examType,
+          includedQuestionIdsText: (schedule.includedQuestionIds || []).join(", "),
+        }];
+      })));
       setGenerationLogs(logsResponse.data || []);
       const nextMarkingSettings = {
         predictionMinimumMockTests: markingSettingsResponse.data?.predictionMinimumMockTests || defaultMarkingSettings.predictionMinimumMockTests,
@@ -606,8 +611,8 @@ export function MockTestsPage({ freeOnly = false } = {}) {
     });
   }
 
-  function toggleScheduleDay(day) {
-    setGenerationSchedule((current) => {
+  function toggleScheduleDay(examType, day) {
+    updateGenerationSchedule(examType, (current) => {
       const days = current.weeklyDays || [];
       const exists = days.includes(day);
       const nextDays = exists ? days.filter((item) => item !== day) : [...days, day];
@@ -615,8 +620,8 @@ export function MockTestsPage({ freeOnly = false } = {}) {
     });
   }
 
-  function toggleScheduleSubject(subjectId) {
-    setGenerationSchedule((current) => {
+  function toggleScheduleSubject(examType, subjectId) {
+    updateGenerationSchedule(examType, (current) => {
       const exists = current.subjectIds.includes(subjectId);
       return {
         ...current,
@@ -626,8 +631,8 @@ export function MockTestsPage({ freeOnly = false } = {}) {
     });
   }
 
-  function toggleScheduleChapter(chapterId) {
-    setGenerationSchedule((current) => {
+  function toggleScheduleChapter(examType, chapterId) {
+    updateGenerationSchedule(examType, (current) => {
       const exists = current.chapterIds.includes(chapterId);
       return {
         ...current,
@@ -637,31 +642,29 @@ export function MockTestsPage({ freeOnly = false } = {}) {
   }
 
   async function refreshGenerationLogs() {
-    const response = await mockTestService.listGenerationLogs({ limit: 10 });
+    const response = await mockTestService.listGenerationLogs({ limit: 100 });
     setGenerationLogs(response.data || []);
   }
 
   async function handleSaveGenerationSchedule() {
     setSavingGenerationSchedule(true);
     try {
-      const response = await mockTestService.saveGenerationSchedule({
-        ...generationSchedule,
-        monthlyDay: Number(generationSchedule.monthlyDay || 1),
-        questionCount: Number(generationSchedule.questionCount || 0),
-        unusedQuestionPercentage: Number(generationSchedule.unusedQuestionPercentage || 0),
-        incorrectQuestionPercentage: Number(generationSchedule.incorrectQuestionPercentage || 0),
-        usedQuestionPercentage: Number(generationSchedule.usedQuestionPercentage || 0),
-        includedQuestionIds: String(generationSchedule.includedQuestionIdsText || "")
-          .split(/[\s,]+/)
-          .map((item) => item.trim())
-          .filter(Boolean),
-      });
-      setGenerationSchedule({
-        ...defaultGenerationSchedule,
-        ...(response.data || {}),
-        includedQuestionIdsText: (response.data?.includedQuestionIds || []).join(", "),
-      });
-      toast.success("Automatic generation schedule saved");
+      const responses = await Promise.all(Object.values(generationSchedules).map((schedule) => mockTestService.saveGenerationSchedule({
+        ...schedule,
+        recurrenceType: "weekly",
+        monthlyDay: Number(schedule.monthlyDay || 1),
+        questionCount: Number(schedule.questionCount || 0),
+        unusedQuestionPercentage: Number(schedule.unusedQuestionPercentage || 0),
+        incorrectQuestionPercentage: Number(schedule.incorrectQuestionPercentage || 0),
+        usedQuestionPercentage: Number(schedule.usedQuestionPercentage || 0),
+        includedQuestionIds: String(schedule.includedQuestionIdsText || "").split(/[\s,]+/).map((item) => item.trim()).filter(Boolean),
+      })));
+      setGenerationSchedules(Object.fromEntries(responses.map((response) => [response.data.examType, {
+        ...defaultGenerationSchedules[response.data.examType],
+        ...response.data,
+        includedQuestionIdsText: (response.data.includedQuestionIds || []).join(", "),
+      }])));
+      toast.success("NEET and JEE generation settings saved independently");
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -672,12 +675,13 @@ export function MockTestsPage({ freeOnly = false } = {}) {
   async function handleRunGenerationNow() {
     setRunningGenerationNow(true);
     try {
-      await mockTestService.runGenerationScheduleNow();
-      toast.success("Premium mock test generated and published");
+      const response = await mockTestService.runGenerationScheduleNow();
+      if (response.success) toast.success(response.message);
+      else toast.error(response.message);
       await Promise.all([loadItems({ ...query, page: 1 }), refreshGenerationLogs()]);
     } catch (error) {
       toast.error(error.message);
-      await refreshGenerationLogs().catch(() => {});
+      await refreshGenerationLogs().catch(() => { });
     } finally {
       setRunningGenerationNow(false);
     }
@@ -946,274 +950,464 @@ export function MockTestsPage({ freeOnly = false } = {}) {
         </div>
       </div> */}
 
-      <div className={ui.compactPanel}>
-        <div className="mb-4 border-b border-slate-200 pb-4">
-          <div className={ui.eyebrow}>Read-Only Pattern Blueprints</div>
-          <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
+      <div className="space-y-3">
+        {/* Pattern Blueprints */}
+        <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+          <div className="flex items-center gap-2 mb-2.5">
+            <Layers size={14} className="text-indigo-600" />
+            <h3 className="text-xs font-semibold text-slate-900">Pattern Blueprints</h3>
+            <span className="text-[10px] text-slate-400">(Read-only)</span>
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {patternBlueprints.map((blueprint) => (
-              <div key={blueprint.key} className="rounded-sm border border-slate-200 bg-slate-50 p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-sm font-black text-slate-900">{blueprint.title || `${blueprint.key} Pattern Blueprint`}</div>
-                    <div className="mt-1 text-xs font-semibold text-slate-500">{(blueprint.chapterWise || []).length} chapter rows | {(blueprint.topicWise || []).length} topic rules</div>
+              <div key={blueprint.key} className="bg-slate-50 rounded-lg border border-slate-200/50 p-2.5 hover:bg-slate-100 transition-colors">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold text-slate-900 truncate">
+                      {blueprint.title || `${blueprint.key} Pattern`}
+                    </div>
+                    <div className="text-[10px] text-slate-500">
+                      {(blueprint.chapterWise || []).length} chapters · {(blueprint.topicWise || []).length} topics
+                    </div>
                   </div>
-                  <button className={cn(ui.buttonBase, ui.buttonSecondary, "min-h-9 px-3 py-2 text-xs")} type="button" onClick={() => void openBlueprintEditor(blueprint)}>
-                    <EditIcon size={14} />
+                  <button
+                    className="inline-flex items-center gap-1 px-2 py-0.5 bg-white border border-slate-200 rounded text-[10px] font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                    type="button"
+                    onClick={() => void openBlueprintEditor(blueprint)}
+                  >
+                    <EditIcon size={11} />
                     Edit
                   </button>
                 </div>
-                <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold text-slate-600">
-                  <span className={ui.pill}>{getBlueprintSummaryValue(blueprint, "total questions")} questions</span>
-                  <span className={ui.pill}>{getBlueprintSummaryValue(blueprint, "total marks")} marks</span>
-                  {(blueprint.subjectWise || []).slice(0, 4).map((item) => (
-                    <span key={`${blueprint.key}-${item.subject}`} className={ui.pill}>{item.subject}: {item.questions}</span>
+                <div className="flex flex-wrap gap-1 mt-1.5">
+                  <span className="inline-flex px-1.5 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-[9px] font-medium text-indigo-700">
+                    {getBlueprintSummaryValue(blueprint, "total questions")} Qs
+                  </span>
+                  <span className="inline-flex px-1.5 py-0.5 bg-emerald-50 border border-emerald-100 rounded text-[9px] font-medium text-emerald-700">
+                    {getBlueprintSummaryValue(blueprint, "total marks")} marks
+                  </span>
+                  {(blueprint.subjectWise || []).slice(0, 3).map((item) => (
+                    <span key={`${blueprint.key}-${item.subject}`} className="inline-flex px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[9px] font-medium text-slate-600">
+                      {item.subject}: {item.questions}
+                    </span>
                   ))}
                 </div>
               </div>
             ))}
           </div>
-          <p className="mt-2 text-xs font-semibold text-slate-500">Patterns are read-only until Edit is clicked and the Admin Password is verified.</p>
+          <p className="text-[10px] text-slate-400 mt-2">Patterns are read-only until Edit is clicked and Admin Password is verified.</p>
         </div>
-        {!freeOnly ? (
-          <div className="mb-4 border-b border-slate-200 pb-4">
-            <div className={ui.eyebrow}>Premium Scheduler</div>
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <h2 className="text-xl font-black tracking-tight text-slate-900">Automatic Mock Test Generation</h2>
-                <p className={ui.muted}>Scheduled mocks are auto-published and visible only to premium users.</p>
+
+        {/* Premium Scheduler */}
+        {!freeOnly && (
+          <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+              <div className="flex items-center gap-2">
+                <Zap size={14} className="text-amber-600" />
+                <h3 className="text-xs font-semibold text-slate-900">Premium Scheduler</h3>
+                <span className="text-[10px] text-slate-400">Auto-generate mock tests</span>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" disabled={runningGenerationNow} onClick={() => void handleRunGenerationNow()}>
+              <div className="flex gap-1.5">
+                <button
+                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[10px] font-medium text-slate-700 rounded transition-colors disabled:opacity-50"
+                  type="button"
+                  disabled={runningGenerationNow}
+                  onClick={() => void handleRunGenerationNow()}
+                >
                   {runningGenerationNow ? "Generating..." : "Run Now"}
                 </button>
-                <button className={cn(ui.buttonBase, ui.buttonPrimary)} type="button" disabled={savingGenerationSchedule} onClick={() => void handleSaveGenerationSchedule()}>
+                <button
+                  className="inline-flex items-center gap-1 px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-[10px] font-medium text-white rounded transition-colors disabled:opacity-50"
+                  type="button"
+                  disabled={savingGenerationSchedule}
+                  onClick={() => void handleSaveGenerationSchedule()}
+                >
                   {savingGenerationSchedule ? "Saving..." : "Save Schedule"}
                 </button>
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <div className="pt-8">
-                <ToggleSwitch checked={Boolean(generationSchedule.enabled)} onChange={(value) => setGenerationSchedule((current) => ({ ...current, enabled: value }))} label="Enable automatic generation" />
-              </div>
-              <label className={ui.field}>
-                <span>Recurrence</span>
-                <select className={ui.input} value={generationSchedule.recurrenceType} onChange={(event) => setGenerationSchedule((current) => ({ ...current, recurrenceType: event.target.value }))}>
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                </select>
-              </label>
-              <label className={ui.field}>
-                <span>Generation Time</span>
-                <input className={ui.input} type="time" value={generationSchedule.generationTime} onChange={(event) => setGenerationSchedule((current) => ({ ...current, generationTime: event.target.value }))} />
-              </label>
-              <label className={ui.field}>
-                <span>Exam Type</span>
-                <select className={ui.input} value={generationSchedule.examType} onChange={(event) => setGenerationSchedule((current) => ({ ...current, examType: event.target.value, subjectIds: [], chapterIds: [] }))}>
-                  <option value="NEET">NEET</option>
-                  <option value="JEE">JEE</option>
-                </select>
-              </label>
-              {generationSchedule.recurrenceType === "monthly" ? (
-                <label className={ui.field}>
-                  <span>Monthly Date</span>
-                  <input className={ui.input} type="number" min="1" max="31" value={generationSchedule.monthlyDay} onChange={(event) => setGenerationSchedule((current) => ({ ...current, monthlyDay: event.target.value }))} />
-                </label>
-              ) : null}
-              <label className={ui.field}>
-                <span>Difficulty</span>
-                <select className={ui.input} value={generationSchedule.difficulty} onChange={(event) => setGenerationSchedule((current) => ({ ...current, difficulty: event.target.value }))}>
-                  <option value="mixed">Mixed</option>
-                  <option value="easy">Easy</option>
-                  <option value="moderate">Moderate</option>
-                  <option value="hard">Hard</option>
-                </select>
-              </label>
-              <label className={ui.field}>
-                <span>Question Count</span>
-                <input className={ui.input} type="number" min="0" max="300" value={generationSchedule.questionCount} onChange={(event) => setGenerationSchedule((current) => ({ ...current, questionCount: event.target.value }))} placeholder="0 uses blueprint" />
-              </label>
-              <label className={ui.field}>
-                <span>Unused %</span>
-                <input className={ui.input} type="number" min="0" max="100" value={generationSchedule.unusedQuestionPercentage} onChange={(event) => setGenerationSchedule((current) => ({ ...current, unusedQuestionPercentage: event.target.value }))} />
-              </label>
-              <label className={ui.field}>
-                <span>Incorrect %</span>
-                <input className={ui.input} type="number" min="0" max="100" value={generationSchedule.incorrectQuestionPercentage} onChange={(event) => setGenerationSchedule((current) => ({ ...current, incorrectQuestionPercentage: event.target.value }))} />
-              </label>
-              <label className={ui.field}>
-                <span>Used %</span>
-                <input className={ui.input} type="number" min="0" max="100" value={generationSchedule.usedQuestionPercentage} onChange={(event) => setGenerationSchedule((current) => ({ ...current, usedQuestionPercentage: event.target.value }))} />
-              </label>
-              <label className={ui.field}>
-                <span>Title Prefix</span>
-                <input className={ui.input} value={generationSchedule.titlePrefix} onChange={(event) => setGenerationSchedule((current) => ({ ...current, titlePrefix: event.target.value }))} />
-              </label>
-              <label className={cn(ui.field, "xl:col-span-2")}>
-                <span>Specific old question IDs</span>
-                <textarea className={ui.input} rows={2} value={generationSchedule.includedQuestionIdsText} onChange={(event) => setGenerationSchedule((current) => ({ ...current, includedQuestionIdsText: event.target.value }))} placeholder="Comma or space separated question IDs" />
-              </label>
-            </div>
+            <div className="grid gap-3 lg:grid-cols-2">
+              {["NEET", "JEE"].map((examType) => {
+                const schedule = generationSchedules[examType];
+                const examSubjects = subjects.filter((item) => item.examType === examType);
+                const selectedSubjects = new Set(schedule.subjectIds.map(String));
+                const examChapters = chapters.filter((item) =>
+                  item.examType === examType &&
+                  (!selectedSubjects.size || selectedSubjects.has(String(item.subjectId?.id || item.subjectId)))
+                );
+                const examLogs = generationLogs.filter((log) =>
+                  log.examType === examType && ["weekly", "manual"].includes(log.scheduleType)
+                );
 
-            {generationSchedule.recurrenceType === "weekly" ? (
-              <div className="mt-4">
-                <div className="mb-2 text-sm font-semibold text-slate-700">Weekly Days</div>
-                <div className="flex flex-wrap gap-2">
-                  {WEEKDAY_OPTIONS.map((day) => {
-                    const active = generationSchedule.weeklyDays?.includes(day.value);
-                    return (
-                      <button key={day.value} type="button" className={cn(ui.buttonBase, active ? ui.buttonPrimary : ui.buttonSecondary)} onClick={() => toggleScheduleDay(day.value)}>
-                        {day.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ) : null}
+                return (
+                  <div key={examType} className="bg-slate-50 rounded-lg border border-slate-200/50 p-3">
+                    <div className="flex items-center justify-between gap-2 mb-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-slate-900">{examType}</span>
+                        <span className="text-[10px] text-slate-400">Weekly</span>
+                      </div>
+                      <ToggleSwitch
+                        checked={Boolean(schedule.enabled)}
+                        onChange={(enabled) => updateGenerationSchedule(examType, (current) => ({ ...current, enabled }))}
+                        label=""
+                        size="sm"
+                      />
+                    </div>
 
-            <div className="mt-4 grid gap-4 xl:grid-cols-2">
-              <div>
-                <div className="mb-2 text-sm font-semibold text-slate-700">Subjects</div>
-                <div className="flex max-h-40 flex-wrap gap-2 overflow-auto">
-                  {scheduleExamSubjects.map((subject) => {
-                    const active = generationSchedule.subjectIds.includes(subject.id);
-                    return (
-                      <button key={subject.id} type="button" className={cn(ui.buttonBase, active ? ui.buttonPrimary : ui.buttonSecondary)} onClick={() => toggleScheduleSubject(subject.id)}>
-                        {subject.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-              <div>
-                <div className="mb-2 text-sm font-semibold text-slate-700">Chapters</div>
-                <div className="flex max-h-40 flex-wrap gap-2 overflow-auto">
-                  {scheduleChapters.map((chapter) => {
-                    const active = generationSchedule.chapterIds.includes(chapter.id);
-                    return (
-                      <button key={chapter.id} type="button" className={cn(ui.buttonBase, active ? ui.buttonPrimary : ui.buttonSecondary)} onClick={() => toggleScheduleChapter(chapter.id)}>
-                        {chapter.name}
-                      </button>
-                    );
-                  })}
-                  {!scheduleChapters.length ? <span className="text-sm font-semibold text-slate-500">No chapters available for the selected filters.</span> : null}
-                </div>
-              </div>
-            </div>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <div>
+                        <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block">Time</label>
+                        <input
+                          className="w-full px-1.5 py-0.5 text-[10px] bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                          type="time"
+                          value={schedule.generationTime}
+                          onChange={(event) => updateGenerationSchedule(examType, (current) => ({ ...current, generationTime: event.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block">Difficulty</label>
+                        <select
+                          className="w-full px-1.5 py-0.5 text-[10px] bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                          value={schedule.difficulty}
+                          onChange={(event) => updateGenerationSchedule(examType, (current) => ({ ...current, difficulty: event.target.value }))}
+                        >
+                          <option value="mixed">Mixed</option>
+                          <option value="easy">Easy</option>
+                          <option value="moderate">Moderate</option>
+                          <option value="hard">Hard</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block">Question Count</label>
+                        <input
+                          className="w-full px-1.5 py-0.5 text-[10px] bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                          type="number"
+                          min="0"
+                          max="300"
+                          value={schedule.questionCount}
+                          onChange={(event) => updateGenerationSchedule(examType, (current) => ({ ...current, questionCount: event.target.value }))}
+                          placeholder="0 uses blueprint"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block">Title Prefix</label>
+                        <input
+                          className="w-full px-1.5 py-0.5 text-[10px] bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                          value={schedule.titlePrefix}
+                          onChange={(event) => updateGenerationSchedule(examType, (current) => ({ ...current, titlePrefix: event.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block">Unused %</label>
+                        <input
+                          className="w-full px-1.5 py-0.5 text-[10px] bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={schedule.unusedQuestionPercentage}
+                          onChange={(event) => updateGenerationSchedule(examType, (current) => ({ ...current, unusedQuestionPercentage: event.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block">Incorrect %</label>
+                        <input
+                          className="w-full px-1.5 py-0.5 text-[10px] bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={schedule.incorrectQuestionPercentage}
+                          onChange={(event) => updateGenerationSchedule(examType, (current) => ({ ...current, incorrectQuestionPercentage: event.target.value }))}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block">Used %</label>
+                        <input
+                          className="w-full px-1.5 py-0.5 text-[10px] bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                          type="number"
+                          min="0"
+                          max="100"
+                          value={schedule.usedQuestionPercentage}
+                          onChange={(event) => updateGenerationSchedule(examType, (current) => ({ ...current, usedQuestionPercentage: event.target.value }))}
+                        />
+                      </div>
+                    </div>
 
-            <div className="mt-5 rounded-sm border border-slate-200 bg-white p-4">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h3 className="text-lg font-bold text-slate-900">Generation History</h3>
-                <button className={cn(ui.buttonBase, ui.buttonSecondary, "min-h-9 px-3 py-2 text-xs")} type="button" onClick={() => void refreshGenerationLogs()}>Refresh</button>
-              </div>
-              <div className="overflow-x-auto">
-                <table className={ui.table}>
-                  <thead>
-                    <tr>
-                      <th className={ui.tableHead}>Generated At</th>
-                      <th className={ui.tableHead}>Schedule</th>
-                      <th className={ui.tableHead}>Test Name</th>
-                      <th className={ui.tableHead}>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {generationLogs.map((log) => (
-                      <tr key={log.id}>
-                        <td className={ui.tableCell}>{log.generatedAt ? new Date(log.generatedAt).toLocaleString() : "-"}</td>
-                        <td className={ui.tableCell}>{log.scheduleType}</td>
-                        <td className={ui.tableCell}>{log.testName || log.message || "-"}</td>
-                        <td className={ui.tableCell}>
-                          <span className={cn(ui.badge, log.status === "success" ? "border-emerald-100 bg-emerald-50 text-emerald-700" : "border-rose-100 bg-rose-50 text-rose-700")}>{log.status}</span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              {!generationLogs.length ? <EmptyState title="No generation logs" description="Scheduled generation history will appear here." /> : null}
+                    <div className="mt-2.5">
+                      <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block mb-1">Weekly Days</label>
+                      <div className="flex flex-wrap gap-1">
+                        {WEEKDAY_OPTIONS.map((day) => (
+                          <button
+                            key={day.value}
+                            type="button"
+                            className={cn(
+                              "px-1.5 py-0.5 text-[9px] font-medium rounded transition-colors",
+                              schedule.weeklyDays.includes(day.value)
+                                ? "bg-indigo-600 text-white"
+                                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                            )}
+                            onClick={() => toggleScheduleDay(examType, day.value)}
+                          >
+                            {day.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-2.5">
+                      <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block mb-1">Subjects</label>
+                      <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                        {examSubjects.map((subject) => (
+                          <button
+                            key={subject.id}
+                            type="button"
+                            className={cn(
+                              "px-1.5 py-0.5 text-[9px] font-medium rounded transition-colors",
+                              schedule.subjectIds.includes(subject.id)
+                                ? "bg-indigo-600 text-white"
+                                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                            )}
+                            onClick={() => toggleScheduleSubject(examType, subject.id)}
+                          >
+                            {subject.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-2.5">
+                      <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block mb-1">Chapters</label>
+                      <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                        {examChapters.map((chapter) => (
+                          <button
+                            key={chapter.id}
+                            type="button"
+                            className={cn(
+                              "px-1.5 py-0.5 text-[9px] font-medium rounded transition-colors",
+                              schedule.chapterIds.includes(chapter.id)
+                                ? "bg-indigo-600 text-white"
+                                : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                            )}
+                            onClick={() => toggleScheduleChapter(examType, chapter.id)}
+                          >
+                            {chapter.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="mt-2.5">
+                      <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block mb-1">Specific Question IDs</label>
+                      <textarea
+                        className="w-full px-1.5 py-0.5 text-[10px] bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-y min-h-[30px]"
+                        rows={1}
+                        value={schedule.includedQuestionIdsText}
+                        onChange={(event) => updateGenerationSchedule(examType, (current) => ({ ...current, includedQuestionIdsText: event.target.value }))}
+                        placeholder="Comma or space separated"
+                      />
+                    </div>
+
+                    <div className="mt-3 pt-2 border-t border-slate-200">
+                      <h4 className="text-[10px] font-semibold text-slate-700 mb-1.5">{examType} Weekly Tests</h4>
+                      <div className="max-h-32 overflow-y-auto">
+                        {examLogs.length > 0 ? (
+                          <table className="w-full text-[10px]">
+                            <thead>
+                              <tr className="text-slate-500 border-b border-slate-200">
+                                <th className="text-left py-0.5 font-medium">Generated</th>
+                                <th className="text-left py-0.5 font-medium">Test</th>
+                                <th className="text-left py-0.5 font-medium">Status</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {examLogs.map((log) => (
+                                <tr key={log.id} className="border-b border-slate-100">
+                                  <td className="py-0.5 text-[9px] text-slate-600">{new Date(log.generatedAt).toLocaleDateString()}</td>
+                                  <td className="py-0.5 text-[9px] text-slate-600 truncate max-w-[100px]">{log.testName || log.message || "-"}</td>
+                                  <td className="py-0.5">
+                                    <span className={cn(
+                                      "inline-flex px-1 py-0.5 text-[8px] font-medium rounded",
+                                      log.status === "success"
+                                        ? "bg-emerald-50 text-emerald-700"
+                                        : "bg-rose-50 text-rose-700"
+                                    )}>
+                                      {log.status}
+                                    </span>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        ) : (
+                          <p className="text-[10px] text-slate-400 py-1">No weekly tests generated yet</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        ) : null}
-        <div className="mb-4 border-b border-slate-200 pb-4">
-          <div className={ui.eyebrow}>Auto Generation</div>
-          <h2 className="text-xl font-black tracking-tight text-slate-900">Generate Mock Test</h2>
-          <p className={ui.muted}>Generated mocks start free for every learner. After a free learner completes one, that mock becomes premium for that learner.</p>
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <label className={ui.field}>
-              <span>Exam Type</span>
-              <select className={ui.input} value={autoForm.examType} onChange={(event) => setAutoForm((current) => ({ ...current, examType: event.target.value, subjectIds: [] }))}>
+        )}
+
+        {/* Auto Generation */}
+        <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+          <div className="flex items-center gap-2 mb-2.5">
+            <Zap size={14} className="text-amber-600" />
+            <h3 className="text-xs font-semibold text-slate-900">Auto Generate Mock Test</h3>
+            <span className="text-[10px] text-slate-400">Quick creation</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+            <div>
+              <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block">Exam Type</label>
+              <select
+                className="w-full px-1.5 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                value={autoForm.examType}
+                onChange={(event) => setAutoForm((current) => ({ ...current, examType: event.target.value, subjectIds: [] }))}
+              >
                 <option value="NEET">NEET</option>
                 <option value="JEE">JEE</option>
               </select>
-            </label>
-            <label className={ui.field}>
-              <span>Difficulty</span>
-              <select className={ui.input} value={autoForm.difficulty} onChange={(event) => setAutoForm((current) => ({ ...current, difficulty: event.target.value }))}>
+            </div>
+            <div>
+              <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block">Difficulty</label>
+              <select
+                className="w-full px-1.5 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                value={autoForm.difficulty}
+                onChange={(event) => setAutoForm((current) => ({ ...current, difficulty: event.target.value }))}
+              >
                 <option value="mixed">Mixed</option>
                 <option value="easy">Easy</option>
                 <option value="moderate">Moderate</option>
                 <option value="hard">Hard</option>
               </select>
-            </label>
-            <label className={ui.field}>
-              <span>Title (Optional)</span>
-              <input className={ui.input} value={autoForm.title} onChange={(event) => setAutoForm((current) => ({ ...current, title: event.target.value }))} placeholder="Auto title if blank" />
-            </label>
-            {!freeOnly ? (
-              <label className={ui.field}>
-                <span>Duration Type</span>
-                <select className={ui.input} value={autoForm.premiumDurationType} onChange={(event) => setAutoForm((current) => ({ ...current, premiumDurationType: event.target.value }))}>
-                  <option value="daily">Daily</option>
-                  <option value="weekly">Weekly</option>
-                  <option value="monthly">Monthly</option>
-                </select>
-              </label>
-            ) : null}
-            {!freeOnly ? (
-              <label className={ui.field}>
-                <span>Validity Days</span>
-                <input className={ui.input} type="number" min="1" value={autoForm.premiumValidityDays} onChange={(event) => setAutoForm((current) => ({ ...current, premiumValidityDays: event.target.value }))} />
-              </label>
-            ) : null}
-            {!freeOnly ? (
-              <div className="pt-8"><ToggleSwitch checked={autoForm.autoDailyQuestionRearrangement} onChange={(value) => setAutoForm((current) => ({ ...current, autoDailyQuestionRearrangement: value }))} label="Daily rearrange" /></div>
-            ) : null}
-            {!freeOnly ? (
-              <div className="pt-8"><ToggleSwitch checked={autoForm.autoDailyQuestionGeneration} onChange={(value) => setAutoForm((current) => ({ ...current, autoDailyQuestionGeneration: value }))} label="Daily generate" /></div>
-            ) : null}
-            <label className={ui.field}>
-              <span>Unused %</span>
-              <input className={ui.input} type="number" min="0" max="100" value={autoForm.unusedQuestionPercentage} onChange={(event) => setAutoForm((current) => ({ ...current, unusedQuestionPercentage: event.target.value }))} />
-            </label>
-            <label className={ui.field}>
-              <span>Incorrect %</span>
-              <input className={ui.input} type="number" min="0" max="100" value={autoForm.incorrectQuestionPercentage} onChange={(event) => setAutoForm((current) => ({ ...current, incorrectQuestionPercentage: event.target.value }))} />
-            </label>
-            <label className={ui.field}>
-              <span>Used %</span>
-              <input className={ui.input} type="number" min="0" max="100" value={autoForm.usedQuestionPercentage} onChange={(event) => setAutoForm((current) => ({ ...current, usedQuestionPercentage: event.target.value }))} />
-            </label>
-            <label className={cn(ui.field, "xl:col-span-2")}>
-              <span>Specific old question IDs</span>
-              <textarea className={ui.input} rows={2} value={autoForm.includedQuestionIdsText} onChange={(event) => setAutoForm((current) => ({ ...current, includedQuestionIdsText: event.target.value }))} placeholder="Comma or space separated question IDs" />
-            </label>
+            </div>
+            <div>
+              <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block">Title (Optional)</label>
+              <input
+                className="w-full px-1.5 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                value={autoForm.title}
+                onChange={(event) => setAutoForm((current) => ({ ...current, title: event.target.value }))}
+                placeholder="Auto title if blank"
+              />
+            </div>
+            {!freeOnly && (
+              <>
+                <div>
+                  <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block">Duration Type</label>
+                  <select
+                    className="w-full px-1.5 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    value={autoForm.premiumDurationType}
+                    onChange={(event) => setAutoForm((current) => ({ ...current, premiumDurationType: event.target.value }))}
+                  >
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block">Validity Days</label>
+                  <input
+                    className="w-full px-1.5 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    type="number"
+                    min="1"
+                    value={autoForm.premiumValidityDays}
+                    onChange={(event) => setAutoForm((current) => ({ ...current, premiumValidityDays: event.target.value }))}
+                  />
+                </div>
+              </>
+            )}
+            {!freeOnly && (
+              <div className="flex items-end">
+                <ToggleSwitch
+                  checked={autoForm.autoDailyQuestionRearrangement}
+                  onChange={(value) => setAutoForm((current) => ({ ...current, autoDailyQuestionRearrangement: value }))}
+                  label="Daily rearrange"
+                  size="sm"
+                />
+              </div>
+            )}
+            {!freeOnly && (
+              <div className="flex items-end">
+                <ToggleSwitch
+                  checked={autoForm.autoDailyQuestionGeneration}
+                  onChange={(value) => setAutoForm((current) => ({ ...current, autoDailyQuestionGeneration: value }))}
+                  label="Daily generate"
+                  size="sm"
+                />
+              </div>
+            )}
+            <div>
+              <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block">Unused %</label>
+              <input
+                className="w-full px-1.5 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                type="number"
+                min="0"
+                max="100"
+                value={autoForm.unusedQuestionPercentage}
+                onChange={(event) => setAutoForm((current) => ({ ...current, unusedQuestionPercentage: event.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block">Incorrect %</label>
+              <input
+                className="w-full px-1.5 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                type="number"
+                min="0"
+                max="100"
+                value={autoForm.incorrectQuestionPercentage}
+                onChange={(event) => setAutoForm((current) => ({ ...current, incorrectQuestionPercentage: event.target.value }))}
+              />
+            </div>
+            <div>
+              <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block">Used %</label>
+              <input
+                className="w-full px-1.5 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                type="number"
+                min="0"
+                max="100"
+                value={autoForm.usedQuestionPercentage}
+                onChange={(event) => setAutoForm((current) => ({ ...current, usedQuestionPercentage: event.target.value }))}
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block">Specific Question IDs</label>
+              <textarea
+                className="w-full px-1.5 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-y min-h-[28px]"
+                rows={1}
+                value={autoForm.includedQuestionIdsText}
+                onChange={(event) => setAutoForm((current) => ({ ...current, includedQuestionIdsText: event.target.value }))}
+                placeholder="Comma or space separated question IDs"
+              />
+            </div>
             <div className="flex items-end">
-              <button className={cn(ui.buttonBase, ui.buttonPrimary, "w-full")} type="button" disabled={autoGenerating} onClick={() => void handleAutoGenerate()}>
+              <button
+                className="w-full px-3 py-0.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-[10px] font-medium rounded-lg transition-all shadow-sm shadow-indigo-500/25 disabled:opacity-50"
+                type="button"
+                disabled={autoGenerating}
+                onClick={() => void handleAutoGenerate()}
+              >
                 {autoGenerating ? "Generating..." : "Generate Mock Test"}
               </button>
             </div>
           </div>
-          <div className="mt-4">
-            <div className="mb-2 text-sm font-semibold text-slate-700">Subjects (optional, auto if none selected)</div>
-            <div className="flex flex-wrap gap-2">
+
+          <div className="mt-2.5">
+            <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block mb-1">Subjects (optional)</label>
+            <div className="flex flex-wrap gap-1">
               {autoExamSubjects.map((subject) => {
                 const active = autoForm.subjectIds.includes(subject.id);
                 return (
                   <button
                     key={subject.id}
                     type="button"
-                    className={cn(ui.buttonBase, active ? ui.buttonPrimary : ui.buttonSecondary)}
+                    className={cn(
+                      "px-1.5 py-0.5 text-[9px] font-medium rounded transition-colors",
+                      active
+                        ? "bg-indigo-600 text-white"
+                        : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                    )}
                     onClick={() => toggleAutoSubject(subject.id)}
                   >
                     {subject.name}
@@ -1222,219 +1416,350 @@ export function MockTestsPage({ freeOnly = false } = {}) {
               })}
             </div>
           </div>
-          <div className="mt-5 rounded-sm border border-slate-200 bg-white p-4">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Default Marking Rules</h3>
-                <p className="text-sm text-slate-500">Used automatically for all future generated mocks unless per-test override is enabled.</p>
-              </div>
-              <button className={cn(ui.buttonBase, ui.buttonPrimary)} type="button" disabled={savingMarkingSettings} onClick={() => void handleSaveMarkingSettings()}>
-                {savingMarkingSettings ? "Saving..." : "Save Marking Rules"}
-              </button>
+        </div>
+
+        {/* Marking Rules */}
+        <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div className="flex items-center gap-2">
+              <Settings size={14} className="text-slate-600" />
+              <h3 className="text-xs font-semibold text-slate-900">Default Marking Rules</h3>
+              <span className="text-[10px] text-slate-400">Used for generated mocks</span>
             </div>
-            <label className={cn(ui.field, "mb-4 max-w-xs")}>
-              <span>Minimum mock tests for prediction</span>
-              <input
-                className={ui.input}
-                type="number"
-                min="1"
-                max="50"
-                value={markingSettings.predictionMinimumMockTests || 5}
-                onChange={(event) =>
-                  setMarkingSettings((current) => ({
-                    ...current,
-                    predictionMinimumMockTests: Number(event.target.value),
-                  }))
-                }
-              />
-            </label>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-              {[
-                { key: "neet", label: "NEET" },
-                { key: "jeeMain", label: "JEE Main" },
-                { key: "jeeAdvanced", label: "JEE Advanced" },
-              ].map((exam) => (
-                <div key={exam.key} className="rounded-sm border border-slate-200 bg-slate-50 p-3">
-                  <div className="mb-2 text-sm font-bold text-slate-900">{exam.label}</div>
-                  <label className={ui.field}>
-                    <span>Scheme Version</span>
-                    <input
-                      className={ui.input}
-                      value={markingSettings?.[exam.key]?.version || "v1"}
-                      onChange={(event) =>
-                        setMarkingSettings((current) => ({
-                          ...current,
-                          [exam.key]: {
-                            ...(current?.[exam.key] || {}),
-                            version: event.target.value,
-                          },
-                        }))}
-                    />
-                  </label>
-                  <div className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">MCQ</div>
-                  <div className="mt-1 grid grid-cols-3 gap-2">
-                    <label className={ui.field}>
-                      <span>+ve</span>
-                      <input className={ui.input} type="number" value={markingSettings?.[exam.key]?.mcq?.correct ?? 4} onChange={(event) => updateMarkingRule(exam.key, "mcq", "correct", event.target.value)} />
-                    </label>
-                    <label className={ui.field}>
-                      <span>-ve</span>
-                      <input className={ui.input} type="number" value={markingSettings?.[exam.key]?.mcq?.wrong ?? -1} onChange={(event) => updateMarkingRule(exam.key, "mcq", "wrong", event.target.value)} />
-                    </label>
-                    <label className={ui.field}>
-                      <span>Unans.</span>
-                      <input className={ui.input} type="number" value={markingSettings?.[exam.key]?.mcq?.unanswered ?? 0} onChange={(event) => updateMarkingRule(exam.key, "mcq", "unanswered", event.target.value)} />
-                    </label>
+            <button
+              className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-[10px] font-medium text-white rounded transition-colors disabled:opacity-50"
+              type="button"
+              disabled={savingMarkingSettings}
+              onClick={() => void handleSaveMarkingSettings()}
+            >
+              {savingMarkingSettings ? "Saving..." : "Save Rules"}
+            </button>
+          </div>
+
+          <div className="mb-3 max-w-xs">
+            <label className="text-[9px] font-medium text-slate-500 uppercase tracking-wider block">Min. Tests for Prediction</label>
+            <input
+              className="w-full px-1.5 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+              type="number"
+              min="1"
+              max="50"
+              value={markingSettings.predictionMinimumMockTests || 5}
+              onChange={(event) =>
+                setMarkingSettings((current) => ({
+                  ...current,
+                  predictionMinimumMockTests: Number(event.target.value),
+                }))
+              }
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            {[
+              { key: "neet", label: "NEET" },
+              { key: "jeeMain", label: "JEE Main" },
+              { key: "jeeAdvanced", label: "JEE Advanced" },
+            ].map((exam) => (
+              <div key={exam.key} className="bg-slate-50 rounded-lg border border-slate-200/50 p-2.5">
+                <div className="text-[10px] font-semibold text-slate-900 mb-1.5">{exam.label}</div>
+                <div className="mb-1.5">
+                  <label className="text-[8px] font-medium text-slate-400 uppercase tracking-wider">Version</label>
+                  <input
+                    className="w-full px-1.5 py-0.5 text-[10px] bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                    value={markingSettings?.[exam.key]?.version || "v1"}
+                    onChange={(event) =>
+                      setMarkingSettings((current) => ({
+                        ...current,
+                        [exam.key]: {
+                          ...(current?.[exam.key] || {}),
+                          version: event.target.value,
+                        },
+                      }))}
+                  />
+                </div>
+                <div className="text-[8px] font-medium text-slate-400 uppercase tracking-wider mb-0.5">MCQ</div>
+                <div className="grid grid-cols-3 gap-1">
+                  <div>
+                    <label className="text-[7px] text-slate-400 block">+ve</label>
+                    <input className="w-full px-1 py-0.5 text-[10px] bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" type="number" value={markingSettings?.[exam.key]?.mcq?.correct ?? 4} onChange={(event) => updateMarkingRule(exam.key, "mcq", "correct", event.target.value)} />
                   </div>
-                  <div className="mt-2 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Numerical</div>
-                  <div className="mt-1 grid grid-cols-3 gap-2">
-                    <label className={ui.field}>
-                      <span>+ve</span>
-                      <input className={ui.input} type="number" value={markingSettings?.[exam.key]?.numerical?.correct ?? 4} onChange={(event) => updateMarkingRule(exam.key, "numerical", "correct", event.target.value)} />
-                    </label>
-                    <label className={ui.field}>
-                      <span>-ve</span>
-                      <input className={ui.input} type="number" value={markingSettings?.[exam.key]?.numerical?.wrong ?? 0} onChange={(event) => updateMarkingRule(exam.key, "numerical", "wrong", event.target.value)} />
-                    </label>
-                    <label className={ui.field}>
-                      <span>Unans.</span>
-                      <input className={ui.input} type="number" value={markingSettings?.[exam.key]?.numerical?.unanswered ?? 0} onChange={(event) => updateMarkingRule(exam.key, "numerical", "unanswered", event.target.value)} />
-                    </label>
+                  <div>
+                    <label className="text-[7px] text-slate-400 block">-ve</label>
+                    <input className="w-full px-1 py-0.5 text-[10px] bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" type="number" value={markingSettings?.[exam.key]?.mcq?.wrong ?? -1} onChange={(event) => updateMarkingRule(exam.key, "mcq", "wrong", event.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-[7px] text-slate-400 block">Unans.</label>
+                    <input className="w-full px-1 py-0.5 text-[10px] bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" type="number" value={markingSettings?.[exam.key]?.mcq?.unanswered ?? 0} onChange={(event) => updateMarkingRule(exam.key, "mcq", "unanswered", event.target.value)} />
                   </div>
                 </div>
-              ))}
-            </div>
+                <div className="text-[8px] font-medium text-slate-400 uppercase tracking-wider mt-1 mb-0.5">Numerical</div>
+                <div className="grid grid-cols-3 gap-1">
+                  <div>
+                    <label className="text-[7px] text-slate-400 block">+ve</label>
+                    <input className="w-full px-1 py-0.5 text-[10px] bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" type="number" value={markingSettings?.[exam.key]?.numerical?.correct ?? 4} onChange={(event) => updateMarkingRule(exam.key, "numerical", "correct", event.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-[7px] text-slate-400 block">-ve</label>
+                    <input className="w-full px-1 py-0.5 text-[10px] bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" type="number" value={markingSettings?.[exam.key]?.numerical?.wrong ?? 0} onChange={(event) => updateMarkingRule(exam.key, "numerical", "wrong", event.target.value)} />
+                  </div>
+                  <div>
+                    <label className="text-[7px] text-slate-400 block">Unans.</label>
+                    <input className="w-full px-1 py-0.5 text-[10px] bg-white border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" type="number" value={markingSettings?.[exam.key]?.numerical?.unanswered ?? 0} onChange={(event) => updateMarkingRule(exam.key, "numerical", "unanswered", event.target.value)} />
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <SearchBar value={search} onChange={setSearch} placeholder="Search mock tests by title or description..." />
-          <div className="flex flex-wrap items-end gap-3">
-            <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-              Created Date
-              <input
-                className={ui.input}
-                type="date"
-                value={filters.createdDate}
-                onChange={(event) => setFilters((current) => ({ ...current, createdDate: event.target.value }))}
+
+        {/* Search and Filters */}
+        <div className="bg-white rounded-lg border border-slate-200/60 p-2.5 shadow-sm">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex-1 min-w-0">
+              <SearchBar
+                value={search}
+                onChange={setSearch}
+                placeholder="Search mock tests by title or description..."
               />
-            </label>
-            <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-              Status
-              <select className={ui.input} value={filters.active} onChange={(event) => setFilters((current) => ({ ...current, active: event.target.value }))}>
-                <option value="">All Mocks</option>
-                <option value="true">Active Mocks</option>
-                <option value="false">Inactive Mocks</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-              Exam
-              <select className={ui.input} value={filters.examType} onChange={(event) => setFilters((current) => ({ ...current, examType: event.target.value }))}>
-                <option value="">All Exams</option>
-                <option value="NEET">NEET only</option>
-                <option value="JEE">JEE only</option>
-              </select>
-            </label>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <div className="flex items-center gap-0.5">
+                <span className="text-[7px] font-medium text-slate-400 uppercase tracking-wider">Created:</span>
+                <input
+                  className="px-1.5 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all w-28"
+                  type="date"
+                  value={filters.createdDate}
+                  onChange={(event) => setFilters((current) => ({ ...current, createdDate: event.target.value }))}
+                />
+              </div>
+              <div className="flex items-center gap-0.5">
+                <span className="text-[7px] font-medium text-slate-400 uppercase tracking-wider">Status:</span>
+                <select
+                  className="px-1.5 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  value={filters.active}
+                  onChange={(event) => setFilters((current) => ({ ...current, active: event.target.value }))}
+                >
+                  <option value="">All</option>
+                  <option value="true">Active</option>
+                  <option value="false">Inactive</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-0.5">
+                <span className="text-[7px] font-medium text-slate-400 uppercase tracking-wider">Exam:</span>
+                <select
+                  className="px-1.5 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all"
+                  value={filters.examType}
+                  onChange={(event) => setFilters((current) => ({ ...current, examType: event.target.value }))}
+                >
+                  <option value="">All</option>
+                  <option value="NEET">NEET</option>
+                  <option value="JEE">JEE</option>
+                </select>
+              </div>
+              <button
+                className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-[8px] font-medium rounded transition-colors"
+                onClick={() => loadItems({ ...query, page: 1 })}
+              >
+                <RefreshIcon size={9} />
+                Refresh
+              </button>
+            </div>
           </div>
-          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => loadItems({ ...query, page: 1 })}>
-            <RefreshIcon size={16} />
-            Refresh
-          </button>
         </div>
       </div>
 
       {loading ? <LoadingSpinner label="Loading mock tests..." /> : null}
       {!loading && !items.length ? <EmptyState title="No mock tests found" description="Create your first full-length mock test to publish it in the learner app." /> : null}
       {!loading && items.length ? (
-        <>
-          <div className={ui.tableWrap}>
-            <div className={ui.tableScroll}>
-              <table className={ui.table}>
-                <thead>
-                  <tr>
-                    <th className={ui.tableHead}>Title</th>
-                    <th className={ui.tableHead}>Exam</th>
-                    <th className={ui.tableHead}>Score</th>
-                    <th className={ui.tableHead}>Duration</th>
-                    <th className={ui.tableHead}>Schedule</th>
-                    <th className={ui.tableHead}>Access Monitor</th>
-                    <th className={ui.tableHead}>Status</th>
-                    <th className={ui.tableHead}>Actions</th>
+        <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full divide-y divide-slate-100">
+              <thead className="bg-slate-50/50">
+                <tr>
+                  <th className="px-2.5 py-1.5 text-left">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Title</span>
+                  </th>
+                  <th className="px-2.5 py-1.5 text-left">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Exam</span>
+                  </th>
+                  <th className="px-2.5 py-1.5 text-left">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Score</span>
+                  </th>
+                  <th className="px-2.5 py-1.5 text-left">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Duration</span>
+                  </th>
+                  <th className="px-2.5 py-1.5 text-left">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Schedule</span>
+                  </th>
+                  <th className="px-2.5 py-1.5 text-left">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Access</span>
+                  </th>
+                  <th className="px-2.5 py-1.5 text-left">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Status</span>
+                  </th>
+                  <th className="px-2.5 py-1.5 text-right">
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {items.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                    {/* Title Column */}
+                    <td className="px-2.5 py-2">
+                      <div className="text-xs font-semibold text-slate-900">{item.title}</div>
+                      <div className="text-[10px] text-slate-500 truncate max-w-[200px]">{item.description || "No description"}</div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        <span className="inline-flex px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[8px] font-medium text-slate-600">
+                          {item.patternPreset || "CUSTOM"}
+                        </span>
+                        <span className="inline-flex px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded text-[8px] font-medium text-slate-600">
+                          {item.totalQuestions} Qs
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Exam Column */}
+                    <td className="px-2.5 py-2">
+                      <span className="inline-flex px-1.5 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[9px] font-medium">
+                        {item.examType}
+                      </span>
+                    </td>
+
+                    {/* Score Column */}
+                    <td className="px-2.5 py-2">
+                      <div className="text-xs font-semibold text-slate-900">
+                        {item.maxScore || item.totalQuestions * item.marksPerQuestion}
+                      </div>
+                      <div className="text-[9px] text-slate-500">+{item.marksPerQuestion} / -{item.negativeMarks}</div>
+                      <div className="text-[8px] text-slate-400">v{item.markingSchemeVersion || "1"}</div>
+                    </td>
+
+                    {/* Duration Column */}
+                    <td className="px-2.5 py-2">
+                      <div className="flex items-center gap-1">
+                        <Clock size={12} className="text-slate-400" />
+                        <span className="text-xs text-slate-700">{item.durationMinutes} min</span>
+                      </div>
+                    </td>
+
+                    {/* Schedule Column */}
+                    <td className="px-2.5 py-2">
+                      <span className="text-[10px] text-slate-600">{formatAvailability(item)}</span>
+                    </td>
+
+                    {/* Access Monitor Column */}
+                    <td className="px-2.5 py-2">
+                      <div className="space-y-0.5 text-[10px] text-slate-600">
+                        <div className="flex items-center gap-1">
+                          <Users size={10} className="text-slate-400" />
+                          <span><span className="font-semibold text-slate-900">{item.completedLearnerCount || 0}</span> completed</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Award size={10} className="text-amber-500" />
+                          <span><span className="font-semibold text-amber-600">{item.freeConvertedLearnerCount || 0}</span> converted</span>
+                        </div>
+                        {item.lastCompletedAt && (
+                          <div className="text-[8px] text-slate-400">
+                            <Calendar size={8} className="inline mr-0.5" />
+                            {new Date(item.lastCompletedAt).toLocaleDateString()}
+                          </div>
+                        )}
+                      </div>
+                    </td>
+
+                    {/* Status Column */}
+                    <td className="px-2.5 py-2">
+                      <div className="flex flex-col gap-0.5">
+                        {/* Active/Draft Status */}
+                        <span className={cn(
+                          "inline-flex px-1.5 py-0.5 text-[8px] font-medium rounded",
+                          item.isActive ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+                        )}>
+                          {item.isActive ? "Active" : "Draft"}
+                        </span>
+
+                        {/* Premium/Free Status */}
+                        <span className={cn(
+                          "inline-flex px-1.5 py-0.5 text-[8px] font-medium rounded",
+                          item.isPremiumOnly ? "bg-amber-100 text-amber-700" : "bg-emerald-50 text-emerald-700"
+                        )}>
+                          {item.isPremiumOnly ? "Premium" : "Free"}
+                        </span>
+
+                        {/* Generation Source */}
+                        <span className={cn(
+                          "inline-flex px-1.5 py-0.5 text-[8px] font-medium rounded",
+                          item.generationSource === "auto" ? "bg-purple-50 text-purple-700" : "bg-slate-50 text-slate-600"
+                        )}>
+                          {item.generationSource === "auto" ? "Auto" : "Manual"}
+                        </span>
+
+                        {/* Free once, then premium badge */}
+                        <span className="inline-flex px-1.5 py-0.5 bg-blue-50 border border-blue-100 rounded text-[7px] font-medium text-blue-700">
+                          Free once, then premium
+                        </span>
+                      </div>
+                    </td>
+
+                    {/* Actions Column */}
+                    <td className="px-2.5 py-2 text-right">
+                      <div className="flex flex-wrap items-center justify-end gap-0.5">
+                        <button
+                          className="p-0.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                          onClick={() => void openEdit(item)}
+                          title="Edit"
+                        >
+                          <EditIcon size={12} />
+                        </button>
+                        <button
+                          className="p-0.5 text-slate-600 hover:bg-slate-50 rounded transition-colors"
+                          onClick={() => void handleDownload(item)}
+                          title="Download"
+                        >
+                          <Download size={12} />
+                        </button>
+                        {item.generationSource === "auto" && (
+                          <button
+                            className="p-0.5 text-amber-600 hover:bg-amber-50 rounded transition-colors disabled:opacity-50"
+                            onClick={() => void handleRegenerate(item)}
+                            disabled={Boolean(rowRegenerating[String(item.id)])}
+                            title="Regenerate"
+                          >
+                            <RotateCw size={12} className={rowRegenerating[String(item.id)] ? "animate-spin" : ""} />
+                          </button>
+                        )}
+                        <button
+                          className="p-0.5 text-slate-600 hover:bg-slate-50 rounded transition-colors"
+                          onClick={() => void handleOpenGenerationHistory(item)}
+                          title="History"
+                        >
+                          {/* <History size={12} /> */}
+                        </button>
+                        <button
+                          className="p-0.5 text-rose-600 hover:bg-rose-50 rounded transition-colors"
+                          onClick={() => setDeleteItem(item)}
+                          title="Delete"
+                        >
+                          <TrashIcon size={12} />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {items.map((item) => (
-                    <tr key={item.id}>
-                      <td className={ui.tableCell}>
-                        <div className="font-bold text-slate-900">{item.title}</div>
-                        <div className="text-sm text-slate-500">{item.description || "No description"}</div>
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-500">
-                          <span className={ui.pill}>{item.patternPreset || "CUSTOM"}</span>
-                          <span>{item.totalQuestions} questions</span>
-                        </div>
-                      </td>
-                      <td className={ui.tableCell}>{item.examType}</td>
-                      <td className={ui.tableCell}>
-                        <div className="font-semibold text-slate-900">{item.maxScore || item.totalQuestions * item.marksPerQuestion}</div>
-                        <div className="text-xs text-slate-500">+{item.marksPerQuestion} / -{item.negativeMarks}</div>
-                        <div className="text-xs text-slate-500">Scheme: {item.markingSchemeVersion || "v1"}</div>
-                      </td>
-                      <td className={ui.tableCell}>{item.durationMinutes} min</td>
-                      <td className={ui.tableCell}>{formatAvailability(item)}</td>
-                      <td className={ui.tableCell}>
-                        <div className="space-y-1 text-xs text-slate-600">
-                          <div><span className="font-bold text-slate-900">{item.completedLearnerCount || 0}</span> learners completed</div>
-                          <div><span className="font-bold text-amber-700">{item.freeConvertedLearnerCount || 0}</span> free learners converted</div>
-                          <div><span className="font-bold text-slate-900">{item.completedAttemptCount || 0}</span> completed attempts</div>
-                          {item.lastCompletedAt ? <div>Last: {new Date(item.lastCompletedAt).toLocaleString()}</div> : null}
-                        </div>
-                      </td>
-                      <td className={ui.tableCell}>
-                        <div className="flex flex-col gap-2">
-                          <span className={ui.pill}>{item.isActive ? "Active" : "Draft"}</span>
-                          <span className="inline-flex items-center rounded-sm border border-blue-200 bg-blue-50 px-2 py-1 text-xs font-black uppercase tracking-wider text-blue-700">
-                            Free once, then premium
-                          </span>
-                          <span className={item.isPremiumOnly ? "inline-flex items-center rounded-sm border border-amber-200 bg-amber-100 px-2 py-1 text-xs font-black uppercase tracking-wider text-amber-700" : "inline-flex items-center rounded-sm border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-black uppercase tracking-wider text-emerald-700"}>
-                            {item.isPremiumOnly ? "Gold Crown Premium" : "Free Mock Test"}
-                          </span>
-                          <span className={ui.pill}>{item.generationSource === "auto" ? "Auto" : "Manual"}</span>
-                        </div>
-                      </td>
-                      <td className={ui.tableCell}>
-                        <div className="flex flex-wrap items-center gap-3">
-                          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => void openEdit(item)}>
-                            <EditIcon size={16} />
-                            Edit
-                          </button>
-                          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => void handleDownload(item)}>
-                            Download
-                          </button>
-                          {item.generationSource === "auto" ? (
-                            <button
-                              className={cn(ui.buttonBase, ui.buttonSecondary)}
-                              onClick={() => void handleRegenerate(item)}
-                              disabled={Boolean(rowRegenerating[String(item.id)])}
-                            >
-                              {rowRegenerating[String(item.id)] ? "Regenerating..." : "Regenerate"}
-                            </button>
-                          ) : null}
-                          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => void handleOpenGenerationHistory(item)}>
-                            History
-                          </button>
-                          <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteItem(item)}>
-                            <TrashIcon size={16} />
-                            Delete
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Footer with record count */}
+          <div className="border-t border-slate-100 px-3 py-1.5 bg-slate-50/30">
+            <div className="flex items-center justify-between">
+              <span className="text-[8px] text-slate-400">
+                {items.length} record{items.length !== 1 ? 's' : ''}
+              </span>
+              <Pagination meta={meta} onChange={(page) => setQuery((current) => ({ ...current, page }))} />
             </div>
           </div>
-          <Pagination meta={meta} onChange={(page) => setQuery((current) => ({ ...current, page }))} />
-        </>
+        </div>
       ) : null}
 
       {showForm ? (
@@ -1453,7 +1778,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
             </label>
             <label className={ui.field}>
               <span>Pattern Preset</span>
-                <select
+              <select
                 className={ui.input}
                 value={formState.patternPreset}
                 onChange={(event) => setFormState((current) => applyPresetToForm(event.target.value, current, markingSettings))}

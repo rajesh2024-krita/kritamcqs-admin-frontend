@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Tag } from "lucide-react";
+import { Tag, Image, Eye, Edit3, Save, RefreshCw, Smartphone, LayoutDashboard, Calendar, FileText, User, CheckCircle, XCircle, ArrowRight } from "lucide-react";
 import { dynamicCtaCardService } from "../api/dynamicCtaCardService";
 import { Field } from "../components/forms/Field";
 import { ToggleSwitch } from "../components/forms/ToggleSwitch";
@@ -7,10 +7,10 @@ import { useToast } from "../context/ToastContext";
 import { cn, ui } from "../ui";
 
 const screens = [
-  { key: "dashboard", label: "Dashboard Card", hint: "Appears on the app Dashboard." },
-  { key: "daily-test", label: "Daily Test Card", hint: "Appears on the Daily Test screen." },
-  { key: "daily-test-result", label: "Result Page Card", hint: "Appears on the Daily Test Result screen." },
-  { key: "profile", label: "Profile Card", hint: "Appears on the Profile screen." },
+  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, hint: "Appears on the app Dashboard." },
+  { key: "daily-test", label: "Daily Test", icon: Calendar, hint: "Appears on the Daily Test screen." },
+  { key: "daily-test-result", label: "Result Page", icon: FileText, hint: "Appears on the Daily Test Result screen." },
+  { key: "profile", label: "Profile", icon: User, hint: "Appears on the Profile screen." },
 ];
 
 const defaults = {
@@ -72,91 +72,188 @@ export function DynamicCtaCardsPage() {
     }
   }
 
+  // Compact input classes
+  const compactInput = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all";
+  const compactTextarea = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-y min-h-[50px]";
+
   return (
-    <div className="flex flex-col gap-6">
-      <section className={ui.panel}>
-        <div className={ui.sectionHead}>
-          <div>
-            <div className={ui.eyebrow}>App CTA Cards</div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900">Free User CTA Cards</h1>
-            <p className={ui.muted}>Manage the reusable Dashboard-style CTA card shown to free users in the app.</p>
-          </div>
-          {loading ? <span className="text-sm font-semibold text-slate-500">Loading...</span> : null}
-        </div>
-      </section>
-
-      <section className={ui.panel}>
-        <div className="grid gap-3 md:grid-cols-4">
-          {screens.map((screen) => (
-            <button
-              key={screen.key}
-              type="button"
-              onClick={() => setActiveScreen(screen.key)}
-              className={cn(
-                "rounded-xl border px-4 py-3 text-left transition",
-                activeScreen === screen.key ? "border-sky-300 bg-sky-50 text-sky-900" : "border-slate-200 bg-white text-slate-700 hover:border-sky-200",
-              )}
-            >
-              <div className="text-sm font-black">{screen.label}</div>
-              <div className="mt-1 text-xs text-slate-500">{screen.hint}</div>
-            </button>
-          ))}
-        </div>
-      </section>
-
-      <section className={ui.panel}>
-        <form onSubmit={save} className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <div className="lg:col-span-2">
-            <div className={ui.eyebrow}>{activeMeta.label}</div>
-            <h2 className="text-xl font-black text-slate-900">Card Content</h2>
-            <p className="mt-1 text-sm text-slate-500">This configuration is independent and will not change the other screen cards.</p>
-          </div>
-
-          <Field label="Enable Card">
-            <ToggleSwitch checked={form.enabled !== false} onChange={(value) => patch({ enabled: value })} label={form.enabled !== false ? "Enabled" : "Disabled"} />
-          </Field>
-          <Field label="Eyebrow">
-            <input className={ui.input} value={form.eyebrow} onChange={(event) => patch({ eyebrow: event.target.value })} placeholder="NEET & JEE Unlock" />
-          </Field>
-          <Field label="Card Title">
-            <input className={ui.input} value={form.title} onChange={(event) => patch({ title: event.target.value })} placeholder="Go Premium" />
-          </Field>
-          <Field label="CTA Button Text">
-            <input className={ui.input} value={form.ctaText} onChange={(event) => patch({ ctaText: event.target.value })} placeholder="View Plans" />
-          </Field>
-          <Field label="CTA Action / Link">
-            <input className={ui.input} value={form.ctaLink} onChange={(event) => patch({ ctaLink: event.target.value })} placeholder="/subscription" />
-          </Field>
-          <Field label="Image / Icon URL">
-            <input className={ui.input} value={form.imageUrl} onChange={(event) => patch({ imageUrl: event.target.value })} placeholder="/uploads/cta.png" />
-          </Field>
-          <Field label="Description" className="lg:col-span-2">
-            <textarea className={ui.textarea} value={form.description} onChange={(event) => patch({ description: event.target.value })} placeholder="Unlock unlimited questions, weak area analysis, and smart revision." />
-          </Field>
-
-          <div className="lg:col-span-2">
-            <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={saving}>{saving ? "Saving..." : "Save Card"}</button>
-          </div>
-        </form>
-      </section>
-
-      <section className={ui.panel}>
-        <div className="mb-4">
-          <div className={ui.eyebrow}>Preview</div>
-          <h2 className="text-xl font-black text-slate-900">Current Card Style</h2>
-        </div>
-        <div className="max-w-xl overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-blue-950 to-blue-700 p-5 text-white shadow-xl">
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.2em] text-blue-100">{form.eyebrow || defaults.eyebrow}</p>
-              <h2 className="mt-2 text-2xl font-black">{form.title || defaults.title}</h2>
-              <p className="mt-2 text-sm leading-6 text-blue-100">{form.description || defaults.description}</p>
-              <div className="mt-4 inline-flex rounded-full bg-white px-4 py-2 text-xs font-black text-blue-950">{form.ctaText || defaults.ctaText}</div>
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="bg-white rounded-lg border border-slate-200/60 px-4 py-2.5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg shadow-indigo-500/25">
+              <Tag size={14} className="text-white" />
             </div>
-            {form.imageUrl ? <img src={form.imageUrl} alt="" className="h-16 w-16 rounded-2xl object-cover" /> : <div className="rounded-2xl bg-white/15 p-3"><Tag className="h-6 w-6 text-yellow-300" /></div>}
+            <div>
+              <h1 className="text-sm font-semibold text-slate-900">App CTA Cards</h1>
+              <p className="text-xs text-slate-500">Manage free user CTA cards across the app</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-[9px] font-medium text-indigo-700">
+              {Object.keys(cards).length} cards
+            </span>
+            <button type="button" className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[9px] font-medium text-slate-700 rounded transition-colors" onClick={loadCards} disabled={loading}>
+              <RefreshCw size={10} className={loading ? "animate-spin" : ""} /> {loading ? "..." : "Refresh"}
+            </button>
           </div>
         </div>
-      </section>
+      </div>
+
+      {/* Screen Tabs */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-2 shadow-sm">
+        <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
+          {screens.map((screen) => {
+            const Icon = screen.icon;
+            const isActive = activeScreen === screen.key;
+            const isEnabled = cards[screen.key]?.enabled !== false;
+            return (
+              <button
+                key={screen.key}
+                type="button"
+                onClick={() => setActiveScreen(screen.key)}
+                className={cn(
+                  "relative flex flex-col items-center gap-1 px-2 py-1.5 rounded-lg transition-all text-center",
+                  isActive
+                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-sm shadow-indigo-500/25"
+                    : "bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200"
+                )}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Icon size={12} />
+                  <span className="text-[9px] font-medium">{screen.label}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  {isEnabled ? (
+                    <CheckCircle size={8} className={isActive ? "text-white/70" : "text-emerald-500"} />
+                  ) : (
+                    <XCircle size={8} className={isActive ? "text-white/70" : "text-slate-400"} />
+                  )}
+                  <span className="text-[6px] font-medium uppercase tracking-wider opacity-70">
+                    {isEnabled ? "Active" : "Inactive"}
+                  </span>
+                </div>
+                {isActive && (
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-4 h-0.5 bg-white rounded-full" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[8px] text-slate-400 text-center mt-1.5">{activeMeta.hint}</p>
+      </div>
+
+      {/* Form Section */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <Edit3 size={14} className="text-indigo-600" />
+          <h2 className="text-xs font-semibold text-slate-900">{activeMeta.label} Card</h2>
+          <span className="text-[8px] text-slate-400">Independent per screen</span>
+        </div>
+        <form onSubmit={save} className="space-y-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Enable Card</label>
+              <div className="flex items-center gap-1.5 bg-slate-50 rounded-lg border border-slate-200/50 px-3 py-0.5">
+                <ToggleSwitch checked={form.enabled !== false} onChange={(value) => patch({ enabled: value })} label="" size="sm" />
+                <span className="text-[8px] font-medium text-slate-700">{form.enabled !== false ? "Enabled" : "Disabled"}</span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Eyebrow</label>
+              <input className={compactInput} value={form.eyebrow} onChange={(event) => patch({ eyebrow: event.target.value })} placeholder="NEET & JEE Unlock" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Card Title</label>
+              <input className={compactInput} value={form.title} onChange={(event) => patch({ title: event.target.value })} placeholder="Go Premium" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">CTA Button Text</label>
+              <input className={compactInput} value={form.ctaText} onChange={(event) => patch({ ctaText: event.target.value })} placeholder="View Plans" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">CTA Action / Link</label>
+              <input className={compactInput} value={form.ctaLink} onChange={(event) => patch({ ctaLink: event.target.value })} placeholder="/subscription" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Image / Icon URL</label>
+              <input className={compactInput} value={form.imageUrl} onChange={(event) => patch({ imageUrl: event.target.value })} placeholder="/uploads/cta.png" />
+            </div>
+            <div className="flex flex-col gap-0.5 sm:col-span-2">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Description</label>
+              <textarea className={compactTextarea} rows={2} value={form.description} onChange={(event) => patch({ description: event.target.value })} placeholder="Unlock unlimited questions, weak area analysis, and smart revision." />
+            </div>
+          </div>
+          <button className={cn(
+            "inline-flex items-center gap-1 px-3 py-0.5 text-[9px] font-medium rounded-lg transition-all",
+            "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-sm shadow-indigo-500/25",
+            saving && "opacity-50 cursor-not-allowed"
+          )} disabled={saving} type="submit">
+            <Save size={10} /> {saving ? "Saving..." : "Save Card"}
+          </button>
+        </form>
+      </div>
+
+      {/* Preview Section */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+        <div className="flex items-center gap-2 mb-3">
+          <Eye size={14} className="text-indigo-600" />
+          <h2 className="text-xs font-semibold text-slate-900">Preview</h2>
+          <span className="text-[8px] text-slate-400">Current card style</span>
+        </div>
+        <div className="max-w-md mx-auto">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-800 p-4 shadow-xl">
+            <div className="flex items-start gap-3">
+              {/* Left Content */}
+              <div className="flex-1 min-w-0">
+                <p className="text-[8px] font-bold uppercase tracking-[0.15em] text-blue-300">
+                  {form.eyebrow || defaults.eyebrow}
+                </p>
+                <h2 className="mt-1.5 text-base font-bold text-white">
+                  {form.title || defaults.title}
+                </h2>
+                <p className="mt-1 text-[9px] leading-relaxed text-blue-100 line-clamp-2">
+                  {form.description || defaults.description}
+                </p>
+                <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1 text-[9px] font-bold text-indigo-900 shadow-lg">
+                  {form.ctaText || defaults.ctaText}
+                  <ArrowRight size={10} />
+                </div>
+              </div>
+
+              {/* Right Image/Icon */}
+              <div className="flex-shrink-0">
+                {form.imageUrl ? (
+                  <img src={form.imageUrl} alt="" className="w-14 h-14 rounded-xl object-cover border-2 border-white/20 shadow-lg" />
+                ) : (
+                  <div className="w-14 h-14 rounded-xl bg-white/10 backdrop-blur-sm flex items-center justify-center border border-white/10">
+                    <Tag className="h-6 w-6 text-yellow-300" />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Status Badge */}
+            <div className="absolute top-3 right-3">
+              <span className={cn(
+                "inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[6px] font-bold uppercase tracking-wider",
+                form.enabled !== false ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/20" : "bg-slate-500/20 text-slate-400 border border-slate-500/20"
+              )}>
+                {form.enabled !== false ? <CheckCircle size={8} /> : <XCircle size={8} />}
+                {form.enabled !== false ? "Active" : "Disabled"}
+              </span>
+            </div>
+
+            {/* Decorative Elements */}
+            <div className="absolute -top-10 -right-10 w-20 h-20 bg-indigo-500/20 rounded-full blur-2xl" />
+            <div className="absolute -bottom-10 -left-10 w-20 h-20 bg-purple-500/20 rounded-full blur-2xl" />
+          </div>
+        </div>
+        <p className="text-[7px] text-slate-400 text-center mt-1.5">
+          {activeMeta.label} preview • Card {form.enabled !== false ? "visible" : "hidden"} to free users
+        </p>
+      </div>
     </div>
   );
 }

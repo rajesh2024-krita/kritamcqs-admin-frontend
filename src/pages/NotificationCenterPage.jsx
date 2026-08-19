@@ -3,6 +3,47 @@ import { notificationService } from "../api/notificationService";
 import { emailTemplateService } from "../api/emailTemplateService";
 import { ctaConfigService } from "../api/ctaConfigService";
 import { cn, ui } from "../ui";
+import {
+  Bell,
+  Send,
+  FileText,
+  Calendar,
+  Clock,
+  BarChart3,
+  Settings,
+  Users,
+  Target,
+  Mail,
+  MessageSquare,
+  Zap,
+  RefreshCw,
+  Plus,
+  Edit,
+  Trash2,
+  Eye,
+  EyeOff,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Play,
+  Pause,
+  StopCircle,
+  TrendingUp,
+  Award,
+  Crown,
+  User,
+  Smartphone,
+  Link,
+  Image,
+  Type,
+  Layout,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Save,
+  Filter,
+  Search
+} from "lucide-react";
 
 const targetOptions = [
   { value: "all", label: "All Users" },
@@ -30,11 +71,11 @@ const deepLinks = ["/daily-test", "/mock-tests", "/revision", "/weak-areas", "/s
 const deliveryOptions = [
   { value: "notification", label: "Push Notification" },
   { value: "email", label: "Email Only" },
-  { value: "both", label: "Push Notification + Email" },
+  { value: "both", label: "Push + Email" },
 ];
 const automationChannelOptions = [
-  { value: "in_app", label: "In-App Notification" },
-  { value: "push", label: "Push Notification" },
+  { value: "in_app", label: "In-App" },
+  { value: "push", label: "Push" },
   { value: "email", label: "Email" },
 ];
 const weekDayOptions = [
@@ -153,10 +194,10 @@ function deliverySummaryMessage(response, fallback = "Notification request compl
   const email = data.emailDelivery || {};
   const parts = [];
   if (Number(push.sentCount || 0) || Number(push.successCount || 0) || Number(push.failedCount || 0) || Number(push.noTokenCount || 0)) {
-    parts.push(`Notification delivered: ${Number(push.successCount || 0)}, failed: ${Number(push.failedCount || 0)}, no token: ${Number(push.noTokenCount || 0)}`);
+    parts.push(`Push: ${Number(push.successCount || 0)} sent, ${Number(push.failedCount || 0)} failed`);
   }
   if (Number(email.emailSentCount || 0) || Number(email.emailFailedCount || 0) || Number(email.emailSkippedCount || 0)) {
-    parts.push(`Email sent: ${Number(email.emailSentCount || 0)}, failed: ${Number(email.emailFailedCount || 0)}, skipped: ${Number(email.emailSkippedCount || 0)}`);
+    parts.push(`Email: ${Number(email.emailSentCount || 0)} sent, ${Number(email.emailFailedCount || 0)} failed`);
   }
   return parts.length ? parts.join(" | ") : response?.message || fallback;
 }
@@ -219,10 +260,10 @@ function formatRemaining(value, now = new Date()) {
   const hours = Math.floor((totalMinutes % 1440) / 60);
   const minutes = totalMinutes % 60;
   const parts = [];
-  if (days) parts.push(`${days} day${days === 1 ? "" : "s"}`);
-  if (hours) parts.push(`${hours} hour${hours === 1 ? "" : "s"}`);
-  if (minutes || !parts.length) parts.push(`${minutes} minute${minutes === 1 ? "" : "s"}`);
-  return parts.slice(0, 3).join(" ");
+  if (days) parts.push(`${days}d`);
+  if (hours) parts.push(`${hours}h`);
+  if (minutes || !parts.length) parts.push(`${minutes}m`);
+  return parts.join(" ");
 }
 
 export function NotificationCenterPage() {
@@ -462,7 +503,7 @@ export function NotificationCenterPage() {
   async function sendNotification(event) {
     event.preventDefault();
     if (currentCampaignForm.targetType === "selected" && selectedUserList.length === 0) {
-      setMessage("Select at least one user before sending a test push.");
+      setMessage("Select at least one user before sending.");
       return;
     }
     const payload = {
@@ -655,7 +696,7 @@ export function NotificationCenterPage() {
   }
 
   async function deleteAutomation(item) {
-    const ok = window.confirm("Are you sure you want to delete this automated notification? This will stop all future scheduled notifications.");
+    const ok = window.confirm("Are you sure you want to delete this automated notification?");
     if (!ok) return;
     setBusy(true);
     try {
@@ -669,327 +710,799 @@ export function NotificationCenterPage() {
     }
   }
 
-  return (
-    <div className="flex flex-col gap-6">
-      <section className={ui.panel}>
-        <div className={ui.sectionHead}>
-          <div>
-            <div className={ui.eyebrow}>Push Notifications</div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900">Notification Center</h1>
-            <p className={ui.muted}>Manage templates, send push notifications, schedule campaigns, and review delivery history.</p>
-          </div>
-          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={loadAll} disabled={busy}>Refresh</button>
-        </div>
-        {message ? <div className="mt-4 rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-sm font-semibold text-sky-800">{message}</div> : null}
-      </section>
+  // Compact input classes
+  const compactInput = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all";
+  const compactSelect = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none";
+  const compactTextarea = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-y min-h-[40px]";
 
-      <section className={ui.panel}>
-        <div className="grid gap-3 md:grid-cols-7">
-          {[
-            ["send", "Send Notification"],
-            ["templates", "Templates"],
-            ["automated", "Scheduled / Automated Notifications"],
-            ["scheduled", "Scheduled"],
-            ["history", "History"],
-            ["test", "Testing"],
-            ["stats", "Stats"],
-          ].map(([key, label]) => (
-            <button key={key} type="button" className={cn(ui.buttonBase, tab === key ? ui.buttonPrimary : ui.buttonSecondary)} onClick={() => setTab(key)}>
+  return (
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="bg-white rounded-lg border border-slate-200/60 px-4 py-2.5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg shadow-indigo-500/25">
+              <Bell size={14} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-slate-900">Notification Center</h1>
+              <p className="text-xs text-slate-500">Manage templates, campaigns, and automated notifications</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[9px] font-medium text-slate-700 rounded transition-colors" onClick={loadAll} disabled={busy}>
+              <RefreshCw size={10} /> Refresh
+            </button>
+          </div>
+        </div>
+        {message && (
+          <div className="mt-2 rounded-lg border border-indigo-100 bg-indigo-50 px-3 py-1.5 text-[9px] font-medium text-indigo-700">
+            {message}
+          </div>
+        )}
+      </div>
+
+      {/* Tabs */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-1 shadow-sm flex flex-wrap gap-0.5">
+        {[
+          ["send", "Send", Send],
+          ["templates", "Templates", FileText],
+          ["automated", "Automated", Settings],
+          ["scheduled", "Scheduled", Calendar],
+          ["history", "History", Clock],
+          ["test", "Test", Zap],
+          ["stats", "Stats", BarChart3],
+        ].map(([key, label, Icon]) => {
+          const isActive = tab === key;
+          return (
+            <button
+              key={key}
+              type="button"
+              className={cn(
+                "inline-flex items-center gap-1 px-2.5 py-1 text-[9px] font-medium rounded-lg transition-all",
+                isActive
+                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-sm shadow-indigo-500/25"
+                  : "text-slate-600 hover:bg-slate-100"
+              )}
+              onClick={() => setTab(key)}
+            >
+              <Icon size={10} />
               {label}
             </button>
-          ))}
-        </div>
-      </section>
+          );
+        })}
+      </div>
 
-      {tab === "send" ? (
-        <>
-        <form className={ui.panel} onSubmit={sendNotification}>
-          <h2 className="mb-4 text-xl font-black text-slate-900">
-            {editingCampaignId ? "Edit Campaign" : "Create Campaign"}
-          </h2>
-          <div className="mb-4 grid gap-3 md:grid-cols-4">
+      {/* Send Tab */}
+      {tab === "send" && (
+        <form className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm space-y-3" onSubmit={sendNotification}>
+          <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <Send size={14} className="text-indigo-600" />
+            <h2 className="text-xs font-semibold text-slate-900">{editingCampaignId ? "Edit Campaign" : "Create Campaign"}</h2>
+          </div>
+
+          {/* Audience Cards */}
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
             {audiences.map((item) => (
-              <button key={item.value} type="button" className={cn("rounded-xl border px-4 py-3 text-left", currentCampaignForm.targetType === item.value ? "border-sky-300 bg-sky-50" : "border-slate-200 bg-slate-50")} onClick={() => setCurrentCampaignForm((current) => ({ ...current, targetType: item.value }))}>
-                <span className={ui.eyebrow}>{targetOptions.find((option) => option.value === item.value)?.label || item.value}</span>
-                <span className="mt-1 block text-2xl font-black text-slate-900">{item.count || 0}</span>
+              <button
+                key={item.value}
+                type="button"
+                className={cn(
+                  "rounded-lg border p-2 text-left transition-all",
+                  currentCampaignForm.targetType === item.value
+                    ? "border-indigo-300 bg-indigo-50 shadow-sm"
+                    : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                )}
+                onClick={() => setCurrentCampaignForm((current) => ({ ...current, targetType: item.value }))}
+              >
+                <div className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">
+                  {targetOptions.find((option) => option.value === item.value)?.label || item.value}
+                </div>
+                <div className="text-sm font-bold text-slate-900">{item.count || 0}</div>
               </button>
             ))}
           </div>
-          <div className="grid gap-4 lg:grid-cols-3">
-            <label className={ui.field}><span>Campaign Name</span><input className={ui.input} value={currentCampaignForm.campaignName} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, campaignName: event.target.value }))} placeholder="August premium announcement" /></label>
-            <label className={ui.field}><span>Delivery Channel</span><select className={ui.input} value={currentCampaignForm.deliveryType} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, deliveryType: event.target.value }))}>{deliveryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-            <label className={ui.field}><span>Use Template</span><select className={ui.input} value={currentCampaignForm.templateId} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, templateId: event.target.value }))}><option value="">Custom Notification</option>{templates.filter((item) => item.status !== false).map((item) => <option key={item.id || item._id} value={item.id || item._id}>{item.name}</option>)}</select></label>
-            <label className={ui.field}><span>Target Audience</span><select className={ui.input} value={currentCampaignForm.targetType} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, targetType: event.target.value }))}>{targetOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-            <label className={ui.field}><span>Category</span><select className={ui.input} value={currentCampaignForm.category} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, category: event.target.value }))}>{categoryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-            {shouldSendNotification ? <>
-              <label className={ui.field}><span>Notification Title</span><input className={ui.input} value={currentCampaignForm.title} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, title: event.target.value }))} required={shouldSendNotification} /></label>
-              <label className={cn(ui.field, "lg:col-span-3")}><span>Notification Message</span><textarea className={ui.textarea} value={currentCampaignForm.message} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, message: event.target.value }))} required={shouldSendNotification} /></label>
-              <label className={ui.field}><span>Managed CTA</span><select className={ui.input} value={currentCampaignForm.ctaConfigId} onChange={(event) => applyCtaConfig(event.target.value)}><option value="">Custom CTA / None</option>{ctaConfigs.map((item) => <option key={item.id || item._id} value={item.id || item._id}>{item.name} - {item.ctaText}</option>)}</select></label>
-              <label className={ui.field}><span>CTA Button Text</span><input className={ui.input} value={currentCampaignForm.ctaText} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, ctaText: event.target.value }))} placeholder="Open App" /></label>
-              <label className={ui.field}><span>CTA Action / Deep Link</span><input className={ui.input} list="notification-deep-links" value={currentCampaignForm.deepLink} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, deepLink: event.target.value }))} /><datalist id="notification-deep-links">{deepLinks.map((item) => <option key={item} value={item} />)}</datalist></label>
-              <label className={ui.field}><span>Target Screen</span><input className={ui.input} value={currentCampaignForm.targetScreen} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, targetScreen: event.target.value }))} placeholder="subscription" /></label>
-              <div className="flex items-end"><button type="button" className={cn(ui.buttonBase, ui.buttonSecondary, "w-full")} onClick={createCtaFromSendForm}>Save As New CTA</button></div>
-              <label className={ui.field}><span>Image URL</span><input className={ui.input} value={currentCampaignForm.image} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, image: event.target.value }))} /></label>
-            </> : null}
-            {shouldSendEmail ? <>
-              <label className={ui.field}><span>Email Template</span><select className={ui.input} value={currentCampaignForm.emailTemplateId} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, emailTemplateId: event.target.value }))} required={shouldSendEmail}><option value="">Select Email Template</option>{emailTemplates.map((item) => <option key={item.id || item.status?.templateId || item.key} value={item.id || item.status?.templateId || item.key}>{item.name}</option>)}</select></label>
-              <label className={cn(ui.field, "lg:col-span-2")}><span>Email Subject</span><input className={ui.input} value={currentCampaignForm.emailSubject} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, emailSubject: event.target.value }))} required={shouldSendEmail} /></label>
-              <label className={cn(ui.field, "lg:col-span-3")}><span>Email Body</span><textarea className={cn(ui.textarea, "min-h-56")} value={currentCampaignForm.emailBody} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, emailBody: event.target.value }))} required={shouldSendEmail} /></label>
-            </> : null}
-            <label className={ui.field}><span>Sound</span><select className={ui.input} value={currentCampaignForm.sound} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, sound: event.target.value }))}><option value="default">Default</option><option value="custom">Custom</option><option value="silent">Silent</option></select></label>
-            <label className={ui.field}><span>Priority</span><select className={ui.input} value={currentCampaignForm.priority} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, priority: event.target.value }))}><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select></label>
-            <label className={ui.field}><span>Action</span><select className={ui.input} value={currentCampaignForm.action} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, action: event.target.value }))}><option value="send">Send Immediately</option><option value="schedule">Schedule</option><option value="draft">Save Draft</option></select></label>
-            {currentCampaignForm.action === "schedule" ? <label className={ui.field}><span>Schedule Date</span><input className={ui.input} type="datetime-local" value={currentCampaignForm.scheduleDate} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, scheduleDate: event.target.value }))} required /></label> : null}
-            {currentCampaignForm.action === "schedule" ? (
-              <>
-                <label className={ui.field}><span>Recurring</span><select className={ui.input} value={currentCampaignForm.recurring ? currentCampaignForm.recurrence : "none"} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, recurring: event.target.value !== "none", recurrence: event.target.value }))}><option value="none">No Repeat</option><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option><option value="custom">Custom Interval</option></select></label>
-                {currentCampaignForm.recurring && currentCampaignForm.recurrence === "custom" ? <><label className={ui.field}><span>Interval</span><input className={ui.input} type="number" min="1" value={currentCampaignForm.recurrenceInterval} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, recurrenceInterval: event.target.value }))} /></label><label className={ui.field}><span>Interval Unit</span><select className={ui.input} value={currentCampaignForm.recurrenceUnit} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, recurrenceUnit: event.target.value }))}><option>Minutes</option><option>Hours</option><option>Days</option></select></label></> : null}
-              </>
-            ) : null}
-            {currentCampaignForm.targetType ? (
-              <div className="lg:col-span-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-                  <div className="space-y-3">
-                    <label className={ui.field}>
-                      <span>Search / Select Users</span>
-                      <input className={ui.input} placeholder="Search name, email, mobile, or user id" value={userSearch} onChange={(event) => setUserSearch(event.target.value)} />
-                    </label>
-                    <div className="max-h-72 overflow-y-auto rounded-lg border border-slate-200 bg-white">
-                      {userLoading ? <div className="p-4 text-sm font-semibold text-slate-500">Searching...</div> : null}
-                      {!userLoading && !userResults.length ? <div className="p-4 text-sm font-semibold text-slate-500">No users found.</div> : null}
-                      {userResults.map((user) => {
-                        const selected = selectedUserSet.has(user.id);
-                        return (
-                          <button
-                            key={user.id}
-                            type="button"
-                            className={cn("flex w-full items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 text-left transition last:border-b-0 hover:bg-sky-50", selected ? "bg-sky-50" : "bg-white")}
-                            onClick={() => addSelectedUser(user)}
-                            disabled={selected}
-                          >
-                            <span className="min-w-0">
-                              <span className="block truncate text-sm font-black text-slate-900">{user.name || user.email || user.mobile || user.id}</span>
-                              <span className="block truncate text-xs text-slate-500">{user.email || "No email"} | {user.mobile || "No mobile"}</span>
-                              <span className="mt-1 block text-xs font-bold uppercase tracking-[0.12em] text-slate-400">{user.examMode || "No mode"} | {user.subscriptionType}</span>
-                            </span>
-                            <span className={cn("shrink-0 rounded-full px-3 py-1 text-xs font-black", user.tokenCount > 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700")}>
-                              {user.tokenCount > 0 ? `${user.tokenCount} token` : "No token"}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex flex-wrap gap-2">
-                      <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={selectVisibleUsers} disabled={!userResults.length}>Select Visible</button>
-                      <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => setSelectedUserList([])} disabled={!selectedUserList.length}>Clear Selected</button>
-                    </div>
-                    <label className={ui.field}>
-                      <span>Selected Users</span>
-                      <textarea className={ui.textarea} placeholder="User IDs, emails, or mobiles separated by comma/new line" value={currentCampaignForm.selectedUsers} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, selectedUsers: event.target.value }))} />
-                    </label>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedUserList.map((value) => (
-                        <button key={value} type="button" className="rounded-full border border-sky-200 bg-white px-3 py-1 text-xs font-black text-sky-800 shadow-sm" onClick={() => removeSelectedUser(value)}>
-                          {value} x
-                        </button>
-                      ))}
-                    </div>
-                    <p className={ui.muted}>For selected campaigns, add user IDs, emails, or mobiles. Push requires a device token; email requires an email address.</p>
-                  </div>
+
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Campaign Name</label>
+              <input className={compactInput} value={currentCampaignForm.campaignName} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, campaignName: event.target.value }))} placeholder="August campaign" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Delivery</label>
+              <select className={compactSelect} value={currentCampaignForm.deliveryType} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, deliveryType: event.target.value }))}>
+                {deliveryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Template</label>
+              <select className={compactSelect} value={currentCampaignForm.templateId} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, templateId: event.target.value }))}>
+                <option value="">Custom</option>
+                {templates.filter((item) => item.status !== false).map((item) => <option key={item.id || item._id} value={item.id || item._id}>{item.name}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Audience</label>
+              <select className={compactSelect} value={currentCampaignForm.targetType} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, targetType: event.target.value }))}>
+                {targetOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Category</label>
+              <select className={compactSelect} value={currentCampaignForm.category} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, category: event.target.value }))}>
+                {categoryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Sound</label>
+              <select className={compactSelect} value={currentCampaignForm.sound} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, sound: event.target.value }))}>
+                <option value="default">Default</option><option value="custom">Custom</option><option value="silent">Silent</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Priority</label>
+              <select className={compactSelect} value={currentCampaignForm.priority} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, priority: event.target.value }))}>
+                <option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Action</label>
+              <select className={compactSelect} value={currentCampaignForm.action} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, action: event.target.value }))}>
+                <option value="send">Send Now</option><option value="schedule">Schedule</option><option value="draft">Save Draft</option>
+              </select>
+            </div>
+            {currentCampaignForm.action === "schedule" && (
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Schedule Date</label>
+                <input className={compactInput} type="datetime-local" value={currentCampaignForm.scheduleDate} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, scheduleDate: event.target.value }))} required />
+              </div>
+            )}
+          </div>
+
+          {/* Notification Content */}
+          {shouldSendNotification && (
+            <div className="pt-2 border-t border-slate-100">
+              <div className="text-[7px] font-medium text-slate-500 uppercase tracking-wider mb-1">Notification Content</div>
+              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Title</label>
+                  <input className={compactInput} value={currentCampaignForm.title} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, title: event.target.value }))} required={shouldSendNotification} />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Image URL</label>
+                  <input className={compactInput} value={currentCampaignForm.image} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, image: event.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-0.5 sm:col-span-2">
+                  <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Message</label>
+                  <textarea className={compactTextarea} rows={3} value={currentCampaignForm.message} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, message: event.target.value }))} required={shouldSendNotification} />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">CTA Text</label>
+                  <input className={compactInput} value={currentCampaignForm.ctaText} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, ctaText: event.target.value }))} placeholder="Learn More" />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Deep Link</label>
+                  <input className={compactInput} value={currentCampaignForm.deepLink} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, deepLink: event.target.value }))} placeholder="/dashboard" />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Managed CTA</label>
+                  <select className={compactSelect} value={currentCampaignForm.ctaConfigId} onChange={(event) => applyCtaConfig(event.target.value)}>
+                    <option value="">Custom</option>
+                    {ctaConfigs.map((item) => <option key={item.id || item._id} value={item.id || item._id}>{item.name}</option>)}
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <button type="button" className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[8px] font-medium text-slate-700 rounded transition-colors" onClick={createCtaFromSendForm}>
+                    <Plus size={9} /> Save as CTA
+                  </button>
                 </div>
               </div>
-            ) : null}
-          </div>
-          <div className="mt-5 grid gap-4 lg:grid-cols-2">
-            {shouldSendNotification ? <PreviewCard title="Notification Preview" heading={currentCampaignForm.title || "Notification title"} body={currentCampaignForm.message || "Notification message"} cta={currentCampaignForm.ctaText || currentCampaignForm.deepLink} /> : null}
-            {shouldSendEmail ? <div className="rounded-xl border border-slate-200 bg-slate-50 p-4"><div className={ui.eyebrow}>Email Preview</div><h3 className="text-base font-black text-slate-950">{currentCampaignForm.emailSubject || "Email subject"}</h3><div className="prose prose-sm mt-3 max-w-none text-slate-700" dangerouslySetInnerHTML={{ __html: currentCampaignForm.emailBody || "<p>Select an email template to preview.</p>" }} /></div> : null}
-          </div>
-          <div className="mt-5 flex justify-end">
-            <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy}>
-              {busy ? "Working..." : currentCampaignForm.action === "send" ? "Send Immediately" : currentCampaignForm.action === "schedule" ? "Schedule Campaign" : "Save Draft"}
-            </button>
-          </div>
-        </form>
-        </>
-      ) : null}
-
-      {tab === "templates" ? (
-        <section className={ui.panel}>
-          <form onSubmit={saveTemplate} className="mb-6 grid gap-4 lg:grid-cols-3">
-            <label className={ui.field}><span>Template Name</span><input className={ui.input} value={templateForm.name} onChange={(event) => setTemplateForm((current) => ({ ...current, name: event.target.value }))} required /></label>
-            <label className={ui.field}><span>Title</span><input className={ui.input} value={templateForm.title} onChange={(event) => setTemplateForm((current) => ({ ...current, title: event.target.value }))} required /></label>
-            <label className={ui.field}><span>Default Audience</span><select className={ui.input} value={templateForm.targetType} onChange={(event) => setTemplateForm((current) => ({ ...current, targetType: event.target.value }))}>{targetOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-            <label className={cn(ui.field, "lg:col-span-3")}><span>Message</span><textarea className={ui.textarea} value={templateForm.message} onChange={(event) => setTemplateForm((current) => ({ ...current, message: event.target.value }))} required /></label>
-            <label className={ui.field}><span>Image URL</span><input className={ui.input} value={templateForm.image} onChange={(event) => setTemplateForm((current) => ({ ...current, image: event.target.value }))} /></label>
-            <label className={ui.field}><span>Managed CTA</span><select className={ui.input} value={templateForm.ctaConfigId} onChange={(event) => applyCtaConfig(event.target.value, "template")}><option value="">Custom CTA / None</option>{ctaConfigs.map((item) => <option key={item.id || item._id} value={item.id || item._id}>{item.name} - {item.ctaText}</option>)}</select></label>
-            <label className={ui.field}><span>Deep Link</span><input className={ui.input} value={templateForm.deepLink} onChange={(event) => setTemplateForm((current) => ({ ...current, deepLink: event.target.value }))} /></label>
-            <label className={ui.field}><span>CTA Text</span><input className={ui.input} value={templateForm.ctaText} onChange={(event) => setTemplateForm((current) => ({ ...current, ctaText: event.target.value }))} /></label>
-            <label className={ui.field}><span>Category</span><select className={ui.input} value={templateForm.category} onChange={(event) => setTemplateForm((current) => ({ ...current, category: event.target.value }))}>{categoryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-            <div className="flex items-end gap-3 lg:col-span-3"><button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy}>{editingTemplateId ? "Update Template" : "Save Template"}</button>{editingTemplateId ? <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => { setEditingTemplateId(""); setTemplateForm(emptyTemplate); }}>Cancel</button> : null}</div>
-          </form>
-          <SimpleTable columns={["Name", "Title", "Audience", "Status", "Actions"]} rows={templates.map((item) => [
-            item.name,
-            item.title,
-            item.targetType,
-            item.status === false ? "Inactive" : "Active",
-            <div className="flex gap-2" key={item.id || item._id}><button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => { setEditingTemplateId(item.id || item._id); setTemplateForm({ ...emptyTemplate, ...item }); }}>Edit</button><button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={async () => { await notificationService.deleteTemplate(item.id || item._id); await loadAll(); }}>Delete</button></div>,
-          ])} />
-        </section>
-      ) : null}
-
-      {tab === "automated" ? (
-        <section className="flex flex-col gap-6">
-          <form className={ui.panel} onSubmit={saveAutomation}>
-            <div className={ui.sectionHead}>
-              <div>
-                <h2 className="text-xl font-black text-slate-900">{editingAutomationId ? "Edit Automated Notification" : "Create Automated Notification"}</h2>
-                <p className={ui.muted}>Timezone: {automationForm.timezone || automationTimezone}</p>
-              </div>
-              {editingAutomationId ? <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => { setEditingAutomationId(""); setAutomationForm({ ...emptyAutomation, timezone: automationTimezone }); }}>Cancel Edit</button> : null}
             </div>
+          )}
 
-            <div className="mt-5 grid gap-4 lg:grid-cols-3">
-              <label className={ui.field}><span>Notification Name</span><input className={ui.input} value={automationForm.campaignName} onChange={(event) => setAutomationForm((current) => ({ ...current, campaignName: event.target.value }))} required /></label>
-              <label className={ui.field}><span>Schedule Type</span><select className={ui.input} value={automationForm.scheduleType} onChange={(event) => setAutomationForm((current) => ({ ...current, scheduleType: event.target.value }))}><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></label>
-              <label className={ui.field}><span>Time</span><input className={ui.input} type="time" value={automationForm.scheduleTime} onChange={(event) => setAutomationForm((current) => ({ ...current, scheduleTime: event.target.value }))} required /></label>
+          {/* Email Content */}
+          {shouldSendEmail && (
+            <div className="pt-2 border-t border-slate-100">
+              <div className="text-[7px] font-medium text-slate-500 uppercase tracking-wider mb-1">Email Content</div>
+              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Email Template</label>
+                  <select className={compactSelect} value={currentCampaignForm.emailTemplateId} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, emailTemplateId: event.target.value }))}>
+                    <option value="">Custom</option>
+                    {emailTemplates.map((item) => <option key={item.id || item.status?.templateId || item.key} value={item.id || item.status?.templateId || item.key}>{item.name}</option>)}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Email Subject</label>
+                  <input className={compactInput} value={currentCampaignForm.emailSubject} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, emailSubject: event.target.value }))} required={shouldSendEmail} />
+                </div>
+                <div className="flex flex-col gap-0.5 sm:col-span-2">
+                  <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Email Body</label>
+                  <textarea className={compactTextarea} rows={4} value={currentCampaignForm.emailBody} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, emailBody: event.target.value }))} required={shouldSendEmail} />
+                </div>
+              </div>
+            </div>
+          )}
 
-              {automationForm.scheduleType === "weekly" ? (
-                <div className="lg:col-span-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <div className={ui.eyebrow}>Weekly Days</div>
-                  <div className="grid gap-2 md:grid-cols-4 lg:grid-cols-7">
-                    {weekDayOptions.map((day) => (
-                      <label key={day.value} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
-                        <input type="checkbox" className={ui.checkbox} checked={automationForm.weeklyDays.map(Number).includes(day.value)} onChange={() => toggleAutomationDay(day.value)} />
-                        {day.label}
-                      </label>
+          {/* Selected Users */}
+          {currentCampaignForm.targetType === "selected" && (
+            <div className="pt-2 border-t border-slate-100">
+              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Search Users</label>
+                  <input className={compactInput} placeholder="Search name, email, mobile..." value={userSearch} onChange={(event) => setUserSearch(event.target.value)} />
+                  <div className="max-h-48 overflow-y-auto rounded-lg border border-slate-200 bg-white">
+                    {userLoading && <div className="p-2 text-[8px] text-slate-500">Searching...</div>}
+                    {!userLoading && !userResults.length && <div className="p-2 text-[8px] text-slate-500">No users found</div>}
+                    {userResults.map((user) => {
+                      const selected = selectedUserSet.has(user.id);
+                      return (
+                        <button
+                          key={user.id}
+                          type="button"
+                          className={cn(
+                            "flex w-full items-center justify-between gap-2 border-b border-slate-100 px-2 py-1.5 text-left transition last:border-b-0",
+                            selected ? "bg-indigo-50" : "hover:bg-slate-50"
+                          )}
+                          onClick={() => addSelectedUser(user)}
+                          disabled={selected}
+                        >
+                          <span className="text-[8px] font-medium text-slate-900 truncate">{user.name || user.email || user.mobile}</span>
+                          <span className={cn(
+                            "px-1 py-0.5 rounded text-[6px] font-medium",
+                            user.tokenCount > 0 ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                          )}>
+                            {user.tokenCount > 0 ? `${user.tokenCount} token` : "No token"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="flex gap-1">
+                    <button type="button" className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-[7px] font-medium text-slate-700 rounded transition-colors" onClick={selectVisibleUsers}>Select Visible</button>
+                    <button type="button" className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-[7px] font-medium text-slate-700 rounded transition-colors" onClick={() => setSelectedUserList([])}>Clear</button>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Selected Users</label>
+                  <textarea className={compactTextarea} rows={4} value={currentCampaignForm.selectedUsers} onChange={(event) => setCurrentCampaignForm((current) => ({ ...current, selectedUsers: event.target.value }))} placeholder="IDs, emails, or mobiles" />
+                  <div className="flex flex-wrap gap-0.5">
+                    {selectedUserList.map((value) => (
+                      <button key={value} type="button" className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-indigo-50 border border-indigo-200 rounded text-[7px] font-medium text-indigo-700" onClick={() => removeSelectedUser(value)}>
+                        {value} <X size={8} className="inline" />
+                      </button>
                     ))}
                   </div>
                 </div>
-              ) : (
-                <label className={ui.field}><span>Day Of Month</span><input className={ui.input} type="number" min="1" max="31" value={automationForm.monthlyDay} onChange={(event) => setAutomationForm((current) => ({ ...current, monthlyDay: event.target.value }))} required /></label>
-              )}
+              </div>
+            </div>
+          )}
 
-              <div className="lg:col-span-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <div className={ui.eyebrow}>Delivery Type</div>
-                <div className="grid gap-2 md:grid-cols-3">
+          <div className="flex justify-end pt-1 border-t border-slate-100">
+            <button className={cn(
+              "inline-flex items-center gap-0.5 px-3 py-0.5 text-[8px] font-medium rounded-lg transition-all",
+              "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-sm shadow-indigo-500/25",
+              busy && "opacity-50 cursor-not-allowed"
+            )} disabled={busy} type="submit">
+              <Send size={9} /> {busy ? "Working..." : currentCampaignForm.action === "send" ? "Send Now" : currentCampaignForm.action === "schedule" ? "Schedule" : "Save Draft"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Templates Tab */}
+      {tab === "templates" && (
+        <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm space-y-3">
+          <form onSubmit={saveTemplate} className="space-y-2">
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+              <FileText size={14} className="text-indigo-600" />
+              <h2 className="text-xs font-semibold text-slate-900">{editingTemplateId ? "Edit Template" : "Create Template"}</h2>
+            </div>
+            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Name</label>
+                <input className={compactInput} value={templateForm.name} onChange={(event) => setTemplateForm((current) => ({ ...current, name: event.target.value }))} required />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Title</label>
+                <input className={compactInput} value={templateForm.title} onChange={(event) => setTemplateForm((current) => ({ ...current, title: event.target.value }))} required />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Audience</label>
+                <select className={compactSelect} value={templateForm.targetType} onChange={(event) => setTemplateForm((current) => ({ ...current, targetType: event.target.value }))}>
+                  {targetOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col gap-0.5 sm:col-span-3">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Message</label>
+                <textarea className={compactTextarea} rows={3} value={templateForm.message} onChange={(event) => setTemplateForm((current) => ({ ...current, message: event.target.value }))} required />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Image URL</label>
+                <input className={compactInput} value={templateForm.image} onChange={(event) => setTemplateForm((current) => ({ ...current, image: event.target.value }))} />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Deep Link</label>
+                <input className={compactInput} value={templateForm.deepLink} onChange={(event) => setTemplateForm((current) => ({ ...current, deepLink: event.target.value }))} />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">CTA Text</label>
+                <input className={compactInput} value={templateForm.ctaText} onChange={(event) => setTemplateForm((current) => ({ ...current, ctaText: event.target.value }))} />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Category</label>
+                <select className={compactSelect} value={templateForm.category} onChange={(event) => setTemplateForm((current) => ({ ...current, category: event.target.value }))}>
+                  {categoryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                </select>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Managed CTA</label>
+                <select className={compactSelect} value={templateForm.ctaConfigId} onChange={(event) => applyCtaConfig(event.target.value, "template")}>
+                  <option value="">Custom</option>
+                  {ctaConfigs.map((item) => <option key={item.id || item._id} value={item.id || item._id}>{item.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-1">
+              <button className={cn(
+                "inline-flex items-center gap-0.5 px-2.5 py-0.5 text-[8px] font-medium rounded-lg transition-all",
+                "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-sm shadow-indigo-500/25",
+                busy && "opacity-50 cursor-not-allowed"
+              )} disabled={busy} type="submit">
+                <Save size={9} /> {editingTemplateId ? "Update" : "Save"}
+              </button>
+              {editingTemplateId && (
+                <button type="button" className="px-2.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-[8px] font-medium text-slate-700 rounded-lg transition-colors" onClick={() => { setEditingTemplateId(""); setTemplateForm(emptyTemplate); }}>
+                  Cancel
+                </button>
+              )}
+            </div>
+          </form>
+
+          <div className="pt-2 border-t border-slate-100">
+            <div className="text-[7px] font-medium text-slate-500 uppercase tracking-wider mb-1">Saved Templates ({templates.length})</div>
+            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+              {templates.map((item) => (
+                <div key={item.id || item._id} className="bg-slate-50 rounded-lg border border-slate-200/50 p-2">
+                  <div className="flex items-start justify-between gap-1">
+                    <div className="min-w-0">
+                      <div className="text-[9px] font-semibold text-slate-900 truncate">{item.name}</div>
+                      <div className="text-[7px] text-slate-400">{item.title}</div>
+                    </div>
+                    <div className="flex gap-0.5">
+                      <button className="p-0.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors" onClick={() => { setEditingTemplateId(item.id || item._id); setTemplateForm({ ...emptyTemplate, ...item }); }}>
+                        <Edit size={10} />
+                      </button>
+                      <button className="p-0.5 text-rose-600 hover:bg-rose-50 rounded transition-colors" onClick={async () => { await notificationService.deleteTemplate(item.id || item._id); await loadAll(); }}>
+                        <Trash2 size={10} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-0.5 mt-1">
+                    <span className={cn(
+                      "px-1 py-0.5 rounded text-[6px] font-medium",
+                      item.status !== false ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
+                    )}>
+                      {item.status !== false ? "Active" : "Inactive"}
+                    </span>
+                    <span className="px-1 py-0.5 bg-indigo-50 text-indigo-600 rounded text-[6px] font-medium">{item.targetType}</span>
+                  </div>
+                </div>
+              ))}
+              {!templates.length && <div className="col-span-full text-[9px] text-slate-400 text-center py-4">No templates created yet</div>}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Automated Tab */}
+      {tab === "automated" && (
+        <div className="space-y-3">
+          <form className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm space-y-2" onSubmit={saveAutomation}>
+            <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+              <Settings size={14} className="text-indigo-600" />
+              <h2 className="text-xs font-semibold text-slate-900">{editingAutomationId ? "Edit Automation" : "Create Automation"}</h2>
+              {editingAutomationId && (
+                <button type="button" className="ml-auto px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[8px] font-medium text-slate-700 rounded transition-colors" onClick={() => { setEditingAutomationId(""); setAutomationForm({ ...emptyAutomation, timezone: automationTimezone }); }}>
+                  Cancel
+                </button>
+              )}
+            </div>
+            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Name</label>
+                <input className={compactInput} value={automationForm.campaignName} onChange={(event) => setAutomationForm((current) => ({ ...current, campaignName: event.target.value }))} required />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Schedule</label>
+                <select className={compactSelect} value={automationForm.scheduleType} onChange={(event) => setAutomationForm((current) => ({ ...current, scheduleType: event.target.value }))}>
+                  <option value="weekly">Weekly</option><option value="monthly">Monthly</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Time</label>
+                <input className={compactInput} type="time" value={automationForm.scheduleTime} onChange={(event) => setAutomationForm((current) => ({ ...current, scheduleTime: event.target.value }))} required />
+              </div>
+            </div>
+
+            {/* Weekly Days */}
+            {automationForm.scheduleType === "weekly" && (
+              <div className="flex flex-wrap gap-1">
+                {weekDayOptions.map((day) => (
+                  <label key={day.value} className="flex items-center gap-0.5 px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[7px] font-medium text-slate-700 cursor-pointer hover:bg-slate-50 transition-colors">
+                    <input type="checkbox" className="h-3 w-3 rounded border-slate-300 text-indigo-600 focus:ring-1 focus:ring-indigo-500/20" checked={automationForm.weeklyDays.map(Number).includes(day.value)} onChange={() => toggleAutomationDay(day.value)} />
+                    {day.label.slice(0, 3)}
+                  </label>
+                ))}
+              </div>
+            )}
+
+            {/* Monthly Day */}
+            {automationForm.scheduleType === "monthly" && (
+              <div className="flex flex-col gap-0.5 max-w-[120px]">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Day of Month</label>
+                <input className={compactInput} type="number" min="1" max="31" value={automationForm.monthlyDay} onChange={(event) => setAutomationForm((current) => ({ ...current, monthlyDay: event.target.value }))} required />
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Channels</label>
+                <div className="flex flex-wrap gap-1">
                   {automationChannelOptions.map((channel) => (
-                    <label key={channel.value} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
-                      <input type="checkbox" className={ui.checkbox} checked={automationForm.deliveryChannels.includes(channel.value)} onChange={() => toggleAutomationChannel(channel.value)} />
+                    <label key={channel.value} className="flex items-center gap-0.5 px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[7px] font-medium text-slate-700 cursor-pointer hover:bg-slate-50 transition-colors">
+                      <input type="checkbox" className="h-3 w-3 rounded border-slate-300 text-indigo-600 focus:ring-1 focus:ring-indigo-500/20" checked={automationForm.deliveryChannels.includes(channel.value)} onChange={() => toggleAutomationChannel(channel.value)} />
                       {channel.label}
                     </label>
                   ))}
                 </div>
               </div>
-
-              <label className={ui.field}><span>Target Audience</span><select className={ui.input} value={automationForm.targetType} onChange={(event) => setAutomationForm((current) => ({ ...current, targetType: event.target.value }))}>{targetOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-              <div className="rounded-xl border border-sky-100 bg-sky-50 px-4 py-3">
-                <div className={ui.eyebrow}>Audience Count</div>
-                <div className="text-2xl font-black text-slate-900">{automationAudienceCount}</div>
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Audience</label>
+                <select className={compactSelect} value={automationForm.targetType} onChange={(event) => setAutomationForm((current) => ({ ...current, targetType: event.target.value }))}>
+                  {targetOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                </select>
               </div>
-              <label className={ui.field}><span>Enable Automation</span><select className={ui.input} value={automationForm.automationEnabled ? "enabled" : "disabled"} onChange={(event) => setAutomationForm((current) => ({ ...current, automationEnabled: event.target.value === "enabled" }))}><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select></label>
-              {automationForm.targetType === "selected" ? <label className={cn(ui.field, "lg:col-span-3")}><span>Selected Users</span><textarea className={ui.textarea} value={automationForm.selectedUsers} onChange={(event) => setAutomationForm((current) => ({ ...current, selectedUsers: event.target.value }))} placeholder="User IDs, emails, or mobiles separated by comma/new line" /></label> : null}
-
-              {(automationShouldInApp || automationShouldPush) ? (
-                <>
-                  <label className={ui.field}><span>Notification Title</span><input className={ui.input} value={automationForm.title} onChange={(event) => setAutomationForm((current) => ({ ...current, title: event.target.value }))} required={automationShouldInApp || automationShouldPush} /></label>
-                  <label className={cn(ui.field, "lg:col-span-2")}><span>Notification Message</span><textarea className={ui.textarea} value={automationForm.message} onChange={(event) => setAutomationForm((current) => ({ ...current, message: event.target.value }))} required={automationShouldInApp || automationShouldPush} /></label>
-                  <label className={ui.field}><span>Deep Link</span><input className={ui.input} list="notification-deep-links" value={automationForm.deepLink} onChange={(event) => setAutomationForm((current) => ({ ...current, deepLink: event.target.value }))} /></label>
-                  <label className={ui.field}><span>CTA Text</span><input className={ui.input} value={automationForm.ctaText} onChange={(event) => setAutomationForm((current) => ({ ...current, ctaText: event.target.value }))} /></label>
-                  <label className={ui.field}><span>Category</span><select className={ui.input} value={automationForm.category} onChange={(event) => setAutomationForm((current) => ({ ...current, category: event.target.value }))}>{categoryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-                </>
-              ) : null}
-
-              {automationShouldEmail ? (
-                <>
-                  <label className={ui.field}><span>Email Template</span><select className={ui.input} value={automationForm.emailTemplateId} onChange={(event) => setAutomationForm((current) => ({ ...current, emailTemplateId: event.target.value }))}><option value="">Custom Email</option>{emailTemplates.map((item) => <option key={item.id || item.status?.templateId || item.key} value={item.id || item.status?.templateId || item.key}>{item.name || item.key}</option>)}</select></label>
-                  <label className={cn(ui.field, "lg:col-span-2")}><span>Email Subject</span><input className={ui.input} value={automationForm.emailSubject} onChange={(event) => setAutomationForm((current) => ({ ...current, emailSubject: event.target.value }))} required={automationShouldEmail} /></label>
-                  <label className={cn(ui.field, "lg:col-span-3")}><span>Email Body / Template</span><textarea className={ui.textarea} value={automationForm.emailBody} onChange={(event) => setAutomationForm((current) => ({ ...current, emailBody: event.target.value }))} required={automationShouldEmail} /></label>
-                </>
-              ) : null}
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Status</label>
+                <select className={compactSelect} value={automationForm.automationEnabled ? "enabled" : "disabled"} onChange={(event) => setAutomationForm((current) => ({ ...current, automationEnabled: event.target.value === "enabled" }))}>
+                  <option value="enabled">Enabled</option><option value="disabled">Disabled</option>
+                </select>
+              </div>
             </div>
 
-            <div className="mt-5 flex justify-end">
-              <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy}>{busy ? "Saving..." : editingAutomationId ? "Update Automation" : "Save Automation"}</button>
+            {/* Notification Content */}
+            {(automationShouldInApp || automationShouldPush) && (
+              <div className="pt-2 border-t border-slate-100">
+                <div className="text-[7px] font-medium text-slate-500 uppercase tracking-wider mb-1">Notification Content</div>
+                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  <div className="flex flex-col gap-0.5">
+                    <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Title</label>
+                    <input className={compactInput} value={automationForm.title} onChange={(event) => setAutomationForm((current) => ({ ...current, title: event.target.value }))} required={automationShouldInApp || automationShouldPush} />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Deep Link</label>
+                    <input className={compactInput} value={automationForm.deepLink} onChange={(event) => setAutomationForm((current) => ({ ...current, deepLink: event.target.value }))} />
+                  </div>
+                  <div className="flex flex-col gap-0.5 sm:col-span-2">
+                    <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Message</label>
+                    <textarea className={compactTextarea} rows={3} value={automationForm.message} onChange={(event) => setAutomationForm((current) => ({ ...current, message: event.target.value }))} required={automationShouldInApp || automationShouldPush} />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">CTA Text</label>
+                    <input className={compactInput} value={automationForm.ctaText} onChange={(event) => setAutomationForm((current) => ({ ...current, ctaText: event.target.value }))} />
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Category</label>
+                    <select className={compactSelect} value={automationForm.category} onChange={(event) => setAutomationForm((current) => ({ ...current, category: event.target.value }))}>
+                      {categoryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                    </select>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Email Content */}
+            {automationShouldEmail && (
+              <div className="pt-2 border-t border-slate-100">
+                <div className="text-[7px] font-medium text-slate-500 uppercase tracking-wider mb-1">Email Content</div>
+                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  <div className="flex flex-col gap-0.5">
+                    <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Email Template</label>
+                    <select className={compactSelect} value={automationForm.emailTemplateId} onChange={(event) => setAutomationForm((current) => ({ ...current, emailTemplateId: event.target.value }))}>
+                      <option value="">Custom</option>
+                      {emailTemplates.map((item) => <option key={item.id || item.status?.templateId || item.key} value={item.id || item.status?.templateId || item.key}>{item.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-0.5">
+                    <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Email Subject</label>
+                    <input className={compactInput} value={automationForm.emailSubject} onChange={(event) => setAutomationForm((current) => ({ ...current, emailSubject: event.target.value }))} required={automationShouldEmail} />
+                  </div>
+                  <div className="flex flex-col gap-0.5 sm:col-span-2">
+                    <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Email Body</label>
+                    <textarea className={compactTextarea} rows={4} value={automationForm.emailBody} onChange={(event) => setAutomationForm((current) => ({ ...current, emailBody: event.target.value }))} required={automationShouldEmail} />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Selected Users */}
+            {automationForm.targetType === "selected" && (
+              <div className="pt-2 border-t border-slate-100">
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Selected Users</label>
+                  <textarea className={compactTextarea} rows={3} value={automationForm.selectedUsers} onChange={(event) => setAutomationForm((current) => ({ ...current, selectedUsers: event.target.value }))} placeholder="IDs, emails, or mobiles" />
+                </div>
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+              <div className="text-[8px] text-slate-500">Audience: <span className="font-semibold text-slate-700">{automationAudienceCount}</span> users</div>
+              <button className={cn(
+                "ml-auto inline-flex items-center gap-0.5 px-2.5 py-0.5 text-[8px] font-medium rounded-lg transition-all",
+                "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-sm shadow-indigo-500/25",
+                busy && "opacity-50 cursor-not-allowed"
+              )} disabled={busy} type="submit">
+                <Save size={9} /> {editingAutomationId ? "Update" : "Save"}
+              </button>
             </div>
           </form>
 
-          <section className={ui.panel}>
-            <SimpleTable columns={["Notification Name", "Schedule", "Target Audience", "Audience Count", "Delivery Type", "Status", "Next Send", "Time Remaining", "Actions"]} rows={automations.map((item) => [
-              item.campaignName || item.title || item.emailSubject,
-              item.scheduleLabel || "-",
-              targetOptions.find((option) => option.value === item.targetType)?.label || item.targetType,
-              item.audienceCount || 0,
-              channelLabel(item.deliveryChannels, item.deliveryType),
-              item.automationEnabled === false || item.status === "paused" ? "Disabled" : "Enabled",
-              formatNextSend(item.nextScheduledAt || item.nextSendAt || item.scheduleDate, nowTick),
-              formatRemaining(item.nextScheduledAt || item.nextSendAt || item.scheduleDate, nowTick),
-              <div key={item.id || item._id} className="flex flex-wrap gap-2">
-                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => editAutomation(item)}>Edit</button>
-                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => setAutomationStatus(item, item.automationEnabled === false || item.status === "paused")}>{item.automationEnabled === false || item.status === "paused" ? "Enable" : "Disable"}</button>
-                <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => deleteAutomation(item)}>Delete</button>
-              </div>,
-            ])} />
-          </section>
-        </section>
-      ) : null}
-
-      {tab === "scheduled" ? (
-        <section className={ui.panel}>
-          <div className="mb-4 flex justify-end"><button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={processScheduled} disabled={busy}>Process Due Now</button></div>
-          <SimpleTable columns={["Campaign", "Delivery", "Audience", "Schedule", "Status", "Actions"]} rows={scheduled.map((item) => [
-            item.campaignName || item.title || item.emailSubject,
-            item.deliveryType || "notification",
-            item.targetType,
-            `${item.scheduleDate ? toInputDate(item.scheduleDate).replace("T", " ") : "-"}${item.recurring ? ` | ${item.recurrence}${item.recurrence === "custom" ? ` ${item.recurrenceInterval} ${item.recurrenceUnit}` : ""}` : ""}`,
-            item.status,
-            <div key={item.id || item._id} className="flex flex-wrap gap-2">
-              {["pending", "draft", "paused"].includes(item.status) ? <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => editCampaign(item)}>Edit</button> : null}
-              {item.status === "pending" ? <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => pauseSchedule(item.id || item._id)}>Pause</button> : null}
-              {item.status === "paused" ? <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => resumeSchedule(item.id || item._id)}>Resume</button> : null}
-              {["pending", "draft", "paused"].includes(item.status) ? <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => cancelSchedule(item.id || item._id)}>Delete</button> : null}
-            </div>,
-          ])} />
-        </section>
-      ) : null}
-
-      {tab === "test" ? (
-        <form className={ui.panel} onSubmit={sendTestNotification}>
-          <h2 className="mb-4 text-xl font-black text-slate-900">Notification Testing</h2>
-          <div className="grid gap-4 lg:grid-cols-3">
-            <label className={ui.field}><span>Delivery Channel</span><select className={ui.input} value={testForm.deliveryType} onChange={(event) => setTestForm((current) => ({ ...current, deliveryType: event.target.value }))}>{deliveryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}</select></label>
-            <label className={ui.field}><span>Test Target</span><select className={ui.input} value={testForm.testTarget} onChange={(event) => setTestForm((current) => ({ ...current, testTarget: event.target.value }))}><option value="admin">Current Admin Device</option><option value="selected">Test User</option><option value="email">Specific Email</option></select></label>
-            <label className={ui.field}><span>Test User</span><input className={ui.input} value={testForm.selectedUsers} onChange={(event) => setTestForm((current) => ({ ...current, selectedUsers: event.target.value }))} placeholder="User id, email, or mobile" /></label>
-            <label className={ui.field}><span>Specific Email</span><input className={ui.input} type="email" value={testForm.testEmail} onChange={(event) => setTestForm((current) => ({ ...current, testEmail: event.target.value }))} placeholder="test@example.com" /></label>
-            <label className={ui.field}><span>Push Title</span><input className={ui.input} value={testForm.title} onChange={(event) => setTestForm((current) => ({ ...current, title: event.target.value }))} /></label>
-            <label className={cn(ui.field, "lg:col-span-2")}><span>Push Message</span><input className={ui.input} value={testForm.message} onChange={(event) => setTestForm((current) => ({ ...current, message: event.target.value }))} /></label>
-            <label className={ui.field}><span>Deep Link</span><input className={ui.input} value={testForm.deepLink} onChange={(event) => setTestForm((current) => ({ ...current, deepLink: event.target.value }))} /></label>
-            <label className={cn(ui.field, "lg:col-span-2")}><span>Email Subject</span><input className={ui.input} value={testForm.emailSubject} onChange={(event) => setTestForm((current) => ({ ...current, emailSubject: event.target.value }))} /></label>
-            <label className={cn(ui.field, "lg:col-span-3")}><span>Email Body</span><textarea className={ui.textarea} value={testForm.emailBody} onChange={(event) => setTestForm((current) => ({ ...current, emailBody: event.target.value }))} /></label>
+          {/* Automations List */}
+          <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm overflow-hidden">
+            <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Settings size={12} className="text-indigo-600" />
+                <span className="text-[8px] font-medium text-slate-600">Automated Notifications</span>
+              </div>
+              <span className="text-[7px] text-slate-400">{automations.length}</span>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full divide-y divide-slate-100 text-[8px]">
+                <thead className="bg-slate-50/50">
+                  <tr>
+                    {["Name", "Schedule", "Audience", "Channels", "Status", "Next Send", "Actions"].map((x) => (
+                      <th key={x} className="px-2 py-1 text-left text-[7px] font-bold uppercase tracking-wider text-slate-400">{x}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {automations.map((item) => (
+                    <tr key={item.id || item._id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-2 py-1.5 text-[8px] font-medium text-slate-900">{item.campaignName || item.title || "-"}</td>
+                      <td className="px-2 py-1.5 text-[7px] text-slate-600">{item.scheduleLabel || `${item.scheduleType} ${item.scheduleTime || ""}`}</td>
+                      <td className="px-2 py-1.5 text-[7px] text-slate-600">{targetOptions.find((opt) => opt.value === item.targetType)?.label || item.targetType}</td>
+                      <td className="px-2 py-1.5 text-[7px] text-slate-600">{channelLabel(item.deliveryChannels, item.deliveryType)}</td>
+                      <td className="px-2 py-1.5">
+                        <span className={cn(
+                          "px-1.5 py-0.5 rounded text-[6px] font-medium",
+                          item.automationEnabled !== false && item.status !== "paused" ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"
+                        )}>
+                          {item.automationEnabled !== false && item.status !== "paused" ? "Active" : "Disabled"}
+                        </span>
+                      </td>
+                      <td className="px-2 py-1.5 text-[7px] text-slate-500">{formatNextSend(item.nextScheduledAt || item.nextSendAt || item.scheduleDate, nowTick)}</td>
+                      <td className="px-2 py-1.5">
+                        <div className="flex items-center gap-0.5">
+                          <button className="p-0.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors" onClick={() => editAutomation(item)}>
+                            <Edit size={10} />
+                          </button>
+                          <button className="p-0.5 text-rose-600 hover:bg-rose-50 rounded transition-colors" onClick={() => deleteAutomation(item)}>
+                            <Trash2 size={10} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {!automations.length && (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-4 text-center text-[8px] text-slate-400">No automated notifications</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div className="mt-5 flex justify-end"><button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={busy}>{busy ? "Sending..." : "Send Test"}</button></div>
+        </div>
+      )}
+
+      {/* Scheduled Tab */}
+      {tab === "scheduled" && (
+        <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm overflow-hidden">
+          <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Calendar size={12} className="text-indigo-600" />
+              <span className="text-[8px] font-medium text-slate-600">Scheduled Notifications</span>
+            </div>
+            <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[7px] font-medium rounded transition-colors" onClick={processScheduled} disabled={busy}>
+              <Play size={8} /> Process Due
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full divide-y divide-slate-100 text-[8px]">
+              <thead className="bg-slate-50/50">
+                <tr>
+                  {["Campaign", "Delivery", "Audience", "Schedule", "Status", "Actions"].map((x) => (
+                    <th key={x} className="px-2 py-1 text-left text-[7px] font-bold uppercase tracking-wider text-slate-400">{x}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {scheduled.map((item) => (
+                  <tr key={item.id || item._id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-2 py-1.5 text-[8px] font-medium text-slate-900">{item.campaignName || item.title || "-"}</td>
+                    <td className="px-2 py-1.5 text-[7px] text-slate-600">{item.deliveryType || "notification"}</td>
+                    <td className="px-2 py-1.5 text-[7px] text-slate-600">{targetOptions.find((opt) => opt.value === item.targetType)?.label || item.targetType}</td>
+                    <td className="px-2 py-1.5 text-[7px] text-slate-500">
+                      {item.scheduleDate ? toInputDate(item.scheduleDate).replace("T", " ") : "-"}
+                      {item.recurring && ` | ${item.recurrence}`}
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <span className={cn(
+                        "px-1.5 py-0.5 rounded text-[6px] font-medium",
+                        item.status === "pending" ? "bg-amber-100 text-amber-700" :
+                        item.status === "paused" ? "bg-blue-100 text-blue-700" :
+                        "bg-slate-100 text-slate-500"
+                      )}>
+                        {item.status}
+                      </span>
+                    </td>
+                    <td className="px-2 py-1.5">
+                      <div className="flex items-center gap-0.5">
+                        {["pending", "draft", "paused"].includes(item.status) && (
+                          <button className="p-0.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors" onClick={() => editCampaign(item)}>
+                            <Edit size={10} />
+                          </button>
+                        )}
+                        {item.status === "pending" && (
+                          <button className="p-0.5 text-amber-600 hover:bg-amber-50 rounded transition-colors" onClick={() => pauseSchedule(item.id || item._id)}>
+                            <Pause size={10} />
+                          </button>
+                        )}
+                        {item.status === "paused" && (
+                          <button className="p-0.5 text-emerald-600 hover:bg-emerald-50 rounded transition-colors" onClick={() => resumeSchedule(item.id || item._id)}>
+                            <Play size={10} />
+                          </button>
+                        )}
+                        {["pending", "draft", "paused"].includes(item.status) && (
+                          <button className="p-0.5 text-rose-600 hover:bg-rose-50 rounded transition-colors" onClick={() => cancelSchedule(item.id || item._id)}>
+                            <Trash2 size={10} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {!scheduled.length && (
+                  <tr>
+                    <td colSpan={6} className="px-4 py-4 text-center text-[8px] text-slate-400">No scheduled notifications</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* History Tab */}
+      {tab === "history" && (
+        <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm overflow-hidden">
+          <div className="px-3 py-2 border-b border-slate-100 flex items-center gap-2">
+            <Clock size={12} className="text-indigo-600" />
+            <span className="text-[8px] font-medium text-slate-600">Delivery History</span>
+            <span className="text-[7px] text-slate-400 ml-auto">{history.length} records</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full divide-y divide-slate-100 text-[8px]">
+              <thead className="bg-slate-50/50">
+                <tr>
+                  {["Campaign", "Delivery", "Audience", "Push Sent", "Push Delivered", "Email Sent", "Failed", "Status"].map((x) => (
+                    <th key={x} className="px-2 py-1 text-left text-[7px] font-bold uppercase tracking-wider text-slate-400">{x}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {history.map((item) => (
+                  <tr key={item.id || item._id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-2 py-1.5 text-[8px] font-medium text-slate-900">{item.campaignName || item.title || "-"}</td>
+                    <td className="px-2 py-1.5 text-[7px] text-slate-600">{item.deliveryType || "notification"}</td>
+                    <td className="px-2 py-1.5 text-[7px] text-slate-600">{targetOptions.find((opt) => opt.value === item.targetType)?.label || item.targetType}</td>
+                    <td className="px-2 py-1.5 text-[7px] text-slate-600">{item.sentCount || 0}</td>
+                    <td className="px-2 py-1.5 text-[7px] text-slate-600">{item.successCount || 0}</td>
+                    <td className="px-2 py-1.5 text-[7px] text-slate-600">{item.emailSentCount || 0}</td>
+                    <td className="px-2 py-1.5 text-[7px] text-rose-600">{Number(item.failedCount || 0) + Number(item.emailFailedCount || 0)}</td>
+                    <td className="px-2 py-1.5">
+                      <span className={cn(
+                        "px-1.5 py-0.5 rounded text-[6px] font-medium",
+                        item.status === "sent" ? "bg-emerald-100 text-emerald-700" :
+                        item.status === "failed" ? "bg-rose-100 text-rose-700" :
+                        "bg-slate-100 text-slate-500"
+                      )}>
+                        {item.status || "draft"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {!history.length && (
+                  <tr>
+                    <td colSpan={8} className="px-4 py-4 text-center text-[8px] text-slate-400">No delivery history</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Test Tab */}
+      {tab === "test" && (
+        <form className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm space-y-2" onSubmit={sendTestNotification}>
+          <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+            <Zap size={14} className="text-indigo-600" />
+            <h2 className="text-xs font-semibold text-slate-900">Test Notification</h2>
+          </div>
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Delivery</label>
+              <select className={compactSelect} value={testForm.deliveryType} onChange={(event) => setTestForm((current) => ({ ...current, deliveryType: event.target.value }))}>
+                {deliveryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Target</label>
+              <select className={compactSelect} value={testForm.testTarget} onChange={(event) => setTestForm((current) => ({ ...current, testTarget: event.target.value }))}>
+                <option value="admin">Admin Device</option><option value="selected">Test User</option><option value="email">Email</option>
+              </select>
+            </div>
+            {testForm.testTarget === "selected" && (
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">User</label>
+                <input className={compactInput} value={testForm.selectedUsers} onChange={(event) => setTestForm((current) => ({ ...current, selectedUsers: event.target.value }))} placeholder="User ID or email" />
+              </div>
+            )}
+            {testForm.testTarget === "email" && (
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Email</label>
+                <input className={compactInput} type="email" value={testForm.testEmail} onChange={(event) => setTestForm((current) => ({ ...current, testEmail: event.target.value }))} placeholder="test@example.com" />
+              </div>
+            )}
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Title</label>
+              <input className={compactInput} value={testForm.title} onChange={(event) => setTestForm((current) => ({ ...current, title: event.target.value }))} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Deep Link</label>
+              <input className={compactInput} value={testForm.deepLink} onChange={(event) => setTestForm((current) => ({ ...current, deepLink: event.target.value }))} />
+            </div>
+            <div className="flex flex-col gap-0.5 sm:col-span-2">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Message</label>
+              <textarea className={compactTextarea} rows={3} value={testForm.message} onChange={(event) => setTestForm((current) => ({ ...current, message: event.target.value }))} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Email Subject</label>
+              <input className={compactInput} value={testForm.emailSubject} onChange={(event) => setTestForm((current) => ({ ...current, emailSubject: event.target.value }))} />
+            </div>
+            <div className="flex flex-col gap-0.5 sm:col-span-2">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Email Body</label>
+              <textarea className={compactTextarea} rows={4} value={testForm.emailBody} onChange={(event) => setTestForm((current) => ({ ...current, emailBody: event.target.value }))} />
+            </div>
+          </div>
+          <div className="flex justify-end pt-1 border-t border-slate-100">
+            <button className={cn(
+              "inline-flex items-center gap-0.5 px-3 py-0.5 text-[8px] font-medium rounded-lg transition-all",
+              "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-sm shadow-indigo-500/25",
+              busy && "opacity-50 cursor-not-allowed"
+            )} disabled={busy} type="submit">
+              <Send size={9} /> Send Test
+            </button>
+          </div>
         </form>
-      ) : null}
+      )}
 
-      {tab === "history" ? (
-        <section className={ui.panel}>
-          <SimpleTable columns={["Campaign", "Delivery", "Audience", "Push Sent", "Push Delivered", "Email Sent", "Failed", "Status"]} rows={history.map((item) => [
-            item.campaignName || item.title || item.emailSubject,
-            item.deliveryType || "notification",
-            item.targetType,
-            item.sentCount || 0,
-            item.successCount || 0,
-            item.emailSentCount || 0,
-            Number(item.failedCount || 0) + Number(item.emailFailedCount || 0) + Number(item.emailSkippedCount || 0),
-            item.status,
-          ])} />
-        </section>
-      ) : null}
-
-      {tab === "stats" ? (
-        <section className={ui.panel}>
-          <div className="grid gap-4 md:grid-cols-5">
+      {/* Stats Tab */}
+      {tab === "stats" && (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             {[
               ["Total", stats?.totalNotifications || 0],
               ["Today", stats?.todayNotifications || 0],
@@ -997,43 +1510,26 @@ export function NotificationCenterPage() {
               ["Failed", stats?.failed || 0],
               ["Device Tokens", stats?.activeDeviceTokens || 0],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-xl border border-slate-200 bg-slate-50 p-4"><div className={ui.eyebrow}>{label}</div><div className="mt-2 text-2xl font-black text-slate-900">{value}</div></div>
+              <div key={label} className="bg-white rounded-lg border border-slate-200/60 px-3 py-2 shadow-sm">
+                <div className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">{label}</div>
+                <div className="text-sm font-bold text-slate-900 mt-0.5">{value}</div>
+              </div>
             ))}
           </div>
-          <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4">
-            <h3 className="mb-3 text-lg font-black text-slate-900">Notification Sent Trend</h3>
-            <div className="space-y-2">
-              {(stats?.sentTrend || []).map((item) => <div key={item._id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-sm"><span>{item._id}</span><span>Sent {item.sent || 0} | Delivered {item.delivered || 0} | Failed {item.failed || 0}</span></div>)}
+          <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+            <div className="text-[8px] font-medium text-slate-600 mb-2">Sent Trend</div>
+            <div className="space-y-1">
+              {(stats?.sentTrend || []).map((item) => (
+                <div key={item._id} className="flex items-center justify-between bg-slate-50 rounded px-2 py-1 text-[7px]">
+                  <span className="font-medium text-slate-700">{item._id}</span>
+                  <span className="text-slate-500">Sent {item.sent || 0} | Delivered {item.delivered || 0} | Failed {item.failed || 0}</span>
+                </div>
+              ))}
+              {!stats?.sentTrend?.length && <div className="text-[7px] text-slate-400 text-center py-2">No trend data available</div>}
             </div>
           </div>
-        </section>
-      ) : null}
-    </div>
-  );
-}
-
-function SimpleTable({ columns, rows }) {
-  return (
-    <div className={ui.tableWrap}>
-      <div className={ui.tableScroll}>
-        <table className={ui.table}>
-          <thead><tr>{columns.map((column) => <th key={column} className={ui.tableHead}>{column}</th>)}</tr></thead>
-          <tbody>{rows.map((row, index) => <tr key={index}>{row.map((cell, cellIndex) => <td key={cellIndex} className={ui.tableCell}>{cell}</td>)}</tr>)}</tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
-
-function PreviewCard({ title, heading, body, cta }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <div className={ui.eyebrow}>{title}</div>
-      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <h3 className="text-base font-black text-slate-950">{heading}</h3>
-        <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-600">{body}</p>
-        {cta ? <div className="mt-3 inline-flex rounded-lg bg-slate-900 px-3 py-2 text-xs font-black text-white">{cta}</div> : null}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

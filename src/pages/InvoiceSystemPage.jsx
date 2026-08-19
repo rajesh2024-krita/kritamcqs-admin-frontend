@@ -7,6 +7,39 @@ import { useToast } from "../context/ToastContext";
 import { cn, ui } from "../ui";
 import { formatDate } from "../utils/format";
 import { InvoiceBuilderModal } from "../components/invoice-builder/InvoiceBuilderModal";
+import { 
+  FileText, 
+  Plus, 
+  Save, 
+  RefreshCw, 
+  Download, 
+  Eye, 
+  Edit, 
+  Trash2, 
+  Copy, 
+  Send, 
+  Mail, 
+  CheckCircle, 
+  XCircle, 
+  AlertCircle, 
+  Clock, 
+  DollarSign, 
+  Percent, 
+  Building, 
+  User, 
+  Calendar, 
+  CreditCard,
+  Shield,
+  Printer,
+  Settings,
+  Layout,
+  // Template,
+  Zap,
+  LinkIcon,
+  Search,
+  X,
+  PartyPopperIcon
+} from "lucide-react";
 
 const apiBase = (import.meta.env.VITE_API_BASE_URL || "http://localhost:3001/api").replace(/\/api\/?$/, "");
 const PAGE_WIDTH = 794;
@@ -256,6 +289,7 @@ export function InvoiceSystemPage() {
       { subtotal: 0, discountTotal: 0, taxTotal: 0, grandTotal: 0 },
     );
   }, [invoiceForm.items]);
+
   function patchInvoice(path, value) {
     setInvoiceForm((current) => {
       const [group, key] = path.split(".");
@@ -561,64 +595,115 @@ export function InvoiceSystemPage() {
     }
   }
 
+  // Compact input classes
+  const compactInput = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all";
+  const compactSelect = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none";
+  const compactTextarea = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-y min-h-[50px]";
+
   if (loading) return <LoadingSpinner label="Loading invoice system..." />;
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className={ui.panel}>
-        <div className={ui.sectionHead}>
-          <div>
-            <div className={ui.eyebrow}>Student Purchase Invoices</div>
-            <h2 className="text-3xl font-black tracking-tight text-slate-900">Invoices</h2>
-            <p className={ui.muted}>Customize the invoice template used after student subscription purchases. Successful purchases already call the backend invoice generation and email flow.</p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => load()}><RefreshIcon size={16} />Refresh</button>
-            <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={() => openTemplateEditor(activeTemplate)}>Open Invoice Pro Editor</button>
-          </div>
-        </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-4">
-          <div className={ui.tile}><div className={ui.metricLabel}>Invoices</div><div className={ui.metricValue}>{invoiceStats.total}</div></div>
-          <div className={ui.tile}><div className={ui.metricLabel}>Email Sent</div><div className={ui.metricValue}>{invoiceStats.sent}</div></div>
-          <div className={ui.tile}><div className={ui.metricLabel}>Pending</div><div className={ui.metricValue}>{invoiceStats.pending}</div></div>
-          <div className={ui.tile}><div className={ui.metricLabel}>Failed</div><div className={ui.metricValue}>{invoiceStats.failed}</div></div>
-        </div>
-        <div className={`mt-4 rounded-lg border p-4 ${invoiceEmailConnected ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className={`text-sm font-black ${invoiceEmailConnected ? "text-emerald-800" : "text-amber-800"}`}>
-                {invoiceEmailConnected ? "Successfully Connected" : "Invoice email is not connected"}
-              </div>
-              <p className={`mt-1 text-sm ${invoiceEmailConnected ? "text-emerald-700" : "text-amber-700"}`}>
-                {invoiceEmailConnected
-                  ? `${connectedTemplate?.name || "Connected invoice template"} will be used for test emails, live purchase emails, PDF download, and resend.`
-                  : "Connect an Invoice Editor template before sending invoice emails. The default invoice will not be sent as a fallback."}
-              </p>
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="bg-white rounded-lg border border-slate-200/60 px-4 py-2.5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg shadow-indigo-500/25">
+              <FileText size={14} className="text-white" />
             </div>
-            {invoiceEmailConnected ? <span className={ui.pill}>Connected</span> : <span className={ui.pill}>Action Required</span>}
+            <div>
+              <h1 className="text-sm font-semibold text-slate-900">Invoice System</h1>
+              <p className="text-sm text-slate-500">Manage student invoices and templates</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[9px] font-medium text-slate-700 rounded transition-colors" onClick={() => load()}><RefreshCw size={10} /> Refresh</button>
+            <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-[9px] font-medium rounded-lg transition-all shadow-sm shadow-indigo-500/25" onClick={() => openTemplateEditor(activeTemplate)}>
+              <Layout size={10} /> Template Editor
+            </button>
           </div>
         </div>
-      </section>
+      </div>
 
-      <section className={ui.panel}>
-        <div className={ui.sectionHead}>
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">Create / Edit Invoice</h3>
-            <p className={ui.muted}>Fill invoice details first, then save as draft, mark status, email, download, or continue designing the visual template below.</p>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {[
+          { label: "Total Invoices", value: invoiceStats.total, icon: FileText, color: "blue" },
+          { label: "Sent", value: invoiceStats.sent, icon: Mail, color: "emerald" },
+          { label: "Pending", value: invoiceStats.pending, icon: Clock, color: "amber" },
+          { label: "Failed", value: invoiceStats.failed, icon: AlertCircle, color: "rose" },
+        ].map((stat) => {
+          const Icon = stat.icon;
+          const colorClasses = {
+            blue: "bg-blue-50 text-blue-600",
+            emerald: "bg-emerald-50 text-emerald-600",
+            amber: "bg-amber-50 text-amber-600",
+            rose: "bg-rose-50 text-rose-600",
+          };
+          return (
+            <div key={stat.label} className="bg-white rounded-lg border border-slate-200/60 px-3 py-2 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">{stat.label}</span>
+                <div className={`p-1 rounded ${colorClasses[stat.color]}`}>
+                  <Icon size={12} className={colorClasses[stat.color]} />
+                </div>
+              </div>
+              <div className="text-base font-bold text-slate-900 mt-0.5">{stat.value}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Connection Status */}
+      <div className={cn(
+        "rounded-lg border px-3 py-1.5 flex flex-wrap items-center justify-between gap-2",
+        invoiceEmailConnected ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"
+      )}>
+        <div className="flex items-center gap-2">
+          {invoiceEmailConnected ? (
+            <CheckCircle size={14} className="text-emerald-600" />
+          ) : (
+            <AlertCircle size={14} className="text-amber-600" />
+          )}
+          <span className="text-[10px] font-medium">
+            {invoiceEmailConnected ? "Invoice email connected" : "Invoice email not connected"}
+          </span>
+        </div>
+        <span className={cn(
+          "inline-flex px-1.5 py-0.5 rounded text-[7px] font-medium",
+          invoiceEmailConnected ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+        )}>
+          {invoiceEmailConnected ? "Connected" : "Action Required"}
+        </span>
+      </div>
+
+      {/* Create/Edit Invoice */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <Edit size={14} className="text-indigo-600" />
+            <h3 className="text-sm font-semibold text-slate-900">Create / Edit Invoice</h3>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => setInvoiceForm(emptyInvoiceForm)}>New</button>
-            <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => saveInvoice("draft")}>Save Draft</button>
-            <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={() => saveInvoice(invoiceForm.status)}>Save Invoice</button>
+          <div className="flex flex-wrap gap-1">
+            <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[8px] font-medium text-slate-700 rounded transition-colors" onClick={() => setInvoiceForm(emptyInvoiceForm)}>
+              <Plus size={9} /> New
+            </button>
+            <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[8px] font-medium text-slate-700 rounded transition-colors" onClick={() => saveInvoice("draft")}>
+              <Save size={9} /> Draft
+            </button>
+            <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-[8px] font-medium rounded-lg transition-all shadow-sm shadow-indigo-500/25" onClick={() => saveInvoice(invoiceForm.status)}>
+              <Save size={9} /> Save
+            </button>
           </div>
         </div>
-        <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-3">
+
+        <div className="grid grid-cols-1 gap-1.5 mt-2 sm:grid-cols-3">
           {[
             ["billingCompany.name", "Billing Company"],
             ["billingCompany.email", "Billing Email"],
             ["billingCompany.phone", "Billing Phone"],
             ["billingCompany.gstin", "Billing GSTIN"],
-            ["customerCompany.name", "Customer / To Company"],
+            ["customerCompany.name", "Customer Name"],
             ["customerCompany.email", "Customer Email"],
             ["customerCompany.phone", "Customer Phone"],
             ["customerCompany.gstin", "Customer GSTIN"],
@@ -628,243 +713,301 @@ export function InvoiceSystemPage() {
             ["transactionId", "Transaction ID"],
             ["logoUrl", "Logo URL"],
             ["signatureUrl", "Signature URL"],
-            ["qrCode", "QR Code / Payment Link"],
+            ["qrCode", "QR Code"],
           ].map(([key, label]) => (
-            <label className={ui.field} key={key}>
-              <span>{label}</span>
-              <input className={ui.input} type={key.toLowerCase().includes("date") ? "date" : "text"} value={key.includes(".") ? invoiceForm[key.split(".")[0]]?.[key.split(".")[1]] || "" : invoiceForm[key] || ""} onChange={(event) => patchInvoice(key, event.target.value)} />
-            </label>
+            <div key={key} className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">{label}</label>
+              <input className={compactInput} type={key.toLowerCase().includes("date") ? "date" : "text"} value={key.includes(".") ? invoiceForm[key.split(".")[0]]?.[key.split(".")[1]] || "" : invoiceForm[key] || ""} onChange={(event) => patchInvoice(key, event.target.value)} />
+            </div>
           ))}
-          <label className={ui.field}>
-            <span>Status</span>
-            <select className={ui.input} value={invoiceForm.status} onChange={(event) => patchInvoice("status", event.target.value)}>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Status</label>
+            <select className={compactSelect} value={invoiceForm.status} onChange={(event) => patchInvoice("status", event.target.value)}>
               {["draft", "pending", "paid", "overdue", "sent", "cancelled"].map((status) => <option key={status}>{status}</option>)}
             </select>
-          </label>
-          <label className={ui.field}>
-            <span>Currency</span>
-            <select className={ui.input} value={invoiceForm.currency} onChange={(event) => patchInvoice("currency", event.target.value)}>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Currency</label>
+            <select className={compactSelect} value={invoiceForm.currency} onChange={(event) => patchInvoice("currency", event.target.value)}>
               {["₹", "$", "€", "£", "د.إ"].map((currency) => <option key={currency}>{currency}</option>)}
             </select>
-          </label>
-          <label className={ui.field}>
-            <span>Tax Type</span>
-            <input className={ui.input} value={invoiceForm.taxDetails.gstType || ""} onChange={(event) => patchInvoice("taxDetails.gstType", event.target.value)} />
-          </label>
-          <label className={ui.field}>
-            <span>Default Tax %</span>
-            <input
-              className={ui.input}
-              type="number"
-              min="0"
-              max="100"
-              value={settings?.defaultTaxPercent ?? 0}
-              onChange={(event) => setSettings((current) => ({ ...(current || {}), defaultTaxPercent: Number(event.target.value || 0) }))}
-            />
-          </label>
-          <label className={ui.field}>
-            <span>Convenience Charge %</span>
-            <input
-              className={ui.input}
-              type="number"
-              min="0"
-              max="100"
-              value={settings?.defaultConvenienceChargePercent ?? 0}
-              onChange={(event) => setSettings((current) => ({ ...(current || {}), defaultConvenienceChargePercent: Number(event.target.value || 0) }))}
-            />
-          </label>
-          <label className={ui.field}>
-            <span>GST on Charge %</span>
-            <input
-              className={ui.input}
-              type="number"
-              min="0"
-              max="100"
-              value={settings?.defaultConvenienceChargeGstPercent ?? 0}
-              onChange={(event) => setSettings((current) => ({ ...(current || {}), defaultConvenienceChargeGstPercent: Number(event.target.value || 0) }))}
-            />
-          </label>
-          <label className={cn(ui.field, "lg:col-span-3")}>
-            <span>Billing Address</span>
-            <textarea className={ui.textarea} value={invoiceForm.billingCompany.address || ""} onChange={(event) => patchInvoice("billingCompany.address", event.target.value)} />
-          </label>
-          <label className={cn(ui.field, "lg:col-span-3")}>
-            <span>Customer Address</span>
-            <textarea className={ui.textarea} value={invoiceForm.customerCompany.address || ""} onChange={(event) => patchInvoice("customerCompany.address", event.target.value)} />
-          </label>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Tax Type</label>
+            <input className={compactInput} value={invoiceForm.taxDetails.gstType || ""} onChange={(event) => patchInvoice("taxDetails.gstType", event.target.value)} />
+          </div>
+          <div className="flex flex-col gap-0.5 sm:col-span-3">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Billing Address</label>
+            <textarea className={compactTextarea} rows={2} value={invoiceForm.billingCompany.address || ""} onChange={(event) => patchInvoice("billingCompany.address", event.target.value)} />
+          </div>
+          <div className="flex flex-col gap-0.5 sm:col-span-3">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Customer Address</label>
+            <textarea className={compactTextarea} rows={2} value={invoiceForm.customerCompany.address || ""} onChange={(event) => patchInvoice("customerCompany.address", event.target.value)} />
+          </div>
         </div>
 
-        <div className="mt-6 overflow-hidden rounded-xl border border-slate-200">
-          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-3">
-            <h4 className="font-black text-slate-900">Dynamic Items Table</h4>
-            <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={addItem}>Add Row</button>
+        {/* Items Table */}
+        <div className="mt-3 rounded-lg border border-slate-200 overflow-hidden">
+          <div className="flex items-center justify-between px-2.5 py-1.5 bg-slate-50 border-b border-slate-200">
+            <span className="text-[8px] font-medium text-slate-600">Items</span>
+            <button className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-200 hover:bg-slate-300 text-[8px] font-medium text-slate-700 rounded transition-colors" onClick={addItem}>
+              <Plus size={9} /> Add Row
+            </button>
           </div>
           <div className="overflow-x-auto">
-            <table className={ui.table}>
-              <thead><tr>{["Product/Service", "Description", "Qty", "Price", "Discount", "Tax %", "Total", ""].map((head) => <th className={ui.tableHead} key={head}>{head}</th>)}</tr></thead>
-              <tbody>
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50/50">
+                <tr>
+                  {["Product", "Description", "Qty", "Price", "Discount", "Tax %", "Total", ""].map((head) => (
+                    <th key={head} className="px-1.5 py-1 text-left text-[7px] font-bold uppercase tracking-wider text-slate-400">{head}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
                 {invoiceForm.items.map((item, index) => {
                   const taxable = Math.max(0, Number(item.quantity || 0) * Number(item.price || 0) - Number(item.discount || 0));
                   const total = taxable + (taxable * Number(item.tax || 0)) / 100;
                   return (
-                    <tr key={index}>
+                    <tr key={index} className="hover:bg-slate-50/50 transition-colors">
                       {["product", "description", "quantity", "price", "discount", "tax"].map((key) => (
-                        <td className={ui.tableCell} key={key}><input className={ui.input} type={["quantity", "price", "discount", "tax"].includes(key) ? "number" : "text"} value={item[key] || ""} onChange={(event) => patchItem(index, key, event.target.value)} /></td>
+                        <td key={key} className="px-1.5 py-1">
+                          <input className={compactInput} type={["quantity", "price", "discount", "tax"].includes(key) ? "number" : "text"} value={item[key] || ""} onChange={(event) => patchItem(index, key, event.target.value)} />
+                        </td>
                       ))}
-                      <td className={ui.tableCell}>{invoiceForm.currency} {total.toFixed(2)}</td>
-                      <td className={ui.tableCell}><button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => removeItem(index)}>Delete</button></td>
+                      <td className="px-1.5 py-1 font-medium text-slate-700">{invoiceForm.currency} {total.toFixed(2)}</td>
+                      <td className="px-1.5 py-1">
+                        <button className="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-200 bg-white text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 transition-colors" onClick={() => removeItem(index)}>
+                          <Trash2 size={10} />
+                        </button>
+                      </td>
                     </tr>
                   );
                 })}
               </tbody>
             </table>
           </div>
-          <div className="grid gap-3 border-t border-slate-200 bg-white p-4 text-sm md:grid-cols-4">
-            <strong>Subtotal: {invoiceForm.currency} {totals.subtotal.toFixed(2)}</strong>
-            <strong>Discount: {invoiceForm.currency} {totals.discountTotal.toFixed(2)}</strong>
-            <strong>Tax: {invoiceForm.currency} {totals.taxTotal.toFixed(2)}</strong>
-            <strong>Grand Total: {invoiceForm.currency} {totals.grandTotal.toFixed(2)}</strong>
+          <div className="grid grid-cols-2 gap-1 border-t border-slate-200 bg-white p-2 sm:grid-cols-4">
+            <div className="text-[9px]"><span className="text-slate-500">Subtotal:</span> <strong>{invoiceForm.currency} {totals.subtotal.toFixed(2)}</strong></div>
+            <div className="text-[9px]"><span className="text-slate-500">Discount:</span> <strong>{invoiceForm.currency} {totals.discountTotal.toFixed(2)}</strong></div>
+            <div className="text-[9px]"><span className="text-slate-500">Tax:</span> <strong>{invoiceForm.currency} {totals.taxTotal.toFixed(2)}</strong></div>
+            <div className="text-[9px]"><span className="text-slate-500">Grand Total:</span> <strong className="text-indigo-600">{invoiceForm.currency} {totals.grandTotal.toFixed(2)}</strong></div>
           </div>
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          <label className={ui.field}><span>Notes</span><textarea className={ui.textarea} value={invoiceForm.notes || ""} onChange={(event) => patchInvoice("notes", event.target.value)} /></label>
-          <label className={ui.field}><span>Terms & Conditions</span><textarea className={ui.textarea} value={invoiceForm.terms || ""} onChange={(event) => patchInvoice("terms", event.target.value)} /></label>
+        <div className="grid grid-cols-1 gap-1.5 mt-2 sm:grid-cols-2">
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Notes</label>
+            <textarea className={compactTextarea} rows={2} value={invoiceForm.notes || ""} onChange={(event) => patchInvoice("notes", event.target.value)} />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Terms</label>
+            <textarea className={compactTextarea} rows={2} value={invoiceForm.terms || ""} onChange={(event) => patchInvoice("terms", event.target.value)} />
+          </div>
         </div>
-      </section>
+      </div>
 
-      <section className={ui.panel}>
-        <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-          <label className={ui.field}>
-            Generate invoice for subscription
-            <input className={ui.input} value={subscriptionId} onChange={(event) => setSubscriptionId(event.target.value)} placeholder="Mongo subscription id" />
-          </label>
-          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={generateInvoice}>Generate & Send</button>
+      {/* Generate & Send */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+        <div className="grid gap-2 sm:grid-cols-2">
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Generate for Subscription</label>
+            <div className="flex gap-1">
+              <input className={cn(compactInput, "flex-1")} value={subscriptionId} onChange={(event) => setSubscriptionId(event.target.value)} placeholder="Subscription ID" />
+              <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[8px] font-medium text-slate-700 rounded transition-colors" onClick={generateInvoice}>
+                <Zap size={9} /> Generate
+              </button>
+            </div>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Send Test Invoice</label>
+            <div className="flex gap-1">
+              <input className={cn(compactInput, "flex-1")} type="email" value={testEmail} onChange={(event) => setTestEmail(event.target.value)} placeholder="customer@example.com" />
+              <button className={cn(
+                "inline-flex items-center gap-0.5 px-2 py-0.5 text-[8px] font-medium rounded transition-colors",
+                invoiceEmailConnected ? "bg-indigo-600 hover:bg-indigo-700 text-white" : "bg-slate-200 text-slate-400 cursor-not-allowed"
+              )} onClick={sendTestInvoice} disabled={!invoiceEmailConnected}>
+                <Send size={9} /> Send
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
-          <label className={ui.field}>
-            Send test invoice
-            <input className={ui.input} type="email" value={testEmail} onChange={(event) => setTestEmail(event.target.value)} placeholder="customer@example.com" />
-          </label>
-          <button className={cn(ui.buttonBase, invoiceEmailConnected ? ui.buttonPrimary : ui.buttonSecondary)} onClick={sendTestInvoice}>
-            {invoiceEmailConnected ? "Send Test Invoice" : "Connect Invoice First"}
+      </div>
+
+      {/* Templates */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <PartyPopperIcon size={14} className="text-indigo-600" />
+            <h3 className="text-sm font-semibold text-slate-900">Invoice Templates</h3>
+            <span className="text-[8px] text-slate-400">({templates.length})</span>
+          </div>
+          <div className="flex gap-1">
+            <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[8px] font-medium text-slate-700 rounded transition-colors" onClick={() => openTemplateEditor(null)}>
+              <Plus size={9} /> New
+            </button>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 gap-1.5 mt-2 sm:grid-cols-2 lg:grid-cols-4">
+          {templates.map((template) => {
+            const isConnected = template.id === connectedTemplate?.id;
+            const isActive = Boolean(template.active);
+            return (
+              <div key={template.id} className={cn(
+                "rounded-lg border p-2.5 transition-all",
+                isConnected ? "border-emerald-200 bg-emerald-50" : isActive ? "border-indigo-200 bg-indigo-50" : "border-slate-200 bg-white hover:border-slate-300"
+              )}>
+                <div className="flex items-start justify-between gap-1">
+                  <div className="min-w-0">
+                    <div className="text-[9px] font-semibold text-slate-900 truncate">{template.name || "Template"}</div>
+                    <div className="text-[7px] text-slate-400">{template.savedAt ? formatDate(template.savedAt) : "Default"}</div>
+                  </div>
+                  <div className="flex gap-0.5">
+                    <button className="p-0.5 text-slate-400 hover:text-slate-600 rounded transition-colors" onClick={() => setViewTemplate(template)}>
+                      <Eye size={10} />
+                    </button>
+                    <button className="p-0.5 text-slate-400 hover:text-slate-600 rounded transition-colors" onClick={() => openTemplateEditor(template)}>
+                      <Edit size={10} />
+                    </button>
+                    <button className="p-0.5 text-slate-400 hover:text-slate-600 rounded transition-colors" onClick={() => duplicateTemplate(template)}>
+                      <Copy size={10} />
+                    </button>
+                    {template.id !== "default-template" && (
+                      <button className="p-0.5 text-rose-400 hover:text-rose-600 rounded transition-colors" onClick={() => deleteTemplate(template)}>
+                        <Trash2 size={10} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-0.5 mt-1">
+                  <span className={cn(
+                    "inline-flex px-1 py-0.5 rounded text-[6px] font-medium",
+                    isActive ? "bg-indigo-100 text-indigo-700" : "bg-slate-100 text-slate-500"
+                  )}>
+                    {isActive ? "Active" : "Inactive"}
+                  </span>
+                  {isConnected && (
+                    <span className="inline-flex px-1 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[6px] font-medium">
+                      <CheckCircle size={8} className="inline mr-0.5" /> Connected
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Invoice History */}
+      <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm overflow-hidden">
+        <div className="px-3 py-2 border-b border-slate-100 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <FileText size={12} className="text-indigo-600" />
+            <h3 className="text-sm font-semibold text-slate-900">Invoice History</h3>
+            <span className="text-[8px] text-slate-400">({invoices.length})</span>
+          </div>
+          <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[8px] font-medium text-slate-700 rounded transition-colors" onClick={() => load()}>
+            <RefreshCw size={9} /> Refresh
           </button>
         </div>
-      </section>
 
-      <section className={ui.panel}>
-        <div className={ui.sectionHead}>
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">Invoice Templates</h3>
-            <p className={ui.muted}>Save multiple invoice templates. The connected template is the only one used for invoice emails and PDF attachments.</p>
-          </div>
-          <label className="flex min-w-[260px] flex-col gap-2 text-sm font-bold text-slate-700">
-            Current template name
-            <input className={ui.input} value={templateName} onChange={(event) => setTemplateName(event.target.value)} />
-          </label>
+        <div className="px-2.5 py-1.5 border-b border-slate-100 grid grid-cols-2 gap-1 sm:grid-cols-5">
+          <input className={compactInput} placeholder="Search..." value={historyFilters.q} onChange={(event) => setHistoryFilters((current) => ({ ...current, q: event.target.value }))} />
+          <select className={compactSelect} value={historyFilters.status} onChange={(event) => setHistoryFilters((current) => ({ ...current, status: event.target.value }))}>
+            <option value="">All statuses</option>
+            {["draft", "pending", "paid", "overdue"].map((status) => <option key={status} value={status}>{status}</option>)}
+          </select>
+          <input className={compactInput} type="date" value={historyFilters.dateFrom} onChange={(event) => setHistoryFilters((current) => ({ ...current, dateFrom: event.target.value }))} />
+          <input className={compactInput} type="date" value={historyFilters.dateTo} onChange={(event) => setHistoryFilters((current) => ({ ...current, dateTo: event.target.value }))} />
+          <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-[8px] font-medium rounded transition-colors" onClick={() => load(historyFilters)}>
+            <Search size={9} /> Filter
+          </button>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={() => openTemplateEditor(null)}>Create New Template</button>
-          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openTemplateEditor(activeTemplate)}>Edit Active Template</button>
-        </div>
-        <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {templates.map((template) => (
-            <div key={template.id} className={`rounded-xl border p-4 ${template.id === connectedTemplate?.id ? "border-emerald-300 bg-emerald-50" : template.active ? "border-sky-300 bg-sky-50" : "border-slate-200 bg-white"}`}>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="font-black text-slate-900">{template.name || "Invoice Template"}</div>
-                  <div className="mt-1 text-xs text-slate-500">{template.savedAt ? `Saved ${formatDate(template.savedAt)}` : "Default starter template"}</div>
-                  {template.id === connectedTemplate?.id ? <div className="mt-2 text-xs font-black uppercase tracking-wide text-emerald-700">Successfully Connected</div> : null}
-                </div>
-                <ToggleSwitch checked={Boolean(template.active)} onChange={() => activateTemplate(template)} label="Active" />
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => setViewTemplate(template)}>View</button>
-                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openTemplateEditor(template)}>Edit</button>
-                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => activateTemplate(template)}>Use</button>
-                <button className={cn(ui.buttonBase, template.id === connectedTemplate?.id ? ui.buttonPrimary : ui.buttonSecondary)} onClick={() => connectTemplateToEmail(template)}>
-                  {template.id === connectedTemplate?.id ? "Connected" : "Connect to Email"}
-                </button>
-                <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => duplicateTemplate(template)}>Duplicate</button>
-                <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => deleteTemplate(template)}>Delete</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
 
-      <section className={ui.tableWrap}>
-        <div className="flex flex-col gap-4 border-b border-slate-200 p-4">
-          <div className="flex items-center justify-between gap-3">
-            <h3 className="text-lg font-bold text-slate-900">Invoice History</h3>
-            <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => load()}><RefreshIcon size={16} />Refresh</button>
-          </div>
-          <div className="grid gap-3 md:grid-cols-5">
-            <input className={ui.input} placeholder="Search invoice, customer, transaction" value={historyFilters.q} onChange={(event) => setHistoryFilters((current) => ({ ...current, q: event.target.value }))} />
-            <select className={ui.input} value={historyFilters.status} onChange={(event) => setHistoryFilters((current) => ({ ...current, status: event.target.value }))}>
-              <option value="">All statuses</option>
-              {["draft", "pending", "paid", "overdue"].map((status) => <option key={status} value={status}>{status}</option>)}
-            </select>
-            <input className={ui.input} type="date" value={historyFilters.dateFrom} onChange={(event) => setHistoryFilters((current) => ({ ...current, dateFrom: event.target.value }))} />
-            <input className={ui.input} type="date" value={historyFilters.dateTo} onChange={(event) => setHistoryFilters((current) => ({ ...current, dateTo: event.target.value }))} />
-            <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={() => load(historyFilters)}>Search / Filter</button>
-          </div>
-        </div>
-        <div className={ui.tableScroll}>
-          <table className={ui.table}>
-            <thead>
+        <div className="overflow-x-auto">
+          <table className="w-full divide-y divide-slate-100">
+            <thead className="bg-slate-50/50">
               <tr>
-                <th className={ui.tableHead}>Invoice</th>
-                <th className={ui.tableHead}>Student</th>
-                <th className={ui.tableHead}>Subtotal</th>
-                <th className={ui.tableHead}>Discount</th>
-                <th className={ui.tableHead}>Tax</th>
-                <th className={ui.tableHead}>Charges</th>
-                <th className={ui.tableHead}>GST on Charges</th>
-                <th className={ui.tableHead}>Total</th>
-                <th className={ui.tableHead}>Status</th>
-                <th className={ui.tableHead}>Email</th>
-                <th className={ui.tableHead}>Created</th>
-                <th className={ui.tableHead}>Payment</th>
-                <th className={ui.tableHead}>PDF</th>
-                <th className={ui.tableHead}>Actions</th>
+                {["Invoice", "Customer", "Total", "Status", "Email", "Created", "Actions"].map((x) => (
+                  <th key={x} className="px-2 py-1 text-left">
+                    <span className="text-[7px] font-bold uppercase tracking-wider text-slate-400">{x}</span>
+                  </th>
+                ))}
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {invoices.map((item) => (
-                <tr key={item.id}>
-                  <td className={ui.tableCell}>{item.invoiceNumber}</td>
-                  <td className={ui.tableCell}>{item.userName}<div className="text-xs text-slate-500">{item.userEmail || "-"}</div></td>
-                  <td className={ui.tableCell}>{item.currency || "INR"} {Number(item.subtotal || 0).toFixed(2)}</td>
-                  <td className={ui.tableCell}>{item.currency || "INR"} {Number(item.discountTotal || 0).toFixed(2)}</td>
-                  <td className={ui.tableCell}>{item.currency || "INR"} {Number(item.taxTotal || 0).toFixed(2)}</td>
-                  <td className={ui.tableCell}>{item.currency || "INR"} {Number(item.convenienceCharge || 0).toFixed(2)}</td>
-                  <td className={ui.tableCell}>{item.currency || "INR"} {Number(item.convenienceChargeGst || 0).toFixed(2)}</td>
-                  <td className={ui.tableCell}>{item.currency || "INR"} {Number(item.grandTotal || item.amount || 0).toFixed(2)}</td>
-                  <td className={ui.tableCell}><span className={ui.pill}>{item.status || "draft"}</span></td>
-                  <td className={ui.tableCell}><span className={ui.pill}>{item.emailStatus || "-"}</span>{item.emailError ? <div className="mt-1 text-xs text-rose-600">{item.emailError}</div> : null}</td>
-                  <td className={ui.tableCell}>{formatDate(item.createdAt || item.issuedAt)}</td>
-                  <td className={ui.tableCell}>{item.paymentHistory?.length ? `${item.paymentHistory.length} record(s)` : "-"}</td>
-                  <td className={ui.tableCell}><a className="font-bold text-sky-700" href={pdfUrl(item)} target="_blank" rel="noreferrer">Download</a></td>
-                  <td className={ui.tableCell}>
-                    <div className="flex flex-wrap gap-2">
-                      <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => viewInvoiceDetails(item.id)}>View</button>
-                      <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => editInvoice(item)}>Edit</button>
-                      <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => duplicateInvoice(item.id)}>Duplicate</button>
-                      <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => sendInvoice(item.id)}>Email Connected Template</button>
-                      <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => deleteInvoice(item.id)}>Delete</button>
+                <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-2 py-1.5">
+                    <div className="text-[10px] font-semibold text-slate-900">{item.invoiceNumber}</div>
+                    <div className="text-[8px] text-slate-400">{item.transactionId || "-"}</div>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <div className="text-[9px] text-slate-700">{item.userName || "-"}</div>
+                    <div className="text-[7px] text-slate-400">{item.userEmail || "-"}</div>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <div className="text-[10px] font-bold text-slate-900">{item.currency || "INR"} {Number(item.grandTotal || item.amount || 0).toFixed(2)}</div>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <span className={cn(
+                      "inline-flex px-1.5 py-0.5 rounded text-[7px] font-medium",
+                      item.status === "paid" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                      item.status === "pending" ? "bg-amber-50 text-amber-700 border border-amber-200" :
+                      item.status === "overdue" ? "bg-rose-50 text-rose-700 border border-rose-200" :
+                      "bg-slate-100 text-slate-600 border border-slate-200"
+                    )}>
+                      {item.status || "draft"}
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <span className={cn(
+                      "inline-flex px-1.5 py-0.5 rounded text-[7px] font-medium",
+                      item.emailStatus === "sent" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                      item.emailStatus === "failed" ? "bg-rose-50 text-rose-700 border border-rose-200" :
+                      "bg-slate-100 text-slate-600 border border-slate-200"
+                    )}>
+                      {item.emailStatus || "-"}
+                    </span>
+                  </td>
+                  <td className="px-2 py-1.5 text-[7px] text-slate-400">{formatDate(item.createdAt || item.issuedAt)}</td>
+                  <td className="px-2 py-1.5">
+                    <div className="flex items-center gap-0.5">
+                      <button className="p-0.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors" onClick={() => viewInvoiceDetails(item.id)}>
+                        <Eye size={10} />
+                      </button>
+                      <button className="p-0.5 text-slate-600 hover:bg-slate-50 rounded transition-colors" onClick={() => editInvoice(item)}>
+                        <Edit size={10} />
+                      </button>
+                      <button className="p-0.5 text-slate-600 hover:bg-slate-50 rounded transition-colors" onClick={() => duplicateInvoice(item.id)}>
+                        <Copy size={10} />
+                      </button>
+                      <a className="p-0.5 text-slate-600 hover:bg-slate-50 rounded transition-colors" href={pdfUrl(item)} target="_blank" rel="noreferrer">
+                        <Download size={10} />
+                      </a>
+                      <button className="p-0.5 text-rose-600 hover:bg-rose-50 rounded transition-colors" onClick={() => deleteInvoice(item.id)}>
+                        <Trash2 size={10} />
+                      </button>
                     </div>
                   </td>
                 </tr>
               ))}
-              {!invoices.length ? (
-                <tr><td className={ui.tableCell} colSpan={14}>No invoices generated yet.</td></tr>
-              ) : null}
+              {!invoices.length && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-6 text-center">
+                    <div className="flex flex-col items-center gap-1">
+                      <FileText size={16} className="text-slate-300" />
+                      <span className="text-[10px] text-slate-500">No invoices generated yet</span>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
-      </section>
-      {editorOpen ? (
+      </div>
+
+      {/* Template Editor Modal */}
+      {editorOpen && (
         <InvoiceBuilderModal
           templateName={templateName}
           onTemplateNameChange={setTemplateName}
@@ -881,56 +1024,89 @@ export function InvoiceSystemPage() {
           onSaveAndActivate={(data) => saveTemplate({ setActive: true, htmlCode: data.htmlCode, cssCode: data.cssCode })}
           onClose={() => setEditorOpen(false)}
         />
-      ) : null}
-      {selectedInvoice ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 p-4">
-          <div className="max-h-[90vh] w-full max-w-4xl overflow-auto rounded-xl bg-white p-5 shadow-2xl">
-            <div className={ui.sectionHead}>
-              <div><h3 className="text-xl font-black text-slate-900">Invoice Details</h3><p className={ui.muted}>{selectedInvoice.invoiceNumber} | {selectedInvoice.templateName || "Active template"}</p></div>
-              <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => setSelectedInvoice(null)}>Close</button>
+      )}
+
+      {/* View Template Modal */}
+      {viewTemplate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={() => setViewTemplate(null)}>
+          <div className="bg-white rounded-xl border border-slate-200/60 shadow-2xl shadow-slate-950/30 w-full max-w-md overflow-hidden animate-in slide-in-from-bottom-4 duration-300" onClick={(e) => e.stopPropagation()}>
+            <div className="px-4 py-2.5 border-b border-slate-200/60 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-slate-900">{viewTemplate.name || "Template"}</h3>
+              <button className="p-1 rounded-lg hover:bg-slate-100 transition-colors" onClick={() => setViewTemplate(null)}>
+                <X size={14} />
+              </button>
             </div>
-            <div className="mt-5 grid gap-3 md:grid-cols-4">
-              <div className={ui.tile}><div className={ui.metricLabel}>Status</div><div className="mt-2 font-black capitalize">{selectedInvoice.status}</div></div>
-              <div className={ui.tile}><div className={ui.metricLabel}>Discount</div><div className="mt-2 font-black">{selectedInvoice.currency} {Number(selectedInvoice.discountTotal || 0).toFixed(2)}</div></div>
-              <div className={ui.tile}><div className={ui.metricLabel}>Tax</div><div className="mt-2 font-black">{selectedInvoice.currency} {Number(selectedInvoice.taxTotal || 0).toFixed(2)}</div></div>
-              <div className={ui.tile}><div className={ui.metricLabel}>Charges</div><div className="mt-2 font-black">{selectedInvoice.currency} {Number(selectedInvoice.convenienceCharge || 0).toFixed(2)}</div></div>
-              <div className={ui.tile}><div className={ui.metricLabel}>GST on Charges</div><div className="mt-2 font-black">{selectedInvoice.currency} {Number(selectedInvoice.convenienceChargeGst || 0).toFixed(2)}</div></div>
-              <div className={ui.tile}><div className={ui.metricLabel}>Total</div><div className="mt-2 font-black">{selectedInvoice.currency} {Number(selectedInvoice.grandTotal || selectedInvoice.amount || 0).toFixed(2)}</div></div>
-              <div className={ui.tile}><div className={ui.metricLabel}>Created</div><div className="mt-2 font-black">{formatDate(selectedInvoice.createdAt)}</div></div>
-              <div className={ui.tile}><div className={ui.metricLabel}>Email</div><div className="mt-2 font-black capitalize">{selectedInvoice.emailStatus || "-"}</div></div>
-            </div>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
-              <div className={ui.panel}><h4 className="font-black text-slate-900">Customer</h4><p className="mt-2 text-sm text-slate-600">{selectedInvoice.userName || "-"}</p><p className="text-sm text-slate-600">{selectedInvoice.userEmail || "-"}</p></div>
-              <div className={ui.panel}><h4 className="font-black text-slate-900">Payment History</h4>{selectedInvoice.paymentHistory?.length ? selectedInvoice.paymentHistory.map((payment, index) => <p className="mt-2 text-sm text-slate-600" key={index}>{formatDate(payment.paidAt)} | {payment.status} | {selectedInvoice.currency} {Number(payment.amount || 0).toFixed(2)} | {payment.transactionId || "-"}</p>) : <p className="mt-2 text-sm text-slate-500">No payment history recorded.</p>}</div>
-            </div>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <a className={cn(ui.buttonBase, ui.buttonPrimary)} href={pdfUrl(selectedInvoice)} target="_blank" rel="noreferrer">Download PDF</a>
-              <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => sendInvoice(selectedInvoice.id)}>Email Connected Template to Customer</button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-      {viewTemplate ? (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/50 p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white p-5 shadow-2xl">
-            <div className={ui.sectionHead}>
-              <div><h3 className="text-xl font-black text-slate-900">View Template</h3><p className={ui.muted}>{viewTemplate.name || "Invoice Template"}</p></div>
-              <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => setViewTemplate(null)}>Close</button>
-            </div>
-            <div className="mt-5 grid gap-3 md:grid-cols-2">
-              <div className={ui.tile}><div className={ui.metricLabel}>Status</div><div className="mt-2 font-black">{viewTemplate.active ? "Active" : "Inactive"}</div></div>
-              <div className={ui.tile}><div className={ui.metricLabel}>Saved</div><div className="mt-2 font-black">{viewTemplate.savedAt ? formatDate(viewTemplate.savedAt) : "Starter"}</div></div>
-              <div className={ui.tile}><div className={ui.metricLabel}>Fields</div><div className="mt-2 font-black">{viewTemplate.fields?.length || 0}</div></div>
-              <div className={ui.tile}><div className={ui.metricLabel}>Email Connection</div><div className="mt-2 font-black">{viewTemplate.id === connectedTemplate?.id ? "Successfully Connected" : "Not connected"}</div></div>
-            </div>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={() => { activateTemplate(viewTemplate); setViewTemplate(null); }}>Set Active Template</button>
-              <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => { connectTemplateToEmail(viewTemplate); setViewTemplate(null); }}>Connect to Email</button>
-              <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => duplicateTemplate(viewTemplate)}>Save as New Template</button>
+            <div className="p-4 space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div className="bg-slate-50 rounded-lg p-2">
+                  <span className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Status</span>
+                  <div className="text-[10px] font-semibold text-slate-900">{viewTemplate.active ? "Active" : "Inactive"}</div>
+                </div>
+                <div className="bg-slate-50 rounded-lg p-2">
+                  <span className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Saved</span>
+                  <div className="text-[10px] font-semibold text-slate-900">{viewTemplate.savedAt ? formatDate(viewTemplate.savedAt) : "Starter"}</div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[8px] font-medium rounded transition-colors" onClick={() => { activateTemplate(viewTemplate); setViewTemplate(null); }}>
+                  <CheckCircle size={9} /> Set Active
+                </button>
+                <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[8px] font-medium rounded transition-colors" onClick={() => { connectTemplateToEmail(viewTemplate); setViewTemplate(null); }}>
+                  <LinkIcon size={9} /> Connect
+                </button>
+                <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[8px] font-medium text-slate-700 rounded transition-colors" onClick={() => duplicateTemplate(viewTemplate)}>
+                  <Copy size={9} /> Duplicate
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      ) : null}
+      )}
+
+      {/* Invoice Details Modal */}
+      {selectedInvoice && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={() => setSelectedInvoice(null)}>
+          <div className="bg-white rounded-xl border border-slate-200/60 shadow-2xl shadow-slate-950/30 w-full max-w-3xl max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-4 duration-300" onClick={(e) => e.stopPropagation()}>
+            <div className="px-4 py-2.5 border-b border-slate-200/60 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">{selectedInvoice.invoiceNumber}</h3>
+                <p className="text-[9px] text-slate-500">{selectedInvoice.templateName || "Active template"}</p>
+              </div>
+              <button className="p-1 rounded-lg hover:bg-slate-100 transition-colors" onClick={() => setSelectedInvoice(null)}>
+                <X size={14} />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4 max-h-[calc(90vh-64px)] space-y-3">
+              <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+                {[
+                  ["Status", selectedInvoice.status],
+                  ["Total", `${selectedInvoice.currency} ${Number(selectedInvoice.grandTotal || selectedInvoice.amount || 0).toFixed(2)}`],
+                  ["Created", formatDate(selectedInvoice.createdAt)],
+                  ["Email", selectedInvoice.emailStatus || "-"],
+                ].map(([label, value]) => (
+                  <div key={label} className="bg-slate-50 rounded-lg p-2">
+                    <span className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">{label}</span>
+                    <div className="text-[10px] font-semibold text-slate-900 truncate">{value}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="bg-slate-50 rounded-lg p-2">
+                <span className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Customer</span>
+                <div className="text-[9px] text-slate-700">{selectedInvoice.userName || "-"}</div>
+                <div className="text-[8px] text-slate-400">{selectedInvoice.userEmail || "-"}</div>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                <a className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-indigo-600 hover:bg-indigo-700 text-white text-[8px] font-medium rounded transition-colors" href={pdfUrl(selectedInvoice)} target="_blank" rel="noreferrer">
+                  <Download size={9} /> PDF
+                </a>
+                <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[8px] font-medium rounded transition-colors" onClick={() => sendInvoice(selectedInvoice.id)}>
+                  <Send size={9} /> Email
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

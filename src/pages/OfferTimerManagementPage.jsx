@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Image, RefreshCw, Save, Upload } from "lucide-react";
+import { Image, RefreshCw, Save, Upload, Eye, EyeOff, Timer, Layout, Palette, Settings, Zap, Users, Calendar, Link as LinkIcon, Type, AlignCenter, Square, Circle, Move, X } from "lucide-react";
 import { offerTimerService } from "../api/offerTimerService";
 import { uploadService } from "../api/uploadService";
 import { cn, ui } from "../ui";
@@ -149,6 +149,7 @@ export function OfferTimerManagementPage() {
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [activeSection, setActiveSection] = useState("content");
 
   function patch(key, value) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -247,193 +248,364 @@ export function OfferTimerManagementPage() {
   const widgetIconPreview = assetUrl(form.widgetStyle.iconImage);
   const widgetPreviewStyle = getWidgetPreviewStyle(form.widgetStyle);
 
+  // Compact input classes
+  const compactInput = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all";
+  const compactSelect = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none";
+  const compactTextarea = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-y min-h-[60px]";
+
   return (
-    <div className="space-y-5">
-      <div className={ui.sectionHead}>
-        <div>
-          <p className={ui.eyebrow}>Mobile App</p>
-          <h1 className="text-2xl font-black tracking-tight text-slate-950">Offer Timer Management</h1>
-          <p className="mt-2 max-w-3xl text-sm text-slate-500">
-            Configure the floating in-app countdown timer and target the right audience segment.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={loadOffer} disabled={status === "loading"}>
-            <RefreshCw size={16} />
-            Reload
-          </button>
-          <button type="button" className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={saveOffer} disabled={status === "saving"}>
-            <Save size={16} />
-            {status === "saving" ? "Saving..." : "Save"}
-          </button>
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="bg-white rounded-lg border border-slate-200/60 px-4 py-2.5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg shadow-lg shadow-orange-500/25">
+              <Timer size={14} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-slate-900">Offer Timer Management</h1>
+              <p className="text-xs text-slate-500">Configure floating in-app countdown timer</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className={cn(
+              "inline-flex px-2 py-0.5 rounded text-[9px] font-medium",
+              form.enabled ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500 border border-slate-200"
+            )}>
+              {form.enabled ? "Active" : "Disabled"}
+            </span>
+            <button type="button" className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[9px] font-medium text-slate-700 rounded transition-colors" onClick={loadOffer} disabled={status === "loading"}>
+              <RefreshCw size={10} className={status === "loading" ? "animate-spin" : ""} /> {status === "loading" ? "..." : "Refresh"}
+            </button>
+            <button type="button" className="inline-flex items-center gap-0.5 px-2.5 py-0.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white text-[9px] font-medium rounded-lg transition-all shadow-sm shadow-orange-500/25" onClick={saveOffer} disabled={status === "saving"}>
+              <Save size={10} /> {status === "saving" ? "Saving..." : "Save"}
+            </button>
+          </div>
         </div>
       </div>
 
-      {message ? (
-        <div className={`rounded-xl border px-4 py-3 text-sm font-semibold ${status === "error" ? "border-rose-200 bg-rose-50 text-rose-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
+      {/* Message */}
+      {message && (
+        <div className={cn(
+          "rounded-lg border px-3 py-1.5 text-[10px] font-medium",
+          status === "error" ? "border-rose-200 bg-rose-50 text-rose-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"
+        )}>
           {message}
         </div>
-      ) : null}
+      )}
 
-      <section className={ui.panel}>
-        <div className="grid gap-5 lg:grid-cols-2">
-          <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
-            <input type="checkbox" className={ui.checkbox} checked={form.enabled} onChange={(event) => patch("enabled", event.target.checked)} />
-            Enable Offer Timer
-          </label>
+      {/* Section Tabs */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-1 shadow-sm flex flex-wrap gap-0.5">
+        {[
+          { key: "content", label: "Content", icon: Type },
+          { key: "widget", label: "Widget UI", icon: Square },
+          { key: "popup", label: "Popup UI", icon: Layout },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeSection === tab.key;
+          return (
+            <button
+              key={tab.key}
+              className={cn(
+                "inline-flex items-center gap-1 px-2.5 py-1 text-[9px] font-medium rounded-lg transition-all",
+                isActive
+                  ? "bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-sm shadow-orange-500/25"
+                  : "text-slate-600 hover:bg-slate-100"
+              )}
+              onClick={() => setActiveSection(tab.key)}
+            >
+              <Icon size={10} />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
-          <label className={ui.field}>
-            Audience Selection
-            <select className={ui.input} value={form.audience} onChange={(event) => patch("audience", event.target.value)}>
-              {audienceOptions.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-
-          <Field label="Offer Title" value={form.title} onChange={(value) => patch("title", value)} />
-          <Field label="Offer Subtitle" value={form.subtitle} onChange={(value) => patch("subtitle", value)} />
-
-          <label className={cn(ui.field, "lg:col-span-2")}>
-            Offer Description
-            <textarea className={ui.textarea} rows={4} value={form.description} onChange={(event) => patch("description", event.target.value)} />
-          </label>
-
-          <Field label="CTA Button Text" value={form.ctaText} onChange={(value) => patch("ctaText", value)} />
-          <Field label="CTA Button Link / Action" value={form.ctaLink} onChange={(value) => patch("ctaLink", value)} placeholder="/subscription" />
-
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 lg:col-span-2">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-bold text-slate-800">Offer Image</p>
-                <p className="mt-1 text-xs text-slate-500">Upload or paste an image URL/path.</p>
-              </div>
-              <label className={cn(ui.buttonBase, ui.buttonSecondary, "cursor-pointer")}>
-                <Upload size={16} />
-                {uploading ? "Uploading..." : "Upload"}
-                <input type="file" accept="image/*" className="hidden" onChange={uploadImage} disabled={uploading} />
-              </label>
-            </div>
-            <input className={cn(ui.input, "mt-4")} value={form.image} onChange={(event) => patch("image", event.target.value)} placeholder="/uploads/offer-timer/image.webp" />
-            {preview ? (
-              <img src={preview} alt="Offer preview" className="mt-4 h-52 w-full rounded-lg border border-slate-200 bg-white object-contain" />
-            ) : (
-              <div className="mt-4 flex h-52 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white text-slate-400">
-                <Image size={28} />
-              </div>
-            )}
+      {/* Content Section */}
+      {activeSection === "content" && (
+        <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm space-y-2">
+          <div className="flex items-center gap-2 mb-1">
+            <Type size={14} className="text-orange-600" />
+            <h2 className="text-xs font-semibold text-slate-900">Content Settings</h2>
           </div>
-
-          <Field label="Start Date & Time" type="datetime-local" value={form.startAt} onChange={(value) => patch("startAt", value)} />
-          <Field label="End Date & Time" type="datetime-local" value={form.endAt} onChange={(value) => patch("endAt", value)} />
-        </div>
-      </section>
-
-      <section className={ui.panel}>
-        <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h2 className="text-xl font-black tracking-tight text-slate-950">Floating Widget UI</h2>
-            <p className="mt-1 text-sm text-slate-500">Design changes appear instantly in the preview and sync to apps after saving.</p>
-          </div>
-          <div className="flex min-h-44 min-w-[240px] items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <div className="relative" style={{ width: widgetPreviewStyle.width, height: widgetPreviewStyle.height }}>
-              {form.widgetStyle.showClose ? (
-                <span
-                  className="absolute -right-1 -top-2 z-10 flex h-6 w-6 items-center justify-center rounded-full text-xs font-black shadow-lg"
-                  style={{ backgroundColor: form.widgetStyle.closeButtonColor, color: form.widgetStyle.closeButtonTextColor }}
-                >
-                  x
-                </span>
-              ) : null}
-              <div className="flex h-full w-full select-none flex-col items-center justify-center gap-1 text-center font-mono leading-tight" style={widgetPreviewStyle}>
-                {widgetIconPreview ? <img src={widgetIconPreview} alt="" className="h-6 w-6 object-contain" /> : null}
-                {form.widgetStyle.icon ? <span className="font-sans text-xs font-black leading-none">{form.widgetStyle.icon}</span> : null}
-                <span>{form.widgetStyle.countdownFormat === "label" ? "OFFER" : form.widgetStyle.countdownFormat === "compact" ? "1h 25m" : form.widgetStyle.countdownFormat === "MM:SS" ? "85:30" : "01:25:30"}</span>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Enable Timer</label>
+              <div className="flex items-center gap-2 bg-slate-50 rounded-lg border border-slate-200/50 px-3 py-0.5">
+                <input type="checkbox" className="h-3 w-3 rounded border-slate-300 text-orange-600 focus:ring-1 focus:ring-orange-500/20" checked={form.enabled} onChange={(event) => patch("enabled", event.target.checked)} />
+                <span className="text-[8px] font-medium text-slate-700">{form.enabled ? "Enabled" : "Disabled"}</span>
               </div>
             </div>
-          </div>
-        </div>
-        <div className="grid gap-5 lg:grid-cols-2">
-          <SelectField label="Shape" value={form.widgetStyle.shape} options={shapeOptions} onChange={(value) => patchNested("widgetStyle", "shape", value)} />
-          <Field label="Shape Size (Legacy px)" type="number" value={form.widgetStyle.size} onChange={(value) => patchNested("widgetStyle", "size", value)} />
-          <Field label="Widget Width (px)" type="number" value={form.widgetStyle.width} onChange={(value) => patchNested("widgetStyle", "width", value)} />
-          <Field label="Widget Height (px)" type="number" value={form.widgetStyle.height} onChange={(value) => patchNested("widgetStyle", "height", value)} />
-          <Field label="Custom Border Radius (px)" type="number" value={form.widgetStyle.borderRadius} onChange={(value) => patchNested("widgetStyle", "borderRadius", value)} />
-          <Field label="Background Color" type="color" value={form.widgetStyle.backgroundColor} onChange={(value) => patchNested("widgetStyle", "backgroundColor", value)} />
-          <Field label="Font Color" type="color" value={form.widgetStyle.textColor} onChange={(value) => patchNested("widgetStyle", "textColor", value)} />
-          <Field label="Font Size (px)" type="number" value={form.widgetStyle.fontSize} onChange={(value) => patchNested("widgetStyle", "fontSize", value)} />
-          <SelectField label="Font Weight" value={form.widgetStyle.fontWeight} options={fontWeightOptions} onChange={(value) => patchNested("widgetStyle", "fontWeight", value)} />
-          <SelectField label="Countdown Format" value={form.widgetStyle.countdownFormat} options={countdownFormatOptions} onChange={(value) => patchNested("widgetStyle", "countdownFormat", value)} />
-          <Field label="Border Color" type="color" value={form.widgetStyle.borderColor} onChange={(value) => patchNested("widgetStyle", "borderColor", value)} />
-          <Field label="Border Width (px)" type="number" value={form.widgetStyle.borderWidth} onChange={(value) => patchNested("widgetStyle", "borderWidth", value)} />
-          <SelectField label="Shadow" value={form.widgetStyle.shadow} options={shadowOptions} onChange={(value) => patchNested("widgetStyle", "shadow", value)} />
-          <Field label="Icon / Short Text" value={form.widgetStyle.icon} onChange={(value) => patchNested("widgetStyle", "icon", value)} placeholder="%" />
-          <div className={cn(ui.field, "lg:col-span-2")}>
-            Custom Icon / Image
-            <div className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:flex-row sm:items-center">
-              <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white">
-                {widgetIconPreview ? <img src={widgetIconPreview} alt="" className="h-full w-full object-contain" /> : <Image size={20} className="text-slate-400" />}
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Audience</label>
+              <select className={compactSelect} value={form.audience} onChange={(event) => patch("audience", event.target.value)}>
+                {audienceOptions.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Title</label>
+              <input className={compactInput} value={form.title} onChange={(event) => patch("title", event.target.value)} placeholder="Offer title" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Subtitle</label>
+              <input className={compactInput} value={form.subtitle} onChange={(event) => patch("subtitle", event.target.value)} placeholder="Offer subtitle" />
+            </div>
+            <div className="flex flex-col gap-0.5 sm:col-span-2">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Description</label>
+              <textarea className={compactTextarea} rows={2} value={form.description} onChange={(event) => patch("description", event.target.value)} placeholder="Offer description" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">CTA Text</label>
+              <input className={compactInput} value={form.ctaText} onChange={(event) => patch("ctaText", event.target.value)} placeholder="Claim Now" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">CTA Link</label>
+              <input className={compactInput} value={form.ctaLink} onChange={(event) => patch("ctaLink", event.target.value)} placeholder="/subscription" />
+            </div>
+            <div className="flex flex-col gap-0.5 sm:col-span-2">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Offer Image</label>
+              <div className="flex gap-1">
+                <input className={cn(compactInput, "flex-1")} value={form.image} onChange={(event) => patch("image", event.target.value)} placeholder="/uploads/offer-timer/image.webp" />
+                <label className={cn("inline-flex items-center gap-1 px-2 py-0.5 text-[8px] font-medium rounded transition-colors cursor-pointer", "bg-slate-100 hover:bg-slate-200 text-slate-700")}>
+                  <Upload size={10} /> {uploading ? "..." : "Upload"}
+                  <input type="file" accept="image/*" className="hidden" onChange={uploadImage} disabled={uploading} />
+                </label>
               </div>
-              <input className={ui.input} value={form.widgetStyle.iconImage || ""} onChange={(event) => patchNested("widgetStyle", "iconImage", event.target.value)} placeholder="/uploads/offer-timer/icon.webp" />
-              <label className={cn(ui.buttonBase, ui.buttonSecondary, "cursor-pointer whitespace-nowrap")}>
-                <Upload size={16} />
-                Upload Icon
-                <input type="file" accept="image/*" className="hidden" onChange={uploadWidgetIcon} disabled={uploading} />
-              </label>
+              {preview && (
+                <img src={preview} alt="Offer preview" className="mt-1 h-20 w-full rounded-lg border border-slate-200 object-contain bg-slate-50" />
+              )}
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Start Date</label>
+              <input className={compactInput} type="datetime-local" value={form.startAt} onChange={(event) => patch("startAt", event.target.value)} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">End Date</label>
+              <input className={compactInput} type="datetime-local" value={form.endAt} onChange={(event) => patch("endAt", event.target.value)} />
             </div>
           </div>
-          <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
-            <input type="checkbox" className={ui.checkbox} checked={Boolean(form.widgetStyle.showClose)} onChange={(event) => patchNested("widgetStyle", "showClose", event.target.checked)} />
-            Show Close Button
-          </label>
-          <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-700">
-            <input type="checkbox" className={ui.checkbox} checked={Boolean(form.widgetStyle.draggable)} onChange={(event) => patchNested("widgetStyle", "draggable", event.target.checked)} />
-            Enable Dragging
-          </label>
-          <Field label="Close Button Color" type="color" value={form.widgetStyle.closeButtonColor} onChange={(value) => patchNested("widgetStyle", "closeButtonColor", value)} />
-          <Field label="Close Button Text Color" type="color" value={form.widgetStyle.closeButtonTextColor} onChange={(value) => patchNested("widgetStyle", "closeButtonTextColor", value)} />
-          <SelectField label="Default Position" value={form.widgetStyle.defaultPosition} options={positionOptions} onChange={(value) => patchNested("widgetStyle", "defaultPosition", value)} />
-          <Field label="Horizontal Offset (px)" type="number" value={form.widgetStyle.offsetX} onChange={(value) => patchNested("widgetStyle", "offsetX", value)} />
-          <Field label="Vertical Offset (px)" type="number" value={form.widgetStyle.offsetY} onChange={(value) => patchNested("widgetStyle", "offsetY", value)} />
         </div>
-      </section>
+      )}
 
-      <section className={ui.panel}>
-        <h2 className="mb-5 text-xl font-black tracking-tight text-slate-950">Offer Popup UI</h2>
-        <div className="grid gap-5 lg:grid-cols-2">
-          <SelectField label="Popup Layout" value={form.popupStyle.layout} options={layoutOptions} onChange={(value) => patchNested("popupStyle", "layout", value)} />
-          <Field label="Border Radius (px)" type="number" value={form.popupStyle.borderRadius} onChange={(value) => patchNested("popupStyle", "borderRadius", value)} />
-          <Field label="Background Color" type="color" value={form.popupStyle.backgroundColor} onChange={(value) => patchNested("popupStyle", "backgroundColor", value)} />
-          <Field label="Title Color" type="color" value={form.popupStyle.titleColor} onChange={(value) => patchNested("popupStyle", "titleColor", value)} />
-          <Field label="Subtitle Color" type="color" value={form.popupStyle.subtitleColor} onChange={(value) => patchNested("popupStyle", "subtitleColor", value)} />
-          <Field label="Description Color" type="color" value={form.popupStyle.descriptionColor} onChange={(value) => patchNested("popupStyle", "descriptionColor", value)} />
-          <Field label="Countdown Color" type="color" value={form.popupStyle.timerColor} onChange={(value) => patchNested("popupStyle", "timerColor", value)} />
-          <Field label="Button Color" type="color" value={form.popupStyle.buttonColor} onChange={(value) => patchNested("popupStyle", "buttonColor", value)} />
-          <Field label="Button Text Color" type="color" value={form.popupStyle.buttonTextColor} onChange={(value) => patchNested("popupStyle", "buttonTextColor", value)} />
+      {/* Widget Section */}
+      {activeSection === "widget" && (
+        <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+            <div className="flex items-center gap-2">
+              <Square size={14} className="text-orange-600" />
+              <h2 className="text-xs font-semibold text-slate-900">Floating Widget UI</h2>
+            </div>
+            <div className="relative" style={{ width: widgetPreviewStyle.width + 20, height: widgetPreviewStyle.height + 20 }}>
+              <div className="absolute top-0 left-0" style={{ width: widgetPreviewStyle.width, height: widgetPreviewStyle.height }}>
+                {form.widgetStyle.showClose && (
+                  <span className="absolute -right-1 -top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full text-[8px] font-black shadow-lg" style={{ backgroundColor: form.widgetStyle.closeButtonColor, color: form.widgetStyle.closeButtonTextColor }}>
+                    ✕
+                  </span>
+                )}
+                <div className="flex h-full w-full select-none flex-col items-center justify-center gap-0.5 text-center font-mono leading-tight" style={widgetPreviewStyle}>
+                  {widgetIconPreview && <img src={widgetIconPreview} alt="" className="h-5 w-5 object-contain" />}
+                  {form.widgetStyle.icon && <span className="text-[10px] font-black">{form.widgetStyle.icon}</span>}
+                  <span className="text-[10px]">
+                    {form.widgetStyle.countdownFormat === "label" ? "OFFER" : form.widgetStyle.countdownFormat === "compact" ? "1h 25m" : form.widgetStyle.countdownFormat === "MM:SS" ? "85:30" : "01:25:30"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Shape</label>
+              <select className={compactSelect} value={form.widgetStyle.shape} onChange={(event) => patchNested("widgetStyle", "shape", event.target.value)}>
+                {shapeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Width (px)</label>
+              <input className={compactInput} type="number" value={form.widgetStyle.width} onChange={(event) => patchNested("widgetStyle", "width", Number(event.target.value))} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Height (px)</label>
+              <input className={compactInput} type="number" value={form.widgetStyle.height} onChange={(event) => patchNested("widgetStyle", "height", Number(event.target.value))} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Border Radius</label>
+              <input className={compactInput} type="number" value={form.widgetStyle.borderRadius} onChange={(event) => patchNested("widgetStyle", "borderRadius", Number(event.target.value))} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Background</label>
+              <div className="flex gap-1">
+                <input type="color" className="h-6 w-6 rounded border border-slate-200 p-0.5 cursor-pointer" value={form.widgetStyle.backgroundColor} onChange={(event) => patchNested("widgetStyle", "backgroundColor", event.target.value)} />
+                <input className={cn(compactInput, "flex-1")} value={form.widgetStyle.backgroundColor} onChange={(event) => patchNested("widgetStyle", "backgroundColor", event.target.value)} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Text Color</label>
+              <div className="flex gap-1">
+                <input type="color" className="h-6 w-6 rounded border border-slate-200 p-0.5 cursor-pointer" value={form.widgetStyle.textColor} onChange={(event) => patchNested("widgetStyle", "textColor", event.target.value)} />
+                <input className={cn(compactInput, "flex-1")} value={form.widgetStyle.textColor} onChange={(event) => patchNested("widgetStyle", "textColor", event.target.value)} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Font Size</label>
+              <input className={compactInput} type="number" value={form.widgetStyle.fontSize} onChange={(event) => patchNested("widgetStyle", "fontSize", Number(event.target.value))} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Font Weight</label>
+              <select className={compactSelect} value={form.widgetStyle.fontWeight} onChange={(event) => patchNested("widgetStyle", "fontWeight", event.target.value)}>
+                {fontWeightOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Countdown Format</label>
+              <select className={compactSelect} value={form.widgetStyle.countdownFormat} onChange={(event) => patchNested("widgetStyle", "countdownFormat", event.target.value)}>
+                {countdownFormatOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Border Color</label>
+              <div className="flex gap-1">
+                <input type="color" className="h-6 w-6 rounded border border-slate-200 p-0.5 cursor-pointer" value={form.widgetStyle.borderColor} onChange={(event) => patchNested("widgetStyle", "borderColor", event.target.value)} />
+                <input className={cn(compactInput, "flex-1")} value={form.widgetStyle.borderColor} onChange={(event) => patchNested("widgetStyle", "borderColor", event.target.value)} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Border Width</label>
+              <input className={compactInput} type="number" value={form.widgetStyle.borderWidth} onChange={(event) => patchNested("widgetStyle", "borderWidth", Number(event.target.value))} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Shadow</label>
+              <select className={compactSelect} value={form.widgetStyle.shadow} onChange={(event) => patchNested("widgetStyle", "shadow", event.target.value)}>
+                {shadowOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Icon Text</label>
+              <input className={compactInput} value={form.widgetStyle.icon} onChange={(event) => patchNested("widgetStyle", "icon", event.target.value)} placeholder="%" />
+            </div>
+            <div className="flex flex-col gap-0.5 sm:col-span-2">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Icon Image</label>
+              <div className="flex gap-1">
+                <input className={cn(compactInput, "flex-1")} value={form.widgetStyle.iconImage || ""} onChange={(event) => patchNested("widgetStyle", "iconImage", event.target.value)} placeholder="/uploads/offer-timer/icon.webp" />
+                <label className={cn("inline-flex items-center gap-0.5 px-2 py-0.5 text-[7px] font-medium rounded transition-colors cursor-pointer", "bg-slate-100 hover:bg-slate-200 text-slate-700")}>
+                  <Upload size={9} /> Upload
+                  <input type="file" accept="image/*" className="hidden" onChange={uploadWidgetIcon} disabled={uploading} />
+                </label>
+              </div>
+              {widgetIconPreview && <img src={widgetIconPreview} alt="Widget icon" className="h-8 w-8 rounded border border-slate-200 object-contain" />}
+            </div>
+            <div className="flex items-center gap-1.5 bg-slate-50 rounded-lg border border-slate-200/50 px-2 py-0.5">
+              <input type="checkbox" className="h-3 w-3 rounded border-slate-300 text-orange-600 focus:ring-1 focus:ring-orange-500/20" checked={Boolean(form.widgetStyle.showClose)} onChange={(event) => patchNested("widgetStyle", "showClose", event.target.checked)} />
+              <span className="text-[7px] font-medium text-slate-600">Close Button</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-slate-50 rounded-lg border border-slate-200/50 px-2 py-0.5">
+              <input type="checkbox" className="h-3 w-3 rounded border-slate-300 text-orange-600 focus:ring-1 focus:ring-orange-500/20" checked={Boolean(form.widgetStyle.draggable)} onChange={(event) => patchNested("widgetStyle", "draggable", event.target.checked)} />
+              <span className="text-[7px] font-medium text-slate-600">Draggable</span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Close Btn Color</label>
+              <div className="flex gap-1">
+                <input type="color" className="h-6 w-6 rounded border border-slate-200 p-0.5 cursor-pointer" value={form.widgetStyle.closeButtonColor} onChange={(event) => patchNested("widgetStyle", "closeButtonColor", event.target.value)} />
+                <input className={cn(compactInput, "flex-1")} value={form.widgetStyle.closeButtonColor} onChange={(event) => patchNested("widgetStyle", "closeButtonColor", event.target.value)} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Close Btn Text</label>
+              <div className="flex gap-1">
+                <input type="color" className="h-6 w-6 rounded border border-slate-200 p-0.5 cursor-pointer" value={form.widgetStyle.closeButtonTextColor} onChange={(event) => patchNested("widgetStyle", "closeButtonTextColor", event.target.value)} />
+                <input className={cn(compactInput, "flex-1")} value={form.widgetStyle.closeButtonTextColor} onChange={(event) => patchNested("widgetStyle", "closeButtonTextColor", event.target.value)} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Default Position</label>
+              <select className={compactSelect} value={form.widgetStyle.defaultPosition} onChange={(event) => patchNested("widgetStyle", "defaultPosition", event.target.value)}>
+                {positionOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Offset X</label>
+              <input className={compactInput} type="number" value={form.widgetStyle.offsetX} onChange={(event) => patchNested("widgetStyle", "offsetX", Number(event.target.value))} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Offset Y</label>
+              <input className={compactInput} type="number" value={form.widgetStyle.offsetY} onChange={(event) => patchNested("widgetStyle", "offsetY", Number(event.target.value))} />
+            </div>
+          </div>
         </div>
-      </section>
+      )}
+
+      {/* Popup Section */}
+      {activeSection === "popup" && (
+        <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm space-y-2">
+          <div className="flex items-center gap-2 mb-1">
+            <Layout size={14} className="text-orange-600" />
+            <h2 className="text-xs font-semibold text-slate-900">Offer Popup UI</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Layout</label>
+              <select className={compactSelect} value={form.popupStyle.layout} onChange={(event) => patchNested("popupStyle", "layout", event.target.value)}>
+                {layoutOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Border Radius</label>
+              <input className={compactInput} type="number" value={form.popupStyle.borderRadius} onChange={(event) => patchNested("popupStyle", "borderRadius", Number(event.target.value))} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Background</label>
+              <div className="flex gap-1">
+                <input type="color" className="h-6 w-6 rounded border border-slate-200 p-0.5 cursor-pointer" value={form.popupStyle.backgroundColor} onChange={(event) => patchNested("popupStyle", "backgroundColor", event.target.value)} />
+                <input className={cn(compactInput, "flex-1")} value={form.popupStyle.backgroundColor} onChange={(event) => patchNested("popupStyle", "backgroundColor", event.target.value)} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Title Color</label>
+              <div className="flex gap-1">
+                <input type="color" className="h-6 w-6 rounded border border-slate-200 p-0.5 cursor-pointer" value={form.popupStyle.titleColor} onChange={(event) => patchNested("popupStyle", "titleColor", event.target.value)} />
+                <input className={cn(compactInput, "flex-1")} value={form.popupStyle.titleColor} onChange={(event) => patchNested("popupStyle", "titleColor", event.target.value)} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Subtitle Color</label>
+              <div className="flex gap-1">
+                <input type="color" className="h-6 w-6 rounded border border-slate-200 p-0.5 cursor-pointer" value={form.popupStyle.subtitleColor} onChange={(event) => patchNested("popupStyle", "subtitleColor", event.target.value)} />
+                <input className={cn(compactInput, "flex-1")} value={form.popupStyle.subtitleColor} onChange={(event) => patchNested("popupStyle", "subtitleColor", event.target.value)} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Description Color</label>
+              <div className="flex gap-1">
+                <input type="color" className="h-6 w-6 rounded border border-slate-200 p-0.5 cursor-pointer" value={form.popupStyle.descriptionColor} onChange={(event) => patchNested("popupStyle", "descriptionColor", event.target.value)} />
+                <input className={cn(compactInput, "flex-1")} value={form.popupStyle.descriptionColor} onChange={(event) => patchNested("popupStyle", "descriptionColor", event.target.value)} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Timer Color</label>
+              <div className="flex gap-1">
+                <input type="color" className="h-6 w-6 rounded border border-slate-200 p-0.5 cursor-pointer" value={form.popupStyle.timerColor} onChange={(event) => patchNested("popupStyle", "timerColor", event.target.value)} />
+                <input className={cn(compactInput, "flex-1")} value={form.popupStyle.timerColor} onChange={(event) => patchNested("popupStyle", "timerColor", event.target.value)} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Button Color</label>
+              <div className="flex gap-1">
+                <input type="color" className="h-6 w-6 rounded border border-slate-200 p-0.5 cursor-pointer" value={form.popupStyle.buttonColor} onChange={(event) => patchNested("popupStyle", "buttonColor", event.target.value)} />
+                <input className={cn(compactInput, "flex-1")} value={form.popupStyle.buttonColor} onChange={(event) => patchNested("popupStyle", "buttonColor", event.target.value)} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Button Text Color</label>
+              <div className="flex gap-1">
+                <input type="color" className="h-6 w-6 rounded border border-slate-200 p-0.5 cursor-pointer" value={form.popupStyle.buttonTextColor} onChange={(event) => patchNested("popupStyle", "buttonTextColor", event.target.value)} />
+                <input className={cn(compactInput, "flex-1")} value={form.popupStyle.buttonTextColor} onChange={(event) => patchNested("popupStyle", "buttonTextColor", event.target.value)} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
-  );
-}
-
-function Field({ label, value, onChange, type = "text", placeholder = "" }) {
-  return (
-    <label className={ui.field}>
-      {label}
-      <input type={type} className={ui.input} value={value ?? ""} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} />
-    </label>
-  );
-}
-
-function SelectField({ label, value, options, onChange }) {
-  return (
-    <label className={ui.field}>
-      {label}
-      <select className={ui.input} value={value} onChange={(event) => onChange(event.target.value)}>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>{option.label}</option>
-        ))}
-      </select>
-    </label>
   );
 }

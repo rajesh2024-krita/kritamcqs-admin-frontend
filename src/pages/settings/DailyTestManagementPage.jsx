@@ -4,6 +4,24 @@ import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { ToggleSwitch } from "../../components/forms/ToggleSwitch";
 import { useToast } from "../../context/ToastContext";
 import { cn, ui } from "../../ui";
+import { 
+  Settings, 
+  RefreshCw, 
+  Save, 
+  RotateCcw, 
+  BarChart3, 
+  Layers, 
+  Target,
+  AlertCircle,
+  CheckCircle,
+  Zap,
+  Calendar,
+  Users,
+  BookOpen,
+  TrendingUp,
+  Shield,
+  Clock
+} from "lucide-react";
 
 const defaultSettings = {
   exam_type: "BOTH",
@@ -206,132 +224,121 @@ export function DailyTestManagementPage() {
     }
   }
 
-  if (loading) return <LoadingSpinner label="Loading daily test management..." />;
+  if (loading) return <LoadingSpinner label="Loading..." />;
+
+  // Compact input class
+  const compactInput = "w-full px-2 py-0.5 text-xs bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all";
+  const compactSelect = "w-full px-2 py-0.5 text-xs bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none";
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className={ui.panel}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className={ui.eyebrow}>Daily Test Control</div>
-            <p className={ui.muted}>Configure daily test generation, question composition, and difficulty distribution from admin.</p>
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="bg-white rounded-lg border border-slate-200/60 px-4 py-2.5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg shadow-indigo-500/25">
+              <Calendar size={14} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-slate-900">Daily Test Management</h1>
+              <p className="text-xs text-slate-500">Configure daily test generation and difficulty distribution</p>
+            </div>
           </div>
-          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={loadData} type="button">
-            Refresh
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className={cn(
+              "inline-flex px-2 py-0.5 rounded text-[9px] font-medium",
+              settings.enabled ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500 border border-slate-200"
+            )}>
+              {settings.enabled ? "Active" : "Disabled"}
+            </span>
+            <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[9px] font-medium text-slate-700 rounded transition-colors" onClick={loadData} type="button">
+              <RefreshCw size={10} /> Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Settings Form */}
+      <form className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm space-y-3" onSubmit={handleSaveSettings}>
+        {/* Header with Save Button */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <Settings size={14} className="text-indigo-600" />
+            <h3 className="text-xs font-semibold text-slate-900">Generation Settings</h3>
+          </div>
+          <button className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-[9px] font-medium rounded-lg transition-all shadow-sm shadow-indigo-500/25 disabled:opacity-50" disabled={saving} type="submit">
+            <Save size={10} /> {saving ? "Saving..." : "Save Settings"}
           </button>
         </div>
-      </section>
 
-      <form className={ui.panel} onSubmit={handleSaveSettings}>
-        <div className={ui.sectionHead}>
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">Generation Settings</h3>
-            <p className={ui.muted}>Set total questions and split across new, weak area, and revision/mistake buckets.</p>
-          </div>
-          <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={saving} type="submit">
-            {saving ? "Saving..." : "Save Settings"}
-          </button>
-        </div>
-
-        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-          <label className={ui.field}>
-            <span>Exam Type</span>
-            <select
-              className={ui.input}
-              value={settings.exam_type}
-              onChange={(event) => setSettings((current) => ({ ...current, exam_type: event.target.value }))}
-            >
-              <option value="BOTH">BOTH - NEET and JEE daily tests</option>
+        {/* Basic Settings Grid */}
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Exam Type</label>
+            <select className={compactSelect} value={settings.exam_type} onChange={(event) => setSettings((current) => ({ ...current, exam_type: event.target.value }))}>
+              <option value="BOTH">BOTH - NEET &amp; JEE</option>
               <option value="NEET">NEET only</option>
               <option value="JEE">JEE only</option>
             </select>
-          </label>
-          <label className={ui.field}>
-            <span>Total Daily Test Questions</span>
-            <input
-              className={ui.input}
-              type="number"
-              min={1}
-              max={200}
-              value={settings.total_questions}
-              onChange={(event) => setSettings((current) => ({ ...current, total_questions: Number(event.target.value || 1) }))}
-            />
-          </label>
-          <label className={ui.field}>
-            <span>New Question Count</span>
-            <input
-              className={ui.input}
-              type="number"
-              min={0}
-              max={200}
-              value={settings.new_questions}
-              onChange={(event) => setSettings((current) => ({ ...current, new_questions: Number(event.target.value || 0) }))}
-            />
-          </label>
-          <label className={ui.field}>
-            <span>Weak Question Count</span>
-            <input
-              className={ui.input}
-              type="number"
-              min={0}
-              max={200}
-              value={settings.weak_questions}
-              onChange={(event) => setSettings((current) => ({ ...current, weak_questions: Number(event.target.value || 0) }))}
-            />
-          </label>
-          <label className={ui.field}>
-            <span>Revision Question Count</span>
-            <input
-              className={ui.input}
-              type="number"
-              min={0}
-              max={200}
-              value={settings.revision_questions}
-              onChange={(event) => setSettings((current) => ({ ...current, revision_questions: Number(event.target.value || 0) }))}
-            />
-          </label>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Total Questions</label>
+            <input className={compactInput} type="number" min={1} max={200} value={settings.total_questions} onChange={(event) => setSettings((current) => ({ ...current, total_questions: Number(event.target.value || 1) }))} />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">New Questions</label>
+            <input className={compactInput} type="number" min={0} max={200} value={settings.new_questions} onChange={(event) => setSettings((current) => ({ ...current, new_questions: Number(event.target.value || 0) }))} />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Weak Questions</label>
+            <input className={compactInput} type="number" min={0} max={200} value={settings.weak_questions} onChange={(event) => setSettings((current) => ({ ...current, weak_questions: Number(event.target.value || 0) }))} />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Revision Questions</label>
+            <input className={compactInput} type="number" min={0} max={200} value={settings.revision_questions} onChange={(event) => setSettings((current) => ({ ...current, revision_questions: Number(event.target.value || 0) }))} />
+          </div>
         </div>
 
-        <div className="mt-6">
-          <h4 className="text-lg font-bold text-slate-900">Subject Distribution</h4>
-          <p className="mb-3 text-sm text-slate-500">Optional exact subject split. Leave all counts as 0 to keep adaptive subject balancing.</p>
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Subject Distribution */}
+        <div className="pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Layers size={12} className="text-indigo-600" />
+            <h4 className="text-[10px] font-semibold text-slate-900">Subject Distribution</h4>
+            <span className="text-[8px] text-slate-400">(Optional - leave 0 for adaptive)</span>
+          </div>
+          <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
             {[
               { exam: "NEET", subjects: ["Biology", "Chemistry", "Physics"] },
               { exam: "JEE", subjects: ["Mathematics", "Chemistry", "Physics"] },
             ].map((group) => {
               const total = group.subjects.reduce((sum, subject) => sum + Number(settings.subject_distribution?.[group.exam]?.[subject] || 0), 0);
+              const isMatch = total === 0 || total === Number(settings.total_questions || 0);
               return (
-                <div key={group.exam} className="rounded-sm border border-slate-200 bg-white p-4">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <p className="text-sm font-black uppercase tracking-wide text-slate-800">{group.exam}</p>
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold ${total > 0 && total !== Number(settings.total_questions || 0) ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>
+                <div key={group.exam} className="bg-slate-50 rounded-lg border border-slate-200/50 p-2">
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span className="text-[9px] font-semibold text-slate-700">{group.exam}</span>
+                    <span className={cn(
+                      "px-1.5 py-0.5 rounded text-[8px] font-medium",
+                      isMatch ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
+                    )}>
                       {total}/{settings.total_questions}
                     </span>
                   </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div className="grid grid-cols-3 gap-1.5">
                     {group.subjects.map((subject) => (
-                      <label key={subject} className={ui.field}>
-                        <span>{subject}</span>
-                        <input
-                          className={ui.input}
-                          type="number"
-                          min={0}
-                          max={200}
-                          value={settings.subject_distribution?.[group.exam]?.[subject] ?? 0}
-                          onChange={(event) =>
-                            setSettings((current) => ({
-                              ...current,
-                              subject_distribution: {
-                                ...(current.subject_distribution || {}),
-                                [group.exam]: {
-                                  ...(current.subject_distribution?.[group.exam] || {}),
-                                  [subject]: Number(event.target.value || 0),
-                                },
-                              },
-                            }))}
-                        />
-                      </label>
+                      <div key={subject} className="flex flex-col gap-0.5">
+                        <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">{subject}</label>
+                        <input className={compactInput} type="number" min={0} max={200} value={settings.subject_distribution?.[group.exam]?.[subject] ?? 0} onChange={(event) => setSettings((current) => ({
+                          ...current,
+                          subject_distribution: {
+                            ...(current.subject_distribution || {}),
+                            [group.exam]: {
+                              ...(current.subject_distribution?.[group.exam] || {}),
+                              [subject]: Number(event.target.value || 0),
+                            },
+                          },
+                        }))} />
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -340,220 +347,174 @@ export function DailyTestManagementPage() {
           </div>
         </div>
 
-        <div className="mt-6">
-          <h4 className="text-lg font-bold text-slate-900">Difficulty Distribution</h4>
-          <p className="mb-3 text-sm text-slate-500">Set the daily test difficulty ratio in percentages.</p>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <label className={ui.field}>
-              <span>Easy %</span>
-              <input
-                className={ui.input}
-                type="number"
-                min={0}
-                max={100}
-                value={settings.easy_percentage}
-                onChange={(event) => setSettings((current) => ({ ...current, easy_percentage: Number(event.target.value || 0) }))}
-              />
-            </label>
-            <label className={ui.field}>
-              <span>Moderate %</span>
-              <input
-                className={ui.input}
-                type="number"
-                min={0}
-                max={100}
-                value={settings.moderate_percentage}
-                onChange={(event) => setSettings((current) => ({ ...current, moderate_percentage: Number(event.target.value || 0) }))}
-              />
-            </label>
-            <label className={ui.field}>
-              <span>Hard %</span>
-              <input
-                className={ui.input}
-                type="number"
-                min={0}
-                max={100}
-                value={settings.hard_percentage}
-                onChange={(event) => setSettings((current) => ({ ...current, hard_percentage: Number(event.target.value || 0) }))}
-              />
-            </label>
+        {/* Difficulty Distribution */}
+        <div className="pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-2 mb-1.5">
+            <BarChart3 size={12} className="text-indigo-600" />
+            <h4 className="text-[10px] font-semibold text-slate-900">Difficulty Distribution</h4>
+            <span className="text-[8px] text-slate-400">(Must total 100%)</span>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Easy %</label>
+              <input className={compactInput} type="number" min={0} max={100} value={settings.easy_percentage} onChange={(event) => setSettings((current) => ({ ...current, easy_percentage: Number(event.target.value || 0) }))} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Moderate %</label>
+              <input className={compactInput} type="number" min={0} max={100} value={settings.moderate_percentage} onChange={(event) => setSettings((current) => ({ ...current, moderate_percentage: Number(event.target.value || 0) }))} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Hard %</label>
+              <input className={compactInput} type="number" min={0} max={100} value={settings.hard_percentage} onChange={(event) => setSettings((current) => ({ ...current, hard_percentage: Number(event.target.value || 0) }))} />
+            </div>
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <span className={cn(
+              "text-[8px] font-medium",
+              Number(settings.easy_percentage) + Number(settings.moderate_percentage) + Number(settings.hard_percentage) === 100 ? "text-emerald-600" : "text-rose-600"
+            )}>
+              Total: {Number(settings.easy_percentage) + Number(settings.moderate_percentage) + Number(settings.hard_percentage)}%
+              {Number(settings.easy_percentage) + Number(settings.moderate_percentage) + Number(settings.hard_percentage) !== 100 && " (Must equal 100)"}
+            </span>
           </div>
         </div>
 
-        <div className="mt-6">
-          <label className={ui.field}>
-            <span>Enable/Disable Daily Test</span>
-            <div className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white px-4 py-3">
-              <ToggleSwitch checked={Boolean(settings.enabled)} onChange={(value) => setSettings((current) => ({ ...current, enabled: value }))} label="Daily test module is active for app users" />
+        {/* Toggle Switches */}
+        <div className="pt-2 border-t border-slate-100">
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+            <div className="flex items-center gap-2 bg-slate-50 rounded-lg border border-slate-200/50 px-3 py-1.5">
+              <ToggleSwitch checked={Boolean(settings.enabled)} onChange={(value) => setSettings((current) => ({ ...current, enabled: value }))} label="" size="sm" />
+              <span className="text-[9px] font-medium text-slate-700">Daily test module is active</span>
             </div>
-          </label>
-        </div>
-
-        <div className="mt-4">
-          <label className={ui.field}>
-            <span>Allow Both Exams Same Day</span>
-            <div className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white px-4 py-3">
-              <ToggleSwitch
-                checked={Boolean(settings.allow_both_exams_same_day)}
-                onChange={(value) => setSettings((current) => ({ ...current, allow_both_exams_same_day: value }))}
-                label="Users can attend both NEET and JEE daily tests on the same day"
-              />
+            <div className="flex items-center gap-2 bg-slate-50 rounded-lg border border-slate-200/50 px-3 py-1.5">
+              <ToggleSwitch checked={Boolean(settings.allow_both_exams_same_day)} onChange={(value) => setSettings((current) => ({ ...current, allow_both_exams_same_day: value }))} label="" size="sm" />
+              <span className="text-[9px] font-medium text-slate-700">Allow both exams same day</span>
             </div>
-          </label>
+          </div>
           {!settings.allow_both_exams_same_day && (
-            <p className="mt-2 text-sm font-medium text-amber-700">
-              Disabled: after completing one exam, the other daily test is locked until tomorrow.
-            </p>
+            <p className="text-[8px] text-amber-600 mt-1">⚠️ Disabled: after completing one exam, the other is locked until tomorrow</p>
           )}
         </div>
 
-        <div className="mt-6 border-t border-slate-200 pt-6">
-          <h4 className="text-lg font-bold text-slate-900">Adaptive Randomization</h4>
-          <p className="mb-3 text-sm text-slate-500">Control adaptive difficulty and repeat prevention for Daily/Weekly/Mock test generation.</p>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <label className={ui.field}>
-              <span>Adaptive Mode</span>
-              <div className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white px-4 py-3">
-                <ToggleSwitch checked={Boolean(settings.adaptive_mode_enabled)} onChange={(value) => setSettings((current) => ({ ...current, adaptive_mode_enabled: value }))} label="Auto-balance by learner capacity" />
-              </div>
-            </label>
-            <label className={ui.field}>
-              <span>Repeat Lookback Sessions</span>
-              <input
-                className={ui.input}
-                type="number"
-                min={1}
-                max={30}
-                value={settings.repeat_lookback_sessions}
-                onChange={(event) => setSettings((current) => ({ ...current, repeat_lookback_sessions: Number(event.target.value || 1) }))}
-              />
-            </label>
-            <label className={ui.field}>
-              <span>Max Repeated Questions Per Paper</span>
-              <input
-                className={ui.input}
-                type="number"
-                min={0}
-                max={200}
-                value={settings.max_repeated_questions}
-                onChange={(event) => setSettings((current) => ({ ...current, max_repeated_questions: Number(event.target.value || 0) }))}
-              />
-            </label>
+        {/* Adaptive Randomization */}
+        <div className="pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Zap size={12} className="text-indigo-600" />
+            <h4 className="text-[10px] font-semibold text-slate-900">Adaptive Randomization</h4>
           </div>
-          <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+            <div className="flex items-center gap-2 bg-slate-50 rounded-lg border border-slate-200/50 px-3 py-1.5">
+              <ToggleSwitch checked={Boolean(settings.adaptive_mode_enabled)} onChange={(value) => setSettings((current) => ({ ...current, adaptive_mode_enabled: value }))} label="" size="sm" />
+              <span className="text-[9px] font-medium text-slate-700">Adaptive Mode</span>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Lookback Sessions</label>
+              <input className={compactInput} type="number" min={1} max={30} value={settings.repeat_lookback_sessions} onChange={(event) => setSettings((current) => ({ ...current, repeat_lookback_sessions: Number(event.target.value || 1) }))} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Max Repeated Questions</label>
+              <input className={compactInput} type="number" min={0} max={200} value={settings.max_repeated_questions} onChange={(event) => setSettings((current) => ({ ...current, max_repeated_questions: Number(event.target.value || 0) }))} />
+            </div>
+          </div>
+
+          {/* Adaptive Ratios */}
+          <div className="grid grid-cols-1 gap-1.5 mt-1.5 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { key: "low_performance_ratio", label: "Low Performance Ratio" },
-              { key: "medium_performance_ratio", label: "Medium Performance Ratio" },
-              { key: "high_performance_ratio", label: "High Performance Ratio" },
-              { key: "mixed_mode_ratio", label: "Mixed Mode Ratio" },
-            ].map((item) => (
-              <div key={item.key} className="rounded-sm border border-slate-200 bg-white p-4">
-                <p className="mb-2 text-sm font-bold text-slate-800">{item.label}</p>
-                <div className="grid grid-cols-3 gap-3">
-                  <label className={ui.field}>
-                    <span>Easy %</span>
-                    <input
-                      className={ui.input}
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={settings[item.key]?.easy ?? 0}
-                      onChange={(event) =>
-                        setSettings((current) => ({
-                          ...current,
-                          [item.key]: { ...(current[item.key] || {}), easy: Number(event.target.value || 0) },
-                        }))}
-                    />
-                  </label>
-                  <label className={ui.field}>
-                    <span>Moderate %</span>
-                    <input
-                      className={ui.input}
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={settings[item.key]?.moderate ?? 0}
-                      onChange={(event) =>
-                        setSettings((current) => ({
-                          ...current,
-                          [item.key]: { ...(current[item.key] || {}), moderate: Number(event.target.value || 0) },
-                        }))}
-                    />
-                  </label>
-                  <label className={ui.field}>
-                    <span>Hard %</span>
-                    <input
-                      className={ui.input}
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={settings[item.key]?.hard ?? 0}
-                      onChange={(event) =>
-                        setSettings((current) => ({
-                          ...current,
-                          [item.key]: { ...(current[item.key] || {}), hard: Number(event.target.value || 0) },
-                        }))}
-                    />
-                  </label>
+              { key: "low_performance_ratio", label: "Low Performance", icon: TrendingUp },
+              { key: "medium_performance_ratio", label: "Medium Performance", icon: Users },
+              { key: "high_performance_ratio", label: "High Performance", icon: Shield },
+              { key: "mixed_mode_ratio", label: "Mixed Mode", icon: Layers },
+            ].map((item) => {
+              const Icon = item.icon;
+              const values = settings[item.key] || { easy: 0, moderate: 0, hard: 0 };
+              const total = Number(values.easy || 0) + Number(values.moderate || 0) + Number(values.hard || 0);
+              return (
+                <div key={item.key} className="bg-slate-50 rounded-lg border border-slate-200/50 p-2">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Icon size={10} className="text-indigo-600" />
+                    <span className="text-[8px] font-medium text-slate-700">{item.label}</span>
+                    <span className={cn(
+                      "ml-auto text-[7px] font-medium",
+                      total === 100 ? "text-emerald-600" : "text-rose-600"
+                    )}>
+                      {total}%
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1">
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Easy</label>
+                      <input className={compactInput} type="number" min={0} max={100} value={values.easy || 0} onChange={(event) => setSettings((current) => ({
+                        ...current,
+                        [item.key]: { ...(current[item.key] || {}), easy: Number(event.target.value || 0) },
+                      }))} />
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Mod</label>
+                      <input className={compactInput} type="number" min={0} max={100} value={values.moderate || 0} onChange={(event) => setSettings((current) => ({
+                        ...current,
+                        [item.key]: { ...(current[item.key] || {}), moderate: Number(event.target.value || 0) },
+                      }))} />
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Hard</label>
+                      <input className={compactInput} type="number" min={0} max={100} value={values.hard || 0} onChange={(event) => setSettings((current) => ({
+                        ...current,
+                        [item.key]: { ...(current[item.key] || {}), hard: Number(event.target.value || 0) },
+                      }))} />
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       </form>
 
-      <section className={ui.panel}>
-        <div className={ui.sectionHead}>
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">Manual Reset</h3>
-            <p className={ui.muted}>Reset generated daily tests so users can receive a regenerated pool.</p>
+      {/* Manual Reset Section */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <RotateCcw size={14} className="text-amber-600" />
+            <h3 className="text-xs font-semibold text-slate-900">Manual Reset</h3>
+            <span className="text-[8px] text-slate-400">Reset generated daily tests</span>
           </div>
-          <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={resetting} onClick={handleResetDailyTests} type="button">
+          <button className={cn(
+            "inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-medium rounded-lg transition-all",
+            "bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200",
+            resetting && "opacity-50 cursor-not-allowed"
+          )} disabled={resetting} onClick={handleResetDailyTests} type="button">
+            <RotateCcw size={10} className={resetting ? "animate-spin" : ""} />
             {resetting ? "Resetting..." : "Reset Daily Tests"}
           </button>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-4">
-          <label className={ui.field}>
-            <span>Email ID (optional)</span>
-            <input
-              className={ui.input}
-              type="email"
-              value={resetInput.email}
-              onChange={(event) => setResetInput((current) => ({ ...current, email: event.target.value }))}
-              placeholder="Leave empty for all users"
-            />
-          </label>
-          <label className={ui.field}>
-            <span>Date (optional)</span>
-            <input
-              className={ui.input}
-              type="date"
-              value={resetInput.date}
-              onChange={(event) => setResetInput((current) => ({ ...current, date: event.target.value }))}
-            />
-          </label>
-          <label className={ui.field}>
-            <span>Exam Type (optional)</span>
-            <select
-              className={ui.input}
-              value={resetInput.exam_mode}
-              onChange={(event) => setResetInput((current) => ({ ...current, exam_mode: event.target.value }))}
-            >
+        <div className="grid grid-cols-1 gap-1.5 mt-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Email (optional)</label>
+            <input className={compactInput} type="email" value={resetInput.email} onChange={(event) => setResetInput((current) => ({ ...current, email: event.target.value }))} placeholder="Leave empty for all" />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Date (optional)</label>
+            <input className={compactInput} type="date" value={resetInput.date} onChange={(event) => setResetInput((current) => ({ ...current, date: event.target.value }))} />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Exam Type (optional)</label>
+            <select className={compactSelect} value={resetInput.exam_mode} onChange={(event) => setResetInput((current) => ({ ...current, exam_mode: event.target.value }))}>
               <option value="">All exam types</option>
               <option value="NEET">NEET</option>
               <option value="JEE">JEE</option>
               <option value="BOTH">BOTH</option>
             </select>
-          </label>
-          <label className={ui.field}>
-            <span>Reset All Dates</span>
-            <div className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white px-4 py-3">
-              <ToggleSwitch checked={Boolean(resetInput.reset_all)} onChange={(value) => setResetInput((current) => ({ ...current, reset_all: value }))} label="Ignore date filter and remove all generated tests" />
-            </div>
-          </label>
+          </div>
+          <div className="flex items-center gap-2 bg-slate-50 rounded-lg border border-slate-200/50 px-3 py-1.5">
+            <ToggleSwitch checked={Boolean(resetInput.reset_all)} onChange={(value) => setResetInput((current) => ({ ...current, reset_all: value }))} label="" size="sm" />
+            <span className="text-[8px] font-medium text-slate-700">Reset All Dates</span>
+          </div>
         </div>
-      </section>
+        {resetInput.reset_all && (
+          <p className="text-[8px] text-amber-600 mt-1">⚠️ This will remove all generated tests regardless of date</p>
+        )}
+      </div>
     </div>
   );
 }

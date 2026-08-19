@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { Bell } from "lucide-react";
+import { Bell, Search, ChevronDown, Sparkles, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { contactService } from "../../api/contactService";
 import { ToastViewport } from "../common/ToastViewport";
@@ -36,9 +36,7 @@ const navItems = [
   { label: "Years", to: "/years", section: "Catalog", icon: OverviewIcon, moduleKey: "years" },
   { label: "Question Types", to: "/question-types", section: "Catalog", icon: HelpIcon, moduleKey: "question-types" },
   { label: "List Styles", to: "/list-styles", section: "Catalog", icon: FileStackIcon, moduleKey: "list-styles" },
-  // { label: "AI Academic Audit", to: "/questions/katex-audit", section: "Content", icon: ShieldIcon, moduleKey: "katex-audit" },
   { label: "Questions", to: "/questions", section: "Content", icon: TagIcon, moduleKey: "questions" },
-  // { label: "Daily Plans", to: "/daily-plans", section: "Content", icon: FileStackIcon },
   { label: "Mock Tests", to: "/mock-tests", section: "Content", icon: OverviewIcon, moduleKey: "mock-tests" },
   { label: "National Competitions", to: "/national-competitions", section: "Content", icon: ShieldIcon, moduleKey: "national-competitions" },
   { label: "Free Mock Tests", to: "/free-mock-tests", section: "Content", icon: OverviewIcon, moduleKey: "free-mock-tests" },
@@ -89,17 +87,33 @@ export function AdminLayout() {
   const { admin, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [unreadContacts, setUnreadContacts] = useState(0);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const previousUnreadRef = useRef(null);
   const location = useLocation();
+  const searchInputRef = useRef(null);
+  const userMenuRef = useRef(null);
+  
   const isEmployee = isEmployeeAdmin(admin);
   const visibleNavItems = navItems.filter((item) => {
     if (!isEmployee) return true;
     if (item.mainOnly) return false;
     return item.moduleKey && canViewModule(admin, item.moduleKey);
   });
+
+  // Filter nav items based on search
+  const filteredNavItems = searchQuery
+    ? visibleNavItems.filter(item => 
+        item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.section.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : visibleNavItems;
+
   const currentNav = visibleNavItems.find(({ to }) => (to === "/" ? location.pathname === "/" : location.pathname.startsWith(to)));
   const pageTitle = currentNav?.label || "Dashboard";
-  const sectionedNav = visibleNavItems.reduce((acc, item) => {
+  
+  const sectionedNav = filteredNavItems.reduce((acc, item) => {
     if (!acc[item.section]) acc[item.section] = [];
     acc[item.section].push(item);
     return acc;
@@ -109,6 +123,21 @@ export function AdminLayout() {
     setMenuOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    if (searchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [searchOpen]);
 
   function playNotificationSound() {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
@@ -160,100 +189,340 @@ export function AdminLayout() {
   }, []);
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-100">
-      <div className={`fixed inset-0 z-30 bg-slate-950/35 transition lg:hidden ${menuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"}`} onClick={() => setMenuOpen(false)} />
-      <div>
-        <aside className={`fixed inset-y-0 left-0 z-40 flex w-[300px] max-w-[86vw] flex-col overflow-y-auto border-r border-slate-800 bg-slate-950 px-4 py-5 text-slate-100 shadow-2xl transition duration-300 ${menuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}`}>
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-sky-500 text-base font-black text-white shadow-lg shadow-sky-950/30">KA</div>
-            <div className="min-w-0">
-              <h2 className="m-0 text-xl font-black tracking-tight text-white">Krita Admin</h2>
-              <p className="mt-1 text-xs text-slate-400">Control workspace</p>
+    <div className="relative min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+      {/* Animated background elements */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-200/30 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-purple-200/20 rounded-full blur-3xl animate-pulse delay-1000" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-200/10 rounded-full blur-3xl animate-pulse delay-2000" />
+      </div>
+
+      {/* Mobile overlay */}
+      <div 
+        className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm transition-all duration-300 lg:hidden ${
+          menuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0"
+        }`} 
+        onClick={() => setMenuOpen(false)} 
+      />
+
+      <div className="relative z-10">
+        {/* Sidebar - Modern Glass Design */}
+        <aside 
+          className={`fixed inset-y-0 left-0 z-50 flex w-[280px] flex-col overflow-y-auto bg-white/95 backdrop-blur-xl border-r border-slate-200/50 shadow-2xl shadow-slate-200/50 transition-all duration-300 ease-out ${
+            menuOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          }`}
+        >
+          {/* Sidebar Header */}
+          <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-xl px-5 py-4 border-b border-slate-200/50">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                    <img 
+                      src="https://adminapi.kritamcqs.com/uploads/invoice-assets/app-logo-1781498798022-a92a1f02.webp" 
+                      alt="logo" 
+                      className="h-8 w-8 object-contain brightness-0 invert"
+                    />
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">Krita Admin</h1>
+                  <p className="text-[10px] font-medium text-slate-400 tracking-wider uppercase">Control Center</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setMenuOpen(false)}
+                className="lg:hidden p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <X size={18} className="text-slate-600" />
+              </button>
             </div>
           </div>
 
-          <div className="mt-5 rounded-xl border border-slate-800 bg-slate-900 px-4 py-4 shadow-inner">
-            <span className="mb-3 inline-flex rounded-full bg-slate-800 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-300">{isEmployee ? "Employee" : "Workspace"}</span>
-            <strong className="block text-base font-bold text-white">{admin?.name || "Administrator"}</strong>
-            <p className="mt-1 text-sm text-slate-300">{admin?.email || admin?.mobile || "Admin access enabled"}</p>
+          {/* Search in Sidebar */}
+          <div className="px-4 py-3 border-b border-slate-200/50">
+            <div className="relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search menu..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all placeholder:text-slate-400 text-slate-700"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
           </div>
 
-          <nav className="mt-5 flex-1 space-y-5 pr-1">
-            {Object.entries(sectionedNav).map(([section, items]) => (
-              <div key={section} className="space-y-2">
-                <div className="px-2 text-[11px] font-bold uppercase tracking-[0.2em] text-slate-500">{section}</div>
-                {items.map(({ label, to, icon: Icon }) => (
-                  <NavLink
-                    key={to}
-                    to={to}
-                    end={to === "/"}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 rounded-xl border px-3 py-2.5 transition duration-200 ${isActive ? "border-sky-400/30 bg-sky-500/15 text-white shadow-lg shadow-sky-950/20" : "border-transparent text-slate-300 hover:border-slate-800 hover:bg-slate-900 hover:text-white"}`
-                    }
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-900 text-slate-100"><Icon size={18} /></span>
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="truncate text-sm font-bold">{label}</span>
-                      <span className="mt-0.5 text-[10px] uppercase tracking-[0.14em] text-slate-500">{section}</span>
-                    </span>
-                  </NavLink>
-                ))}
+          {/* Navigation */}
+          <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto">
+            {Object.entries(sectionedNav).length === 0 ? (
+              <div className="text-center py-8 text-slate-400 text-sm">
+                No results found
               </div>
-            ))}
+            ) : (
+              Object.entries(sectionedNav).map(([section, items]) => (
+                <div key={section} className="space-y-2">
+                  <div className="px-3 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 flex items-center gap-2">
+                    <span>{section}</span>
+                    <span className="flex-1 h-px bg-slate-200/50" />
+                    <span className="text-[9px] font-medium text-slate-300">{items.length}</span>
+                  </div>
+                  {items.map(({ label, to, icon: Icon }) => (
+                    <NavLink
+                      key={to}
+                      to={to}
+                      end={to === "/"}
+                      className={({ isActive }) =>
+                        `group relative flex items-center gap-3 rounded-xl px-3 py-2.5 transition-all duration-200 ${
+                          isActive 
+                            ? "bg-gradient-to-r from-indigo-50 to-purple-50 text-indigo-700 shadow-sm shadow-indigo-500/10" 
+                            : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                        }`
+                      }
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setSearchQuery("");
+                      }}
+                    >
+                      {({ isActive }) => (
+                        <>
+                          {isActive && (
+                            <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 bg-gradient-to-b from-indigo-500 to-purple-500 rounded-full" />
+                          )}
+                          <span className={cn(
+                            "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-200",
+                            isActive 
+                              ? "bg-indigo-100 text-indigo-600 shadow-sm shadow-indigo-200" 
+                              : "bg-slate-100 text-slate-500 group-hover:bg-slate-200 group-hover:text-slate-700"
+                          )}>
+                            <Icon size={15} />
+                          </span>
+                          <span className="flex min-w-0 flex-1 flex-col">
+                            <span className={cn(
+                              "text-sm font-medium transition-colors",
+                              isActive ? "text-indigo-700" : "text-slate-700 group-hover:text-slate-900"
+                            )}>
+                              {label}
+                            </span>
+                          </span>
+                          {isActive && (
+                            <Sparkles size={12} className="text-indigo-400" />
+                          )}
+                        </>
+                      )}
+                    </NavLink>
+                  ))}
+                </div>
+              ))
+            )}
           </nav>
 
-          <div className="mt-6">
-            <button className={cn(ui.buttonBase, ui.buttonGhost, "w-full justify-center")} onClick={() => void logout()}>
+          {/* Sidebar Footer */}
+          <div className="sticky bottom-0 bg-white/95 backdrop-blur-xl border-t border-slate-200/50 px-4 py-3">
+            <button 
+              className={cn(
+                ui.buttonBase, 
+                "w-full justify-center gap-2 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700 text-white shadow-lg shadow-rose-500/25 transition-all duration-300"
+              )} 
+              onClick={() => void logout()}
+            >
               <LogoutIcon size={16} />
-              Logout
+              Sign Out
             </button>
           </div>
         </aside>
 
-        <main className="px-4 py-4 lg:ml-[300px] lg:px-8 lg:py-6">
-          <header className="admin-surface sticky top-4 z-20 mb-6 flex flex-col gap-4 rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-4 shadow-sm shadow-slate-200/70 backdrop-blur sm:flex-row sm:items-center sm:justify-between sm:px-6">
-            <div className="flex flex-1 items-center gap-3">
-              <button className={cn(ui.buttonBase, ui.buttonGhost, "lg:hidden")} onClick={() => setMenuOpen((current) => !current)}>
-                <MenuIcon size={16} />
-                Menu
-              </button>
-              <div>
-                <div className="mb-1 text-[11px] font-bold uppercase tracking-[0.2em] text-sky-700">{currentNav?.section || "Admin Workspace"}</div>
-                <h1 className="text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">{pageTitle}</h1>
+        {/* Main Content */}
+        <main className="lg:ml-[280px] min-h-screen">
+          {/* Header - Modern Glass */}
+          <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 px-4 py-3 lg:px-8">
+            <div className="flex items-center justify-between gap-4">
+              {/* Left Section */}
+              <div className="flex items-center gap-4">
+                <button 
+                  className="lg:hidden p-2 rounded-xl hover:bg-slate-100 transition-colors"
+                  onClick={() => setMenuOpen(true)}
+                >
+                  <MenuIcon size={20} className="text-slate-700" />
+                </button>
+                <div className="hidden sm:block">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-indigo-50 rounded-full border border-indigo-100/50">
+                      <div className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-pulse" />
+                      <span className="text-[10px] font-medium text-indigo-600 uppercase tracking-wider">
+                        {currentNav?.section || "Overview"}
+                      </span>
+                    </div>
+                    <h1 className="text-xl font-bold text-slate-900">{pageTitle}</h1>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="flex flex-wrap justify-start gap-3 sm:justify-end">
-              <NavLink
-                to="/contact-messages"
-                className={({ isActive }) =>
-                  `relative inline-flex h-11 w-11 items-center justify-center rounded-xl border shadow-sm transition ${isActive ? "border-sky-200 bg-sky-50 text-sky-700" : "border-slate-200/70 bg-white text-slate-700 hover:border-sky-200 hover:bg-sky-50 hover:text-sky-700"}`
-                }
-                aria-label="Contact message notifications"
-                title="Contact message notifications"
-              >
-                <Bell size={18} />
-                {unreadContacts > 0 ? (
-                  <span className="absolute -right-1.5 -top-1.5 min-w-5 rounded-full bg-rose-600 px-1.5 py-0.5 text-center text-[10px] font-black leading-none text-white shadow-sm">
-                    {unreadContacts > 99 ? "99+" : unreadContacts}
-                  </span>
-                ) : null}
-              </NavLink>
-              <div className="inline-flex items-center rounded-full border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Live Workspace</div>
-              <div className="flex items-center gap-3 rounded-xl border border-slate-200/70 bg-white px-3 py-2 shadow-sm">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-slate-900 text-sm font-black text-white">{(admin?.name || "A").slice(0, 1).toUpperCase()}</div>
-                <div>
-                  <div className="text-sm font-bold text-slate-900">{admin?.name || "Administrator"}</div>
-                  <div className="text-xs text-slate-500">{admin?.email || admin?.mobile || "Admin access"}</div>
+
+              {/* Right Section */}
+              <div className="flex items-center gap-3">
+                {/* Search Button - Desktop */}
+                <button
+                  onClick={() => setSearchOpen(true)}
+                  className="hidden md:flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl hover:bg-slate-100 transition-colors group"
+                >
+                  <Search size={16} className="text-slate-400 group-hover:text-slate-600" />
+                  <span className="text-sm text-slate-400">Search...</span>
+                  <kbd className="px-1.5 py-0.5 text-[10px] font-medium bg-white border border-slate-200 rounded text-slate-400">
+                    ⌘K
+                  </kbd>
+                </button>
+
+                {/* Notification Bell */}
+                <NavLink
+                  to="/contact-messages"
+                  className={({ isActive }) =>
+                    `relative p-2.5 rounded-xl border transition-all duration-200 ${
+                      isActive 
+                        ? "border-indigo-200 bg-indigo-50 text-indigo-600" 
+                        : "border-slate-200 bg-white text-slate-600 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-600"
+                    }`
+                  }
+                  aria-label="Contact message notifications"
+                  title="Contact message notifications"
+                >
+                  <Bell size={18} />
+                  {unreadContacts > 0 && (
+                    <span className="absolute -top-1 -right-1 min-w-[20px] h-5 rounded-full bg-gradient-to-r from-rose-500 to-rose-600 px-1.5 flex items-center justify-center text-[10px] font-black text-white shadow-lg shadow-rose-500/25 animate-bounce">
+                      {unreadContacts > 99 ? "99+" : unreadContacts}
+                    </span>
+                  )}
+                </NavLink>
+
+                {/* User Menu */}
+                <div className="relative" ref={userMenuRef}>
+                  <button
+                    onClick={() => setUserMenuOpen(!userMenuOpen)}
+                    className="flex items-center gap-2 p-1.5 pr-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all duration-200 hover:shadow-md group"
+                  >
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center text-white font-bold text-xs shadow-lg shadow-indigo-500/25">
+                      {(admin?.name || "A").slice(0, 1).toUpperCase()}
+                    </div>
+                    <div className="hidden sm:block text-left">
+                      <div className="text-sm font-medium text-slate-900">{admin?.name || "Administrator"}</div>
+                      <div className="text-[10px] text-slate-400 truncate max-w-[100px]">
+                        {admin?.email || admin?.mobile || "Admin access"}
+                      </div>
+                    </div>
+                    <ChevronDown size={14} className={cn(
+                      "text-slate-400 transition-transform duration-200",
+                      userMenuOpen && "rotate-180"
+                    )} />
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {userMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-2xl shadow-2xl shadow-slate-200/50 py-1.5 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="px-4 py-3 border-b border-slate-100">
+                        <div className="text-sm font-medium text-slate-900">{admin?.name || "Administrator"}</div>
+                        <div className="text-xs text-slate-400 truncate">{admin?.email || admin?.mobile}</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          void logout();
+                        }}
+                        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-colors"
+                      >
+                        <LogoutIcon size={16} />
+                        Sign out
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </header>
 
-          <div className="flex flex-col gap-6">
-            <Outlet />
+          {/* Page Content */}
+          <div className="p-4 lg:p-8">
+            <div className="max-w-7xl mx-auto">
+              <Outlet />
+            </div>
           </div>
         </main>
+
+        {/* Search Modal */}
+        {searchOpen && (
+          <div 
+            className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-start justify-center pt-20 px-4 animate-in fade-in duration-200"
+            onClick={() => setSearchOpen(false)}
+          >
+            <div 
+              className="w-full max-w-2xl bg-white rounded-3xl shadow-2xl shadow-black/20 overflow-hidden animate-in slide-in-from-top-4 duration-300"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative">
+                <Search size={20} className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  ref={searchInputRef}
+                  type="text"
+                  placeholder="Search for anything..."
+                  className="w-full pl-14 pr-12 py-4 text-lg bg-transparent border-none focus:outline-none text-slate-900 placeholder:text-slate-400"
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  value={searchQuery}
+                />
+                <button
+                  onClick={() => setSearchOpen(false)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+                >
+                  <X size={18} className="text-slate-400" />
+                </button>
+              </div>
+              {searchQuery && (
+                <div className="border-t border-slate-100 max-h-[400px] overflow-y-auto p-2">
+                  {visibleNavItems
+                    .filter(item => 
+                      item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      item.section.toLowerCase().includes(searchQuery.toLowerCase())
+                    )
+                    .slice(0, 8)
+                    .map(item => (
+                      <NavLink
+                        key={item.to}
+                        to={item.to}
+                        className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 transition-colors"
+                        onClick={() => {
+                          setSearchOpen(false);
+                          setSearchQuery("");
+                        }}
+                      >
+                        <span className="p-1.5 bg-slate-100 rounded-lg text-slate-600">
+                          <item.icon size={16} />
+                        </span>
+                        <div>
+                          <div className="text-sm font-medium text-slate-900">{item.label}</div>
+                          <div className="text-xs text-slate-400">{item.section}</div>
+                        </div>
+                      </NavLink>
+                    ))}
+                  {visibleNavItems.filter(item => 
+                    item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    item.section.toLowerCase().includes(searchQuery.toLowerCase())
+                  ).length === 0 && (
+                    <div className="text-center py-8 text-slate-400 text-sm">
+                      No results found
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <ToastViewport />
       </div>
     </div>

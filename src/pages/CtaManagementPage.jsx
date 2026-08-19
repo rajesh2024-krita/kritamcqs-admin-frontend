@@ -6,6 +6,35 @@ import { ToggleSwitch } from "../components/forms/ToggleSwitch";
 import { useToast } from "../context/ToastContext";
 import { cn, ui } from "../ui";
 import { alignmentOptions, ctaTypeOptions, getCtaTypeLabel, isValidCtaUrl, openInOptions } from "../utils/ctaOptions";
+import {
+  Link2,
+  Plus,
+  RefreshCw,
+  Edit,
+  Trash2,
+  Eye,
+  EyeOff,
+  Palette,
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Mail,
+  Bell,
+  Sparkles,
+  HelpCircle,
+  BookOpen,
+  Code,
+  ExternalLink,
+  CheckCircle,
+  XCircle,
+  Filter,
+  Search,
+  Save,
+  X,
+  Type,
+  Layout,
+  Globe
+} from "lucide-react";
 
 const emptyForm = {
   name: "",
@@ -26,6 +55,12 @@ const channelOptions = [
   { value: "email", label: "Email Templates" },
   { value: "push", label: "Push Notifications" },
 ];
+
+const channelIcons = {
+  both: Sparkles,
+  email: Mail,
+  push: Bell,
+};
 
 function colorInputValue(value, fallback) {
   return /^#[0-9a-f]{6}$/i.test(String(value || "")) ? value : fallback;
@@ -94,81 +129,243 @@ export function CtaManagementPage() {
     }
   }
 
-  return (
-    <div className="flex flex-col gap-6">
-      <section className={ui.panel}>
-        <div className={ui.sectionHead}>
-          <div>
-            <div className={ui.eyebrow}>CTA Management</div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900">Call-to-Action Configurations</h1>
-            <p className={ui.muted}>Create reusable CTA buttons and deep links for email templates and push notifications.</p>
-          </div>
-          <select className={ui.input} value={filter} onChange={(event) => setFilter(event.target.value)}>
-            {channelOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
-          </select>
-        </div>
-      </section>
+  // Compact input classes
+  const compactInput = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all";
+  const compactSelect = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none";
+  const compactTextarea = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-y min-h-[50px]";
 
-      <section className={ui.panel}>
-        <form onSubmit={save} className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <Field label="CTA Name"><input className={ui.input} value={form.name} onChange={(event) => patch({ name: event.target.value })} placeholder="Premium renewal CTA" /></Field>
-          <Field label="Available In"><SelectDropdown value={form.channel} onChange={(value) => patch({ channel: value })} options={channelOptions} /></Field>
-          <Field label="Active"><ToggleSwitch checked={form.isActive !== false} onChange={(value) => patch({ isActive: value })} label={form.isActive !== false ? "Active" : "Inactive"} /></Field>
-          <Field label="Button Text"><input className={ui.input} value={form.ctaText} onChange={(event) => patch({ ctaText: event.target.value })} placeholder="Renew Now" /></Field>
-          <Field label="CTA Type"><SelectDropdown value={form.ctaType} onChange={handleTypeChange} options={ctaTypeOptions.map(({ value, label }) => ({ value, label }))} /></Field>
-          <Field label="Open In"><SelectDropdown value={form.openIn} onChange={(value) => patch({ openIn: value })} options={openInOptions} /></Field>
-          <Field label="CTA URL / Deep Link" className="lg:col-span-3"><input className={ui.input} value={form.ctaUrl} onChange={(event) => patch({ ctaUrl: event.target.value })} placeholder="/subscription?user={{user_id}}" /></Field>
-          <Field label="Button Color"><div className="flex gap-3"><input type="color" className="h-11 w-14 rounded-lg border border-slate-200 bg-white p-1" value={colorInputValue(form.buttonColor, "#2563eb")} onChange={(event) => patch({ buttonColor: event.target.value })} /><input className={ui.input} value={form.buttonColor} onChange={(event) => patch({ buttonColor: event.target.value })} /></div></Field>
-          <Field label="Button Text Color"><div className="flex gap-3"><input type="color" className="h-11 w-14 rounded-lg border border-slate-200 bg-white p-1" value={colorInputValue(form.buttonTextColor, "#ffffff")} onChange={(event) => patch({ buttonTextColor: event.target.value })} /><input className={ui.input} value={form.buttonTextColor} onChange={(event) => patch({ buttonTextColor: event.target.value })} /></div></Field>
-          <Field label="Button Alignment"><SelectDropdown value={form.buttonAlignment} onChange={(value) => patch({ buttonAlignment: value })} options={alignmentOptions} /></Field>
-          <Field label="Description" className="lg:col-span-3"><textarea className={ui.textarea} value={form.description} onChange={(event) => patch({ description: event.target.value })} placeholder="When to use this CTA." /></Field>
-          <div className="flex gap-3 lg:col-span-3">
-            <button className={cn(ui.buttonBase, ui.buttonPrimary)}>{editingId ? "Update CTA" : "Create CTA"}</button>
-            {editingId ? <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => { setEditingId(""); setForm(emptyForm); }}>Cancel</button> : null}
+  return (
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="bg-white rounded-lg border border-slate-200/60 px-4 py-2.5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg shadow-indigo-500/25">
+              <Link2 size={14} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-slate-900">CTA Management</h1>
+              <p className="text-xs text-slate-500">Create reusable CTA buttons for email and push notifications</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-[9px] font-medium text-indigo-700">
+              {items.length} CTAs
+            </span>
+            <div className="flex items-center gap-0.5">
+              <Filter size={9} className="text-slate-400" />
+              <select className={cn(compactSelect, "w-32")} value={filter} onChange={(event) => setFilter(event.target.value)}>
+                {channelOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Form Section */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+        <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+          {editingId ? <Edit size={14} className="text-indigo-600" /> : <Plus size={14} className="text-indigo-600" />}
+          <h2 className="text-xs font-semibold text-slate-900">{editingId ? "Edit CTA" : "Create CTA"}</h2>
+        </div>
+        <form onSubmit={save} className="space-y-2 pt-2">
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">CTA Name</label>
+              <input className={compactInput} value={form.name} onChange={(event) => patch({ name: event.target.value })} placeholder="Premium renewal CTA" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Channel</label>
+              <select className={compactSelect} value={form.channel} onChange={(e) => patch({ channel: e.target.value })}>
+                {channelOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+            </div>
+            <div className="flex items-end">
+              <div className="flex items-center gap-1.5 bg-slate-50 rounded-lg border border-slate-200/50 px-2 py-0.5">
+                <ToggleSwitch checked={form.isActive !== false} onChange={(value) => patch({ isActive: value })} label="" size="sm" />
+                <span className="text-[8px] font-medium text-slate-700">{form.isActive !== false ? "Active" : "Inactive"}</span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Button Text</label>
+              <input className={compactInput} value={form.ctaText} onChange={(event) => patch({ ctaText: event.target.value })} placeholder="Renew Now" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">CTA Type</label>
+              <select className={compactSelect} value={form.ctaType} onChange={(e) => handleTypeChange(e.target.value)}>
+                {ctaTypeOptions.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Open In</label>
+              <select className={compactSelect} value={form.openIn} onChange={(e) => patch({ openIn: e.target.value })}>
+                {openInOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5 sm:col-span-2 lg:col-span-3">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">CTA URL / Deep Link</label>
+              <input className={compactInput} value={form.ctaUrl} onChange={(event) => patch({ ctaUrl: event.target.value })} placeholder="/subscription?user={{user_id}}" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Button Color</label>
+              <div className="flex gap-1">
+                <input type="color" className="h-7 w-7 rounded border border-slate-200 bg-white p-0.5 cursor-pointer" value={colorInputValue(form.buttonColor, "#2563eb")} onChange={(event) => patch({ buttonColor: event.target.value })} />
+                <input className={cn(compactInput, "flex-1")} value={form.buttonColor} onChange={(event) => patch({ buttonColor: event.target.value })} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Text Color</label>
+              <div className="flex gap-1">
+                <input type="color" className="h-7 w-7 rounded border border-slate-200 bg-white p-0.5 cursor-pointer" value={colorInputValue(form.buttonTextColor, "#ffffff")} onChange={(event) => patch({ buttonTextColor: event.target.value })} />
+                <input className={cn(compactInput, "flex-1")} value={form.buttonTextColor} onChange={(event) => patch({ buttonTextColor: event.target.value })} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Alignment</label>
+              <select className={compactSelect} value={form.buttonAlignment} onChange={(e) => patch({ buttonAlignment: e.target.value })}>
+                {alignmentOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5 sm:col-span-2 lg:col-span-3">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Description</label>
+              <textarea className={compactTextarea} rows={2} value={form.description} onChange={(event) => patch({ description: event.target.value })} placeholder="When to use this CTA." />
+            </div>
+          </div>
+          <div className="flex gap-1 pt-1 border-t border-slate-100">
+            <button className={cn(
+              "inline-flex items-center gap-0.5 px-2.5 py-0.5 text-[8px] font-medium rounded-lg transition-all",
+              "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-sm shadow-indigo-500/25"
+            )} type="submit">
+              <Save size={9} /> {editingId ? "Update" : "Create"}
+            </button>
+            {editingId && (
+              <button type="button" className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[8px] font-medium text-slate-700 rounded-lg transition-colors" onClick={() => { setEditingId(""); setForm(emptyForm); }}>
+                Cancel
+              </button>
+            )}
           </div>
         </form>
-      </section>
+      </div>
 
-      <section className={ui.panel}>
-        <div className="mb-4">
-          <div className={ui.eyebrow}>Guide</div>
-          <h2 className="text-xl font-black text-slate-900">Help / Guide</h2>
+      {/* Guide Section */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+        <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+          <HelpCircle size={14} className="text-indigo-600" />
+          <h2 className="text-xs font-semibold text-slate-900">Help & Guide</h2>
         </div>
-        <div className="grid gap-4 text-sm text-slate-700 lg:grid-cols-2">
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4"><strong>How to add a CTA</strong><p className="mt-2">Create a CTA here, choose where it is available, then select it inside an Email Template or Push Notification form. You can still override fields after selection.</p></div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4"><strong>Fields</strong><p className="mt-2">Button Text is the visible label. CTA Type is a route shortcut. CTA URL / Deep Link is the final destination. Open In controls app/web preference. Colors and alignment are used by email buttons.</p></div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4"><strong>Placeholders</strong><p className="mt-2">URLs support template variables such as <code>{"{{user_id}}"}</code>, <code>{"{{email}}"}</code>, <code>{"{{plan_name}}"}</code>, <code>{"{{referral_code}}"}</code>, <code>{"{{notification_id}}"}</code>, and any variables sent with the email or notification campaign.</p></div>
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4"><strong>Examples</strong><p className="mt-2"><code>/subscription</code><br /><code>/mock-tests</code><br /><code>https://app.kritamcqs.com/cta?target=%2Fsubscription</code><br /><code>https://kritamcqs.com</code><br /><code>{"kritamcqs://subscription?plan={{plan_id}}"}</code><br /><code>{"/profile?ref={{referral_code}}"}</code></p></div>
-        </div>
-      </section>
-
-      <section className={ui.panel}>
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-xl font-black text-slate-900">Saved CTAs</h2>
-          {loading ? <span className="text-sm font-semibold text-slate-500">Loading...</span> : null}
-        </div>
-        <div className={ui.tableWrap}>
-          <div className={ui.tableScroll}>
-            <table className={ui.table}>
-              <thead><tr><th className={ui.tableHead}>Name</th><th className={ui.tableHead}>Channel</th><th className={ui.tableHead}>Type</th><th className={ui.tableHead}>Button</th><th className={ui.tableHead}>URL</th><th className={ui.tableHead}>Status</th><th className={ui.tableHead}>Actions</th></tr></thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={item.id}>
-                    <td className={ui.tableCell}><div className="font-bold text-slate-900">{item.name}</div><div className="text-xs text-slate-500">{item.description}</div></td>
-                    <td className={ui.tableCell}>{channelOptions.find((option) => option.value === item.channel)?.label || item.channel}</td>
-                    <td className={ui.tableCell}>{getCtaTypeLabel(item.ctaType)}</td>
-                    <td className={ui.tableCell}>{item.ctaText}</td>
-                    <td className={ui.tableCell}><div className="max-w-sm truncate">{item.ctaUrl}</div></td>
-                    <td className={ui.tableCell}><span className={cn(ui.pill, item.isActive !== false ? ui.pillSuccess : ui.pillGray)}>{item.isActive !== false ? "Active" : "Inactive"}</span></td>
-                    <td className={ui.tableCell}><div className="flex gap-2"><button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => { setEditingId(item.id); setForm({ ...emptyForm, ...item }); }}>Edit</button><button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => remove(item)}>Delete</button></div></td>
-                  </tr>
-                ))}
-                {!items.length ? <tr><td className="py-8 text-center text-sm text-slate-500" colSpan={7}>No CTA configurations found.</td></tr> : null}
-              </tbody>
-            </table>
+        <div className="grid grid-cols-1 gap-1.5 mt-2 sm:grid-cols-2">
+          <div className="bg-slate-50 rounded-lg border border-slate-200/50 p-2">
+            <div className="flex items-center gap-1.5 mb-1">
+              <BookOpen size={10} className="text-indigo-600" />
+              <strong className="text-[8px] text-slate-900">How to add a CTA</strong>
+            </div>
+            <p className="text-[7px] text-slate-600">Create a CTA here, choose where it is available, then select it inside an Email Template or Push Notification form.</p>
+          </div>
+          <div className="bg-slate-50 rounded-lg border border-slate-200/50 p-2">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Code size={10} className="text-indigo-600" />
+              <strong className="text-[8px] text-slate-900">Fields</strong>
+            </div>
+            <p className="text-[7px] text-slate-600">Button Text is the visible label. CTA Type is a route shortcut. CTA URL / Deep Link is the final destination.</p>
+          </div>
+          <div className="bg-slate-50 rounded-lg border border-slate-200/50 p-2">
+            <div className="flex items-center gap-1.5 mb-1">
+              <Link2 size={10} className="text-indigo-600" />
+              <strong className="text-[8px] text-slate-900">Placeholders</strong>
+            </div>
+            <p className="text-[7px] text-slate-600">URLs support template variables like <code className="text-[6px] bg-slate-200 px-0.5 py-0.5 rounded">{"{{user_id}}"}</code>, <code className="text-[6px] bg-slate-200 px-0.5 py-0.5 rounded">{"{{email}}"}</code>.</p>
+          </div>
+          <div className="bg-slate-50 rounded-lg border border-slate-200/50 p-2">
+            <div className="flex items-center gap-1.5 mb-1">
+              <ExternalLink size={10} className="text-indigo-600" />
+              <strong className="text-[8px] text-slate-900">Examples</strong>
+            </div>
+            <p className="text-[6px] text-slate-500 font-mono break-all">/subscription<br />/mock-tests<br />{"kritamcqs://subscription?plan={{plan_id}}"}</p>
           </div>
         </div>
-      </section>
+      </div>
+
+      {/* Saved CTAs Table */}
+      <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm overflow-hidden">
+        <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Link2 size={12} className="text-indigo-600" />
+            <h2 className="text-xs font-semibold text-slate-900">Saved CTAs</h2>
+            <span className="text-[8px] text-slate-400">({items.length})</span>
+          </div>
+          {loading && <span className="text-[8px] text-slate-400">Loading...</span>}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full divide-y divide-slate-100">
+            <thead className="bg-slate-50/50">
+              <tr>
+                {["Name", "Channel", "Type", "Button", "URL", "Status", "Actions"].map((x) => (
+                  <th key={x} className="px-2.5 py-1.5 text-left">
+                    <span className="text-[7px] font-bold uppercase tracking-wider text-slate-400">{x}</span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {items.map((item) => {
+                const ChannelIcon = channelIcons[item.channel] || Sparkles;
+                return (
+                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-2.5 py-1.5">
+                      <div className="text-[10px] font-semibold text-slate-900">{item.name}</div>
+                      <div className="text-[7px] text-slate-400 truncate max-w-[120px]">{item.description || "—"}</div>
+                    </td>
+                    <td className="px-2.5 py-1.5">
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-100 rounded text-[7px] font-medium text-slate-600">
+                        <ChannelIcon size={8} />
+                        {channelOptions.find((option) => option.value === item.channel)?.label || item.channel}
+                      </span>
+                    </td>
+                    <td className="px-2.5 py-1.5">
+                      <span className="text-[8px] text-slate-600">{getCtaTypeLabel(item.ctaType)}</span>
+                    </td>
+                    <td className="px-2.5 py-1.5">
+                      <span className="text-[9px] font-medium text-indigo-600">{item.ctaText}</span>
+                    </td>
+                    <td className="px-2.5 py-1.5">
+                      <div className="max-w-[120px] truncate text-[7px] text-slate-500 font-mono">{item.ctaUrl}</div>
+                    </td>
+                    <td className="px-2.5 py-1.5">
+                      <span className={cn(
+                        "inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[7px] font-medium",
+                        item.isActive !== false ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500 border border-slate-200"
+                      )}>
+                        {item.isActive !== false ? <CheckCircle size={8} /> : <XCircle size={8} />}
+                        {item.isActive !== false ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="px-2.5 py-1.5">
+                      <div className="flex items-center gap-0.5">
+                        <button className="p-0.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors" onClick={() => { setEditingId(item.id); setForm({ ...emptyForm, ...item }); }}>
+                          <Edit size={11} />
+                        </button>
+                        <button className="p-0.5 text-rose-600 hover:bg-rose-50 rounded transition-colors" onClick={() => remove(item)}>
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {!items.length && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-6 text-center">
+                    <div className="flex flex-col items-center gap-1">
+                      <Link2 size={16} className="text-slate-300" />
+                      <span className="text-[10px] text-slate-500">No CTA configurations found</span>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

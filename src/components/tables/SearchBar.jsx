@@ -1,15 +1,43 @@
+import { cn } from "../../ui";
 import { SearchIcon } from "../common/AdminIcons";
+import { X } from "lucide-react";
 
-export function SearchBar({ value, onChange, placeholder = "Search..." }) {
+export function SearchBar({ 
+  value, 
+  onChange, 
+  placeholder = "Search...", 
+  onClear,
+  className = "",
+  compact = true 
+}) {
   return (
-    <div className="flex items-center gap-3 rounded-sm border border-slate-200 bg-white px-4 py-3 shadow-sm focus-within:border-blue-400 focus-within:ring-4 focus-within:ring-blue-100">
-      <SearchIcon size={16} />
+    <div className={cn(
+      "relative flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg transition-all duration-200",
+      "focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-500/20",
+      "hover:border-slate-300",
+      compact ? "px-2.5 py-1" : "px-3 py-1.5",
+      className
+    )}>
+      <SearchIcon size={compact ? 14 : 16} className="text-slate-400 flex-shrink-0" />
       <input
-        className="w-full border-0 bg-transparent p-0 text-sm text-slate-900 shadow-none outline-none ring-0 placeholder:text-slate-400 focus:ring-0"
+        className={cn(
+          "w-full bg-transparent border-0 outline-none ring-0 shadow-none",
+          "placeholder:text-slate-400 focus:ring-0",
+          compact ? "text-[10px]" : "text-sm"
+        )}
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
       />
+      {value && onClear && (
+        <button
+          type="button"
+          onClick={onClear}
+          className="flex-shrink-0 p-0.5 rounded hover:bg-slate-200 transition-colors text-slate-400 hover:text-slate-600"
+        >
+          <X size={compact ? 12 : 14} />
+        </button>
+      )}
     </div>
   );
 }

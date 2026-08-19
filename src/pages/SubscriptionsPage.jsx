@@ -13,6 +13,31 @@ import { SearchBar } from "../components/tables/SearchBar";
 import { useToast } from "../context/ToastContext";
 import { cn, ui } from "../ui";
 import { formatDate } from "../utils/format";
+import {
+  CreditCard,
+  Users,
+  Calendar,
+  Clock,
+  Crown,
+  Shield,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  RefreshCw,
+  Plus,
+  Search,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  DollarSign,
+  Percent,
+  TrendingUp,
+  Zap,
+  Layers,
+  Smartphone,
+  Apple,
+  // Android
+} from "lucide-react";
 
 const defaultForm = {
   userId: "",
@@ -202,84 +227,119 @@ export function SubscriptionsPage() {
 
   const planOptions = plan ? [{ label: `${plan.name} - Rs. ${plan.price}`, value: plan.id }] : [];
 
+  // Compact input classes
+  const compactInput = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all";
+  const compactSelect = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none";
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="rounded-sm border border-white/60 bg-white/85 p-5 shadow-xl shadow-slate-200/60 backdrop-blur-xl">
-        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <div className="mb-2 text-[11px] font-black uppercase tracking-[0.28em] text-blue-700">Revenue Operations</div>
-            <h1 className="mb-1 text-3xl font-black tracking-tight text-slate-900">Subscriptions</h1>
-            <p className="text-slate-500">
-              Review App Store and Razorpay subscription history in separate platform views.
-            </p>
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="bg-white rounded-lg border border-slate-200/60 px-4 py-2.5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg shadow-indigo-500/25">
+              <CreditCard size={14} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-slate-900">Subscriptions</h1>
+              <p className="text-xs text-slate-500">Review App Store and Razorpay subscription history</p>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex items-center rounded-sm bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-blue-700">{meta?.total ?? items.length} records</div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-[9px] font-medium text-indigo-700">
+              {meta?.total ?? items.length} records
+            </span>
+            <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-[9px] font-medium rounded-lg transition-all shadow-sm shadow-indigo-500/25" onClick={openCreate}>
+              <Plus size={10} /> Manual
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="inline-flex w-fit rounded-sm border border-slate-200 bg-white p-1 shadow-sm">
+      {/* Platform Tabs */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-1 shadow-sm inline-flex">
         {[
-          { id: "android", label: "Android / Razorpay" },
-          { id: "apple", label: "iOS / App Store" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={cn(
-              "rounded-sm px-5 py-2.5 text-sm font-black transition",
-              platform === tab.id
-                ? "bg-blue-600 text-white shadow"
-                : "text-slate-600 hover:bg-slate-100",
-            )}
-            onClick={() => {
-              setItems([]);
-              setMeta(null);
-              setQuery((current) => ({ ...current, page: 1 }));
-              setPlatform(tab.id);
-            }}
-          >
-            {tab.label}
+          { id: "android", label: "Android / Razorpay", icon: Smartphone },
+          { id: "apple", label: "iOS / App Store", icon: Smartphone },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = platform === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              className={cn(
+                "inline-flex items-center gap-1.5 px-3 py-1 text-[10px] font-medium rounded-lg transition-all",
+                isActive
+                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-sm shadow-indigo-500/25"
+                  : "text-slate-600 hover:bg-slate-100"
+              )}
+              onClick={() => {
+                setItems([]);
+                setMeta(null);
+                setQuery((current) => ({ ...current, page: 1 }));
+                setPlatform(tab.id);
+              }}
+            >
+              <Icon size={12} />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        {[
+          { label: "Base Plan Price", value: `Rs. ${plan?.price ?? 0}`, icon: DollarSign, color: "blue" },
+          { label: "Active Plans", value: activeCount, icon: CheckCircle, color: "emerald" },
+          { label: "Plan Duration", value: `${plan?.durationMonths ?? 0}m`, icon: Calendar, color: "purple" },
+        ].map((stat) => {
+          const Icon = stat.icon;
+          const colorClasses = {
+            blue: "bg-blue-50 text-blue-600",
+            emerald: "bg-emerald-50 text-emerald-600",
+            purple: "bg-purple-50 text-purple-600",
+          };
+          return (
+            <div key={stat.label} className="bg-white rounded-lg border border-slate-200/60 px-3 py-2 shadow-sm">
+              <div className="flex items-center justify-between">
+                <span className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">{stat.label}</span>
+                <div className={`p-1 rounded ${colorClasses[stat.color]}`}>
+                  <Icon size={12} className={colorClasses[stat.color]} />
+                </div>
+              </div>
+              <div className="text-base font-bold text-slate-900 mt-0.5">{stat.value}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Search */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-2.5 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex-1 min-w-0">
+            <SearchBar
+              value={search}
+              onChange={setSearch}
+              placeholder={
+                platform === "apple"
+                  ? "Search by learner, product, transaction, or status..."
+                  : "Search by learner, coupon, plan, order, payment ref, or status..."
+              }
+            />
+          </div>
+          <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-[8px] font-medium rounded transition-colors" onClick={() => loadPage({ ...query, page: 1 })}>
+            <RefreshCw size={9} /> Search
           </button>
-        ))}
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <div className="rounded-sm border border-white/60 bg-white/85 p-5 shadow-lg shadow-slate-200/50">
-          <div className="mb-4 flex items-center justify-between gap-3"><span className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Base Plan Price</span><span className="h-3 w-3 rounded-sm bg-blue-400 shadow-[0_0_0_4px_rgba(96,165,250,0.16)]" /></div>
-          <h2 className="text-4xl font-black tracking-tight text-slate-900">Rs. {plan?.price ?? 0}</h2>
-        </div>
-        <div className="rounded-sm border border-white/60 bg-white/85 p-5 shadow-lg shadow-slate-200/50">
-          <div className="mb-4 flex items-center justify-between gap-3"><span className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Active Plans</span><span className="h-3 w-3 rounded-sm bg-blue-400 shadow-[0_0_0_4px_rgba(96,165,250,0.16)]" /></div>
-          <h2 className="text-4xl font-black tracking-tight text-slate-900">{activeCount}</h2>
-        </div>
-        <div className="rounded-sm border border-white/60 bg-white/85 p-5 shadow-lg shadow-slate-200/50">
-          <div className="mb-4 flex items-center justify-between gap-3"><span className="text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Plan Duration</span><span className="h-3 w-3 rounded-sm bg-blue-400 shadow-[0_0_0_4px_rgba(96,165,250,0.16)]" /></div>
-          <h2 className="text-4xl font-black tracking-tight text-slate-900">{plan?.durationMonths ?? 0}m</h2>
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 rounded-sm border border-white/60 bg-white/85 p-5 shadow-xl shadow-slate-200/60 backdrop-blur-xl lg:flex-row lg:items-end lg:justify-between">
-        <SearchBar
-          value={search}
-          onChange={setSearch}
-          placeholder={
-            platform === "apple"
-              ? "Search by learner, product, transaction, or status..."
-              : "Search by learner, coupon, plan, order, payment ref, or status..."
-          }
-        />
-        <div className="flex flex-wrap items-center gap-3">
-          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => loadPage({ ...query, page: 1 })}>
-            <RefreshIcon size={16} />
-            Search
-          </button>
-        </div>
-      </div>
+      {/* Loading State */}
+      {loading && <LoadingSpinner />}
 
-      {loading ? <LoadingSpinner label="Loading subscriptions..." /> : null}
-      {!loading && !items.length ? (
+      {/* Empty State */}
+      {!loading && !items.length && (
         <EmptyState
           title="No subscriptions found"
           description={
@@ -288,106 +348,60 @@ export function SubscriptionsPage() {
               : "Successful Razorpay purchases will appear here."
           }
         />
-      ) : null}
-      {!loading && platform === "android" && items.length ? (
-        <>
-          <div className="overflow-hidden rounded-sm border border-white/60 bg-white/85 shadow-xl shadow-slate-200/60 backdrop-blur-xl">
-            <div className="overflow-x-auto">
-              <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
-                <thead>
-                  <tr>
-                    <th className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Learner</th>
-                    <th className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Plan</th>
-                    <th className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Coupon</th>
-                    <th className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Base</th>
-                    <th className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Discount</th>
-                    <th className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Paid</th>
-                    <th className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Status</th>
-                    <th className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Start</th>
-                    <th className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">End</th>
-                    <th className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Payment Ref</th>
-                    <th className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {items.map((item) => (
-                    <tr key={item.id}>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">
-                        <strong className="block font-bold text-slate-900">{item.user?.name || item.user?.mobile || item.userId}</strong>
-                        <div className="text-slate-500">{item.user?.email || item.user?.mobile || "User record unavailable"}</div>
-                      </td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">{item.plan?.name || plan?.name || item.planId}</td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">{item.couponCode ? <span className={ui.pill}>{item.couponCode}</span> : "-"}</td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">Rs. {Number(item.baseAmount ?? item.plan?.price ?? plan?.price ?? 0)}</td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">Rs. {Number(item.discountAmount ?? 0)}</td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">Rs. {Number(item.amount ?? 0)}</td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700"><span className={ui.pill}>{item.status}</span></td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">{formatDate(item.startDate || item.createdAt)}</td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">{item.endDate ? formatDate(item.endDate) : "-"}</td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">{item.razorpayPaymentId || item.razorpayOrderId || "-"}</td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">
-                        {["active", "manual", "completed"].includes(String(item.status).toLowerCase()) ? (
-                          <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setCancelItem(item)}>
-                            <TrashIcon size={16} />
-                            Cancel
-                          </button>
-                        ) : (
-                          <span className="text-slate-500">Closed</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <Pagination meta={meta} onChange={(page) => setQuery((current) => ({ ...current, page }))} />
-        </>
-      ) : null}
+      )}
 
-      {!loading && platform === "apple" && items.length ? (
+      {/* Android Table */}
+      {!loading && platform === "android" && items.length > 0 && (
         <>
-          <div className="overflow-hidden rounded-sm border border-white/60 bg-white/85 shadow-xl shadow-slate-200/60 backdrop-blur-xl">
+          <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
-                <thead>
+              <table className="w-full divide-y divide-slate-100">
+                <thead className="bg-slate-50/50">
                   <tr>
-                    {["Learner", "Product", "Status", "Auto-renew", "Purchase", "Expiry", "Latest transaction", "Original transaction", "Latest event", "Environment", "Actions"].map((label) => (
-                      <th key={label} className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-[11px] font-black uppercase tracking-[0.22em] text-slate-500">{label}</th>
+                    {["Learner", "Plan", "Coupon", "Base", "Discount", "Paid", "Status", "Start", "End", "Payment Ref", "Actions"].map(x => (
+                      <th key={x} className="px-2.5 py-1.5 text-left">
+                        <span className="text-[7px] font-bold uppercase tracking-wider text-slate-400">{x}</span>
+                      </th>
                     ))}
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100">
                   {items.map((item) => (
-                    <tr key={item.id}>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">
-                        <strong className="block font-bold text-slate-900">{item.user?.name || item.user?.mobile || item.userId}</strong>
-                        <div className="text-slate-500">{item.user?.email || item.user?.mobile || "User record unavailable"}</div>
+                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-2.5 py-1.5">
+                        <div className="text-[10px] font-semibold text-slate-900">{item.user?.name || item.user?.mobile || item.userId}</div>
+                        <div className="text-[8px] text-slate-500">{item.user?.email || item.user?.mobile || "—"}</div>
                       </td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">
-                        <span className="block font-semibold">{item.planName || item.planId || "iOS Subscription"}</span>
-                        <span className="text-xs text-slate-500">{item.productId}</span>
+                      <td className="px-2.5 py-1.5 text-[9px] text-slate-600">{item.plan?.name || plan?.name || item.planId}</td>
+                      <td className="px-2.5 py-1.5">
+                        {item.couponCode ? (
+                          <span className="inline-flex px-1.5 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-[7px] font-medium text-indigo-700">{item.couponCode}</span>
+                        ) : "-"}
                       </td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top"><span className={ui.pill}>{item.subscriptionStatus}</span></td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">{item.autoRenewStatus ? "On" : "Off"}</td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">{formatDate(item.purchaseDate)}</td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">{formatDate(item.expiryDate)}</td>
-                      <td className="max-w-48 break-all border-b border-slate-100 px-4 py-4 align-top text-xs text-slate-700">{item.transactionId}</td>
-                      <td className="max-w-48 break-all border-b border-slate-100 px-4 py-4 align-top text-xs text-slate-700">{item.originalTransactionId}</td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">
-                        {item.latestWebhookEvent?.type || "-"}
-                        {item.latestWebhookEvent?.subtype ? <span className="block text-xs text-slate-500">{item.latestWebhookEvent.subtype}</span> : null}
+                      <td className="px-2.5 py-1.5 text-[9px] text-slate-600">₹{Number(item.baseAmount ?? item.plan?.price ?? plan?.price ?? 0)}</td>
+                      <td className="px-2.5 py-1.5 text-[9px] text-slate-600">₹{Number(item.discountAmount ?? 0)}</td>
+                      <td className="px-2.5 py-1.5 text-[9px] font-semibold text-slate-900">₹{Number(item.amount ?? 0)}</td>
+                      <td className="px-2.5 py-1.5">
+                        <span className={cn(
+                          "inline-flex px-1.5 py-0.5 rounded text-[7px] font-medium",
+                          item.status === "active" || item.status === "manual" ? "bg-emerald-50 text-emerald-700" :
+                          item.status === "completed" ? "bg-blue-50 text-blue-700" :
+                          item.status === "cancelled" ? "bg-rose-50 text-rose-700" :
+                          "bg-slate-100 text-slate-600"
+                        )}>
+                          {item.status}
+                        </span>
                       </td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">{item.environment || "-"}</td>
-                      <td className="border-b border-slate-100 px-4 py-4 align-top text-slate-700">
-                        {["active", "failed", "cancelled"].includes(String(item.subscriptionStatus).toLowerCase()) &&
-                        new Date(item.expiryDate) > new Date() ? (
-                          <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setCancelItem(item)}>
-                            <TrashIcon size={16} />
-                            Cancel
+                      <td className="px-2.5 py-1.5 text-[8px] text-slate-500">{formatDate(item.startDate || item.createdAt)}</td>
+                      <td className="px-2.5 py-1.5 text-[8px] text-slate-500">{item.endDate ? formatDate(item.endDate) : "-"}</td>
+                      <td className="px-2.5 py-1.5 text-[7px] text-slate-400 font-mono">{item.razorpayPaymentId || item.razorpayOrderId || "-"}</td>
+                      <td className="px-2.5 py-1.5">
+                        {["active", "manual", "completed"].includes(String(item.status).toLowerCase()) ? (
+                          <button className="p-0.5 text-rose-600 hover:bg-rose-50 rounded transition-colors" onClick={() => setCancelItem(item)}>
+                            <TrashIcon size={11} />
                           </button>
                         ) : (
-                          <span className="text-slate-500">Closed</span>
+                          <span className="text-[7px] text-slate-400">Closed</span>
                         )}
                       </td>
                     </tr>
@@ -398,9 +412,69 @@ export function SubscriptionsPage() {
           </div>
           <Pagination meta={meta} onChange={(page) => setQuery((current) => ({ ...current, page }))} />
         </>
-      ) : null}
+      )}
 
-      {showForm ? (
+      {/* Apple Table */}
+      {!loading && platform === "apple" && items.length > 0 && (
+        <>
+          <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full divide-y divide-slate-100">
+                <thead className="bg-slate-50/50">
+                  <tr>
+                    {["Learner", "Product", "Status", "Auto-renew", "Purchase", "Expiry", "Actions"].map(x => (
+                      <th key={x} className="px-2.5 py-1.5 text-left">
+                        <span className="text-[7px] font-bold uppercase tracking-wider text-slate-400">{x}</span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {items.map((item) => (
+                    <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-2.5 py-1.5">
+                        <div className="text-[10px] font-semibold text-slate-900">{item.user?.name || item.user?.mobile || item.userId}</div>
+                        <div className="text-[8px] text-slate-500">{item.user?.email || item.user?.mobile || "—"}</div>
+                      </td>
+                      <td className="px-2.5 py-1.5">
+                        <div className="text-[9px] font-semibold text-slate-900">{item.planName || item.planId || "iOS Subscription"}</div>
+                        <div className="text-[7px] text-slate-400 font-mono">{item.productId}</div>
+                      </td>
+                      <td className="px-2.5 py-1.5">
+                        <span className={cn(
+                          "inline-flex px-1.5 py-0.5 rounded text-[7px] font-medium",
+                          item.subscriptionStatus === "active" ? "bg-emerald-50 text-emerald-700" :
+                          item.subscriptionStatus === "failed" ? "bg-rose-50 text-rose-700" :
+                          "bg-slate-100 text-slate-600"
+                        )}>
+                          {item.subscriptionStatus}
+                        </span>
+                      </td>
+                      <td className="px-2.5 py-1.5 text-[9px] text-slate-600">{item.autoRenewStatus ? "On" : "Off"}</td>
+                      <td className="px-2.5 py-1.5 text-[8px] text-slate-500">{formatDate(item.purchaseDate)}</td>
+                      <td className="px-2.5 py-1.5 text-[8px] text-slate-500">{formatDate(item.expiryDate)}</td>
+                      <td className="px-2.5 py-1.5">
+                        {["active", "failed", "cancelled"].includes(String(item.subscriptionStatus).toLowerCase()) &&
+                        new Date(item.expiryDate) > new Date() ? (
+                          <button className="p-0.5 text-rose-600 hover:bg-rose-50 rounded transition-colors" onClick={() => setCancelItem(item)}>
+                            <TrashIcon size={11} />
+                          </button>
+                        ) : (
+                          <span className="text-[7px] text-slate-400">Closed</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <Pagination meta={meta} onChange={(page) => setQuery((current) => ({ ...current, page }))} />
+        </>
+      )}
+
+      {/* Form Modal */}
+      {showForm && (
         <EntityFormWrapper
           title="Manual Subscription"
           subtitle="Grant the active database plan and optionally apply a coupon."
@@ -408,7 +482,7 @@ export function SubscriptionsPage() {
           onSubmit={handleSubmit}
           submitLabel="Activate Subscription"
         >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <Field label="Learner">
               <SelectDropdown
                 value={formState.userId}
@@ -426,53 +500,50 @@ export function SubscriptionsPage() {
               />
             </Field>
             <Field label="Coupon Code">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <input
-                  className={ui.input}
-                  value={formState.couponCode}
-                  onChange={(event) => setFormState((current) => ({ ...current, couponCode: event.target.value.toUpperCase() }))}
-                  placeholder="Optional coupon code"
-                />
-                <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={previewCoupon} disabled={pricingLoading}>
-                  {pricingLoading ? "Checking..." : "Apply"}
+              <div className="flex gap-1">
+                <input className={compactInput} value={formState.couponCode} onChange={(event) => setFormState((current) => ({ ...current, couponCode: event.target.value.toUpperCase() }))} placeholder="Optional" />
+                <button type="button" className="inline-flex items-center px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[9px] font-medium text-slate-700 rounded transition-colors disabled:opacity-50" onClick={previewCoupon} disabled={pricingLoading}>
+                  {pricingLoading ? "..." : "Apply"}
                 </button>
               </div>
             </Field>
             <Field label="Start Date">
-              <input
-                className={ui.input}
-                type="datetime-local"
-                value={formState.startDate}
-                onChange={(event) => setFormState((current) => ({ ...current, startDate: event.target.value }))}
-              />
+              <input className={compactInput} type="datetime-local" value={formState.startDate} onChange={(event) => setFormState((current) => ({ ...current, startDate: event.target.value }))} />
             </Field>
-            <Field label="End Date Override (optional)" className={ui.fieldFull}>
-              <input
-                className={ui.input}
-                type="datetime-local"
-                value={formState.endDate}
-                onChange={(event) => setFormState((current) => ({ ...current, endDate: event.target.value }))}
-              />
+            <Field label="End Date Override" wide>
+              <input className={compactInput} type="datetime-local" value={formState.endDate} onChange={(event) => setFormState((current) => ({ ...current, endDate: event.target.value }))} />
             </Field>
-            <div className={cn(ui.fieldFull, "rounded-sm border border-white/60 bg-white/85 p-5 shadow-lg shadow-slate-200/50")}>
-              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-                <div>
-                  <h3 className="text-xl font-bold text-slate-900">Price Preview</h3>
-                  <p className="text-slate-500">Server-validated pricing for the active database plan.</p>
-                </div>
-                {pricing.coupon ? <span className={ui.badge}>{pricing.coupon.code}</span> : null}
+          </div>
+
+          {/* Price Preview */}
+          <div className="mt-2 bg-slate-50 rounded-lg border border-slate-200/50 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-[10px] font-semibold text-slate-900">Price Preview</h3>
+              {pricing.coupon && <span className="inline-flex px-1.5 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-[8px] font-medium text-indigo-700">{pricing.coupon.code}</span>}
+            </div>
+            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+              <div className="bg-white rounded border border-slate-200 p-1.5 text-center">
+                <span className="text-[6px] font-medium text-slate-500 uppercase tracking-wider">Base</span>
+                <div className="text-xs font-bold text-slate-900">₹{pricing.baseAmount}</div>
               </div>
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-sm border border-slate-200/80 bg-slate-50/80 p-4"><span className="text-slate-500">Base Price</span><strong className="mt-2 block text-lg font-bold text-slate-900">Rs. {pricing.baseAmount}</strong></div>
-                <div className="rounded-sm border border-slate-200/80 bg-slate-50/80 p-4"><span className="text-slate-500">Discount</span><strong className="mt-2 block text-lg font-bold text-slate-900">Rs. {pricing.discountAmount}</strong></div>
-                <div className="rounded-sm border border-slate-200/80 bg-slate-50/80 p-4"><span className="text-slate-500">Final Payable</span><strong className="mt-2 block text-lg font-bold text-slate-900">Rs. {pricing.finalAmount}</strong></div>
-                <div className="rounded-sm border border-slate-200/80 bg-slate-50/80 p-4"><span className="text-slate-500">Coupon Type</span><strong className="mt-2 block text-lg font-bold text-slate-900">{pricing.coupon ? `${pricing.coupon.type} (${pricing.coupon.value})` : "No coupon"}</strong></div>
+              <div className="bg-white rounded border border-slate-200 p-1.5 text-center">
+                <span className="text-[6px] font-medium text-slate-500 uppercase tracking-wider">Discount</span>
+                <div className="text-xs font-bold text-slate-900">₹{pricing.discountAmount}</div>
+              </div>
+              <div className="bg-white rounded border border-slate-200 p-1.5 text-center">
+                <span className="text-[6px] font-medium text-slate-500 uppercase tracking-wider">Final</span>
+                <div className="text-xs font-bold text-indigo-600">₹{pricing.finalAmount}</div>
+              </div>
+              <div className="bg-white rounded border border-slate-200 p-1.5 text-center">
+                <span className="text-[6px] font-medium text-slate-500 uppercase tracking-wider">Coupon</span>
+                <div className="text-[8px] font-semibold text-slate-700">{pricing.coupon ? `${pricing.coupon.type} (${pricing.coupon.value})` : "None"}</div>
               </div>
             </div>
           </div>
         </EntityFormWrapper>
-      ) : null}
+      )}
 
+      {/* Cancel Modal */}
       <ConfirmDeleteModal
         open={Boolean(cancelItem)}
         title={`Cancel ${platform === "apple" ? "iOS" : "Android"} subscription`}

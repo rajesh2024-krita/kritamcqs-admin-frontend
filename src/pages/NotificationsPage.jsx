@@ -8,6 +8,36 @@ import { Pagination } from "../components/tables/Pagination";
 import { SearchBar } from "../components/tables/SearchBar";
 import { useToast } from "../context/ToastContext";
 import { cn, ui } from "../ui";
+import {
+  Bell,
+  Send,
+  Users,
+  Target,
+  Mail,
+  MessageSquare,
+  FileText,
+  Image,
+  Zap,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  RefreshCw,
+  Plus,
+  Filter,
+  Search,
+  ChevronDown,
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Upload,
+  Link,
+  Hash,
+  Type,
+  Layout,
+  Share2,
+  Smartphone
+} from "lucide-react";
 
 const typeOptions = [
   { value: "text", label: "Text" },
@@ -208,16 +238,46 @@ export function NotificationsPage() {
     }
   }
 
+  // Compact input classes
+  const compactInput = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all";
+  const compactSelect = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none";
+  const compactTextarea = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-y min-h-[60px]";
+
   return (
-    <div className="flex flex-col gap-6">
-      <form className={ui.compactPanel} onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <div className={ui.eyebrow}>Broadcast</div>
-          <h2 className="text-xl font-black tracking-tight text-slate-900">Send Notifications</h2>
-          <p className={ui.muted}>Send app notifications, emails, or both. Delivery status is stored per user.</p>
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="bg-white rounded-lg border border-slate-200/60 px-4 py-2.5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg shadow-indigo-500/25">
+              <Bell size={14} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-slate-900">Notifications</h1>
+              <p className="text-xs text-slate-500">Send broadcasts and manage notification delivery</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-[9px] font-medium text-indigo-700">
+              {meta?.total || items.length} sent
+            </span>
+            <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[9px] font-medium text-slate-700 rounded transition-colors" onClick={() => loadItems(query)} type="button">
+              <RefreshCw size={10} /> Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Broadcast Form */}
+      <form className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm space-y-3" onSubmit={handleSubmit}>
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <Send size={14} className="text-indigo-600" />
+            <h2 className="text-xs font-semibold text-slate-900">Send Notification</h2>
+          </div>
           <button
             type="button"
-            className={cn(ui.buttonBase, ui.buttonSecondary, "mt-3")}
+            className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[8px] font-medium text-slate-700 rounded transition-colors"
             onClick={() =>
               setForm((current) => ({
                 ...current,
@@ -228,106 +288,113 @@ export function NotificationsPage() {
                 deliveryMode: "notification",
                 ctaText: "Update",
                 linkUrl: playStoreUrl,
-              }))}
+              }))
+            }
           >
-            Prepare App Update Notification
+            <Zap size={9} /> Quick Template
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-          <label className={ui.field}>
-            <span>Notification Type</span>
-            <select className={ui.input} value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}>
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Type</label>
+            <select className={compactSelect} value={form.type} onChange={(event) => setForm((current) => ({ ...current, type: event.target.value }))}>
               {typeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
-          </label>
-          <label className={ui.field}>
-            <span>Audience</span>
-            <select className={ui.input} value={form.targetGroup} onChange={(event) => setForm((current) => ({ ...current, targetGroup: event.target.value }))}>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Audience</label>
+            <select className={compactSelect} value={form.targetGroup} onChange={(event) => setForm((current) => ({ ...current, targetGroup: event.target.value }))}>
               {targetOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
-          </label>
-          <label className={ui.field}>
-            <span>Send Option</span>
-            <select className={ui.input} value={form.deliveryMode} onChange={(event) => setForm((current) => ({ ...current, deliveryMode: event.target.value }))}>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Delivery</label>
+            <select className={compactSelect} value={form.deliveryMode} onChange={(event) => setForm((current) => ({ ...current, deliveryMode: event.target.value }))}>
               {deliveryOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
-          </label>
-          <label className={ui.field}>
-            <span>Email Template</span>
-            <select className={ui.input} value={form.templateKey} onChange={(event) => setForm((current) => ({ ...current, templateKey: event.target.value }))}>
-              <option value="">Auto select by type{autoTemplate ? `: ${autoTemplate.name}` : ""}</option>
-              {emailCatalog.map((item) => <option key={item.key} value={item.key}>{item.name} ({item.key})</option>)}
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Email Template</label>
+            <select className={compactSelect} value={form.templateKey} onChange={(event) => setForm((current) => ({ ...current, templateKey: event.target.value }))}>
+              <option value="">Auto: {autoTemplate?.name || "Default"}</option>
+              {emailCatalog.map((item) => <option key={item.key} value={item.key}>{item.name}</option>)}
             </select>
-          </label>
-          <label className={ui.field}>
-            <span>Title</span>
-            <input className={ui.input} value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
-          </label>
-          <label className={ui.field}>
-            <span>Redirect URL</span>
-            <input className={ui.input} placeholder="/subscription" value={form.linkUrl} onChange={(event) => setForm((current) => ({ ...current, linkUrl: event.target.value }))} />
-          </label>
-          <label className={ui.field}>
-            <span>Managed CTA</span>
-            <select className={ui.input} value={form.ctaConfigId} onChange={(event) => applyCtaConfig(event.target.value)}>
-              <option value="">Custom CTA / None</option>
-              {ctaConfigs.map((item) => <option key={item.id || item._id} value={item.id || item._id}>{item.name} - {item.ctaText}</option>)}
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Title</label>
+            <input className={compactInput} value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Redirect URL</label>
+            <input className={compactInput} placeholder="/subscription" value={form.linkUrl} onChange={(event) => setForm((current) => ({ ...current, linkUrl: event.target.value }))} />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Managed CTA</label>
+            <select className={compactSelect} value={form.ctaConfigId} onChange={(event) => applyCtaConfig(event.target.value)}>
+              <option value="">Custom CTA</option>
+              {ctaConfigs.map((item) => <option key={item.id || item._id} value={item.id || item._id}>{item.name}</option>)}
             </select>
-          </label>
-          <label className={ui.field}>
-            <span>CTA Text</span>
-            <input className={ui.input} placeholder="Open App" value={form.ctaText} onChange={(event) => setForm((current) => ({ ...current, ctaText: event.target.value }))} />
-          </label>
-          <label className={ui.field}>
-            <span>Target Screen</span>
-            <select className={ui.input} value={targetScreenOptions.some((item) => item.value === form.linkUrl) ? form.linkUrl : ""} onChange={(event) => setForm((current) => ({ ...current, linkUrl: event.target.value || current.linkUrl }))}>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">CTA Text</label>
+            <input className={compactInput} placeholder="Open App" value={form.ctaText} onChange={(event) => setForm((current) => ({ ...current, ctaText: event.target.value }))} />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Target Screen</label>
+            <select className={compactSelect} value={targetScreenOptions.some((item) => item.value === form.linkUrl) ? form.linkUrl : ""} onChange={(event) => setForm((current) => ({ ...current, linkUrl: event.target.value || current.linkUrl }))}>
               {targetScreenOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
-          </label>
-          <label className={ui.field}>
-            <span>Attachment</span>
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Attachment</label>
             <input
-              className={ui.input}
+              className={compactInput}
               type="file"
               accept="image/png,image/jpeg,image/webp,image/gif,application/pdf,.doc,.docx,.xls,.xlsx,.txt"
               onChange={(event) => setAttachment(event.target.files?.[0] || null)}
             />
-          </label>
-          <label className={cn(ui.field, "lg:col-span-3")}>
-            <span>Message</span>
-            <textarea className={cn(ui.input, "min-h-28")} value={form.body} onChange={(event) => setForm((current) => ({ ...current, body: event.target.value }))} />
-          </label>
-          {form.targetGroup === "selected" ? (
-            <label className={cn(ui.field, "lg:col-span-3")}>
-              <span>Selected Users</span>
-              <textarea className={cn(ui.input, "min-h-24")} value={form.selectedUsers} onChange={(event) => setForm((current) => ({ ...current, selectedUsers: event.target.value }))} placeholder="Paste user emails, mobiles, or IDs separated by comma or new line" />
-            </label>
-          ) : null}
-          <label className={cn(ui.field, "lg:col-span-3")}>
-            <span>Email Variables (JSON)</span>
-            <textarea className={cn(ui.input, "min-h-24")} value={form.variables} onChange={(event) => setForm((current) => ({ ...current, variables: event.target.value }))} />
-          </label>
-          <div className="lg:col-span-3">
-            <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={createCtaFromNotification}>Save Redirect As New CTA</button>
+            {attachment && <span className="text-[7px] text-emerald-600">{attachment.name}</span>}
           </div>
-        </div>
-
-        <div className="mt-4 flex justify-end">
-          <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={sending} type="submit">
-            {sending ? "Sending..." : "Send Notification"}
-          </button>
+          <div className="flex flex-col gap-0.5 sm:col-span-3">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Message</label>
+            <textarea className={compactTextarea} rows={3} value={form.body} onChange={(event) => setForm((current) => ({ ...current, body: event.target.value }))} placeholder="Notification message..." />
+          </div>
+          {form.targetGroup === "selected" && (
+            <div className="flex flex-col gap-0.5 sm:col-span-3">
+              <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Selected Users</label>
+              <textarea className={compactTextarea} rows={2} value={form.selectedUsers} onChange={(event) => setForm((current) => ({ ...current, selectedUsers: event.target.value }))} placeholder="Emails, mobiles, or IDs (comma or new line)" />
+            </div>
+          )}
+          <div className="flex flex-col gap-0.5 sm:col-span-3">
+            <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Email Variables (JSON)</label>
+            <textarea className={compactTextarea} rows={2} value={form.variables} onChange={(event) => setForm((current) => ({ ...current, variables: event.target.value }))} placeholder='{"key": "value"}' />
+          </div>
+          <div className="flex flex-wrap gap-1 sm:col-span-3">
+            <button type="button" className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[8px] font-medium text-slate-700 rounded transition-colors" onClick={createCtaFromNotification}>
+              <Plus size={9} /> Save as CTA
+            </button>
+            <button className={cn(
+              "inline-flex items-center gap-0.5 px-3 py-0.5 text-[8px] font-medium rounded-lg transition-all ml-auto",
+              "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-sm shadow-indigo-500/25",
+              sending && "opacity-50 cursor-not-allowed"
+            )} disabled={sending} type="submit">
+              <Send size={9} /> {sending ? "Sending..." : "Send Notification"}
+            </button>
+          </div>
         </div>
       </form>
 
-      <div className={ui.compactPanel}>
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className={ui.eyebrow}>History</div>
-            <h2 className="text-xl font-black tracking-tight text-slate-900">Notification Delivery</h2>
+      {/* History Header */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-2.5 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex items-center gap-2">
+            <Clock size={14} className="text-indigo-600" />
+            <h2 className="text-xs font-semibold text-slate-900">Delivery History</h2>
+            <span className="text-[8px] text-slate-400">({meta?.total || items.length})</span>
           </div>
-          <div className="flex flex-wrap gap-3">
-            <select className={ui.input} value={query.type} onChange={(event) => setQuery({ page: 1, type: event.target.value })}>
+          <div className="flex flex-wrap items-center gap-1 ml-auto">
+            <select className={compactSelect} value={query.type} onChange={(event) => setQuery({ page: 1, type: event.target.value })}>
               <option value="all">All types</option>
               {typeOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
@@ -336,48 +403,72 @@ export function NotificationsPage() {
         </div>
       </div>
 
-      {loading ? <LoadingSpinner label="Loading notifications..." /> : null}
-      {!loading && !items.length ? <EmptyState title="No notifications found" description="Broadcast history will appear here." /> : null}
+      {/* Loading/Empty States */}
+      {loading && <LoadingSpinner />}
+      {!loading && !items.length && <EmptyState title="No notifications found" description="Broadcast history will appear here." />}
 
-      {!loading && items.length ? (
-        <div className={ui.tableWrap}>
-          <div className={ui.tableScroll}>
-            <table className={ui.table}>
-              <thead>
+      {/* Table */}
+      {!loading && items.length && (
+        <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full divide-y divide-slate-100">
+              <thead className="bg-slate-50/50">
                 <tr>
-                  <th className={ui.tableHead}>Notification</th>
-                  <th className={ui.tableHead}>User</th>
-                  <th className={ui.tableHead}>Target</th>
-                  <th className={ui.tableHead}>Delivery</th>
-                  <th className={ui.tableHead}>Read</th>
-                  <th className={ui.tableHead}>Created</th>
+                  {["Notification", "User", "Target", "Delivery", "Read", "Created"].map((x) => (
+                    <th key={x} className="px-2.5 py-1.5 text-left">
+                      <span className="text-xs font-normal uppercase tracking-wider text-slate-400">{x}</span>
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {items.map((item) => (
-                  <tr key={item.id}>
-                    <td className={ui.tableCell}>
-                      <div className="font-bold text-slate-900">{item.title}</div>
-                      <div className="max-w-md truncate text-sm text-slate-500">{item.body}</div>
-                      <div className="mt-1 flex flex-wrap gap-2">
-                        <span className={ui.pill}>{item.type}</span>
-                        {item.attachmentUrl ? <span className={ui.pill}>Attachment</span> : null}
+                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-2.5 py-1.5">
+                      <div className="text-[10px] font-semibold text-slate-900">{item.title}</div>
+                      <div className="text-[8px] text-slate-500 truncate max-w-[200px]">{item.body}</div>
+                      <div className="flex flex-wrap gap-0.5 mt-0.5">
+                        <span className="inline-flex px-1.5 py-0.5 bg-slate-100 rounded text-[7px] font-medium text-slate-600">{item.type}</span>
+                        {item.attachmentUrl && <span className="inline-flex px-1.5 py-0.5 bg-indigo-50 rounded text-[7px] font-medium text-indigo-600">Attachment</span>}
                       </div>
                     </td>
-                    <td className={ui.tableCell}>
-                      <div className="font-semibold text-slate-900">{item.user?.name || "Learner"}</div>
-                      <div className="text-xs text-slate-500">{item.user?.email || item.user?.mobile || item.userId}</div>
+                    <td className="px-2.5 py-1.5">
+                      <div className="text-[9px] font-semibold text-slate-900">{item.user?.name || "Learner"}</div>
+                      <div className="text-[7px] text-slate-400">{item.user?.email || item.user?.mobile || item.userId}</div>
                     </td>
-                    <td className={ui.tableCell}>{item.targetGroup || "-"}</td>
-                    <td className={ui.tableCell}>
-                      <div className="flex flex-col gap-1 text-xs font-semibold">
-                        <span>App: {item.notificationStatus || "-"}</span>
-                        <span>Email: {item.emailStatus || "-"}</span>
-                        <span>Push: {item.pushStatus || "-"}</span>
+                    <td className="px-2.5 py-1.5 text-[8px] text-slate-600">{item.targetGroup || "-"}</td>
+                    <td className="px-2.5 py-1.5">
+                      <div className="flex flex-col gap-0.5 text-[7px]">
+                        <span className={cn(
+                          "inline-flex px-1.5 py-0.5 rounded",
+                          item.notificationStatus === "sent" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+                        )}>App: {item.notificationStatus || "-"}</span>
+                        <span className={cn(
+                          "inline-flex px-1.5 py-0.5 rounded",
+                          item.emailStatus === "sent" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+                        )}>Email: {item.emailStatus || "-"}</span>
+                        <span className={cn(
+                          "inline-flex px-1.5 py-0.5 rounded",
+                          item.pushStatus === "sent" ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+                        )}>Push: {item.pushStatus || "-"}</span>
                       </div>
                     </td>
-                    <td className={ui.tableCell}>{item.readAt ? "Read" : "Unread"}</td>
-                    <td className={ui.tableCell}>{item.createdAt ? new Date(item.createdAt).toLocaleString() : "-"}</td>
+                    <td className="px-2.5 py-1.5">
+                      <span className={cn(
+                        "inline-flex px-1.5 py-0.5 rounded text-[7px] font-medium",
+                        item.readAt ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"
+                      )}>
+                        {item.readAt ? "Read" : "Unread"}
+                      </span>
+                    </td>
+                    <td className="px-2.5 py-1.5 text-[7px] text-slate-400">
+                      {item.createdAt ? new Date(item.createdAt).toLocaleString() : "-"}
+                    </td>
+                    {/* <td className="px-2.5 py-1.5">
+                      <button className="p-0.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors">
+                        <Eye size={10} />
+                      </button>
+                    </td> */}
                   </tr>
                 ))}
               </tbody>
@@ -385,7 +476,7 @@ export function NotificationsPage() {
           </div>
           <Pagination meta={meta} onChange={(page) => setQuery((current) => ({ ...current, page }))} />
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

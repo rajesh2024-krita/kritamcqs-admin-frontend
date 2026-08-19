@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Eye, EyeOff, Image, Plus, RefreshCw, Save, Trash2, Upload } from "lucide-react";
+import { ArrowDown, ArrowUp, Eye, EyeOff, Image, Plus, RefreshCw, Save, Trash2, Upload, Layout, FileText, Settings, Globe, Menu, Link as LinkIcon, Type, Palette, Video, Instagram, Star, Users, Phone, Mail, MapPin, Check, X, ChevronRight, ChevronDown } from "lucide-react";
 import { uploadService } from "../api/uploadService";
 import { websiteContentService } from "../api/websiteContentService";
 import { cn, ui } from "../ui";
@@ -467,36 +467,45 @@ export function WebsiteContentPage() {
   }
 
   return (
-    <div className="space-y-5">
-      <div className={ui.sectionHead}>
-        <div>
-          <p className={ui.eyebrow}>Website Builder</p>
-          <h1 className="text-2xl font-black tracking-tight text-slate-950">Landing Page Sections</h1>
-          <p className="mt-2 max-w-3xl text-sm text-slate-500">
-            Manage every landing page section, image, button, and repeatable item from admin without code changes.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={loadContent} disabled={status === "loading"}>
-            <RefreshCw size={16} />
-            Reload
-          </button>
-          <button type="button" className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={saveContent} disabled={status === "saving"}>
-            <Save size={16} />
-            {status === "saving" ? "Publishing..." : "Publish"}
-          </button>
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="bg-white rounded-lg border border-slate-200/60 px-4 py-2.5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg shadow-indigo-500/25">
+              <Globe size={14} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-slate-900">Website Content</h1>
+              <p className="text-xs text-slate-500">Manage landing page sections and content</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <button type="button" className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[9px] font-medium text-slate-700 rounded transition-colors" onClick={loadContent} disabled={status === "loading"}>
+              <RefreshCw size={10} className={status === "loading" ? "animate-spin" : ""} /> {status === "loading" ? "..." : "Refresh"}
+            </button>
+            <button type="button" className="inline-flex items-center gap-0.5 px-2.5 py-0.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-[9px] font-medium rounded-lg transition-all shadow-sm shadow-indigo-500/25" onClick={saveContent} disabled={status === "saving"}>
+              <Save size={10} /> {status === "saving" ? "Publishing..." : "Publish"}
+            </button>
+          </div>
         </div>
       </div>
 
-      {message ? (
-        <div className={`rounded-xl border px-4 py-3 text-sm font-semibold ${status === "error" ? "border-rose-200 bg-rose-50 text-rose-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"}`}>
+      {/* Message */}
+      {message && (
+        <div className={cn(
+          "rounded-lg border px-3 py-1.5 text-[10px] font-medium",
+          status === "error" ? "border-rose-200 bg-rose-50 text-rose-700" : "border-emerald-200 bg-emerald-50 text-emerald-700"
+        )}>
           {message}
         </div>
-      ) : null}
+      )}
 
-      <div className="grid gap-5 xl:grid-cols-[260px_1fr]">
-        <aside className={ui.panel}>
-          <div className="space-y-1">
+      {/* Main Layout */}
+      <div className="grid gap-3 lg:grid-cols-[220px_1fr]">
+        {/* Sidebar */}
+        <aside className="bg-white rounded-lg border border-slate-200/60 p-2 shadow-sm">
+          <div className="space-y-0.5">
             {sections.map(([key, label]) => (
               <button
                 key={key}
@@ -505,7 +514,12 @@ export function WebsiteContentPage() {
                   setActiveSection(key);
                   if (key === "advanced") setAdvancedText(JSON.stringify(contentRef.current, null, 2));
                 }}
-                className={`w-full rounded-lg px-3 py-2.5 text-left text-sm font-bold transition ${activeSection === key ? "bg-sky-600 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950"}`}
+                className={cn(
+                  "w-full rounded-lg px-2.5 py-1.5 text-left text-[10px] font-medium transition-all",
+                  activeSection === key
+                    ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-sm shadow-indigo-500/25"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                )}
               >
                 {label}
               </button>
@@ -513,121 +527,153 @@ export function WebsiteContentPage() {
           </div>
         </aside>
 
-        <section className={ui.panel}>
+        {/* Content */}
+        <section className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
           {activeSection === "general" && (
-            <Section title="General Links & Brand">
-              <ImageField label="Logo" path="brand.logo" value={getIn(content, "brand.logo")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
-              <Field label="Google Play Link" path="links.googlePlay" value={getIn(content, "links.googlePlay")} onChange={update} />
-              <Field label="Dashboard Link" path="links.dashboard" value={getIn(content, "links.dashboard")} onChange={update} />
-              <Field label="Premium Link" path="links.premium" value={getIn(content, "links.premium")} onChange={update} />
-              <Field label="Contact Link" path="links.contact" value={getIn(content, "links.contact")} onChange={update} />
-              <Field label="WhatsApp Link" path="links.whatsapp" value={getIn(content, "links.whatsapp")} onChange={update} />
-              <Field label="Navbar CTA Text" path="ctas.navbar.label" value={getIn(content, "ctas.navbar.label")} onChange={update} />
-              <Field label="Navbar CTA Link" path="ctas.navbar.href" value={getIn(content, "ctas.navbar.href")} onChange={update} />
-              <SelectPathField label="Navbar CTA Link Key" path="ctas.navbar.linkKey" value={getIn(content, "ctas.navbar.linkKey")} options={linkKeys} onChange={update} />
-            </Section>
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-slate-900 mb-2">General Links & Brand</h2>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <ImageField label="Logo" path="brand.logo" value={getIn(content, "brand.logo")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+                <Field label="Google Play" path="links.googlePlay" value={getIn(content, "links.googlePlay")} onChange={update} />
+                <Field label="Dashboard" path="links.dashboard" value={getIn(content, "links.dashboard")} onChange={update} />
+                <Field label="Premium" path="links.premium" value={getIn(content, "links.premium")} onChange={update} />
+                <Field label="Contact" path="links.contact" value={getIn(content, "links.contact")} onChange={update} />
+                <Field label="WhatsApp" path="links.whatsapp" value={getIn(content, "links.whatsapp")} onChange={update} />
+                <Field label="Navbar CTA Text" path="ctas.navbar.label" value={getIn(content, "ctas.navbar.label")} onChange={update} />
+                <Field label="Navbar CTA Link" path="ctas.navbar.href" value={getIn(content, "ctas.navbar.href")} onChange={update} />
+                <SelectPathField label="Navbar Link Key" path="ctas.navbar.linkKey" value={getIn(content, "ctas.navbar.linkKey")} options={linkKeys} onChange={update} />
+              </div>
+            </div>
           )}
 
           {activeSection === "hero" && (
-            <Section title="Hero Section">
-              <Field label="Award Badge" path="hero.badge" value={getIn(content, "hero.badge")} onChange={update} />
-              <Field label="Title" path="hero.title" value={getIn(content, "hero.title")} onChange={update} />
-              <Field label="Tagline" path="hero.tagline" value={getIn(content, "hero.tagline")} onChange={update} />
-              <Field label="Kicker" path="hero.kicker" value={getIn(content, "hero.kicker")} onChange={update} />
-              <TextareaField label="Description" path="hero.description" value={getIn(content, "hero.description")} onChange={update} />
-              <Field label="Primary Button Text" path="hero.primaryCta" value={getIn(content, "hero.primaryCta")} onChange={update} />
-              <Field label="Primary Button Link" path="hero.primaryCtaHref" value={getIn(content, "hero.primaryCtaHref")} onChange={update} />
-              <SelectPathField label="Primary Link Key" path="hero.primaryCtaLinkKey" value={getIn(content, "hero.primaryCtaLinkKey")} options={linkKeys} onChange={update} />
-              <Field label="Secondary Button Text" path="hero.secondaryCta" value={getIn(content, "hero.secondaryCta")} onChange={update} />
-              <Field label="Secondary Button Link" path="hero.secondaryCtaHref" value={getIn(content, "hero.secondaryCtaHref")} onChange={update} />
-              <SelectPathField label="Secondary Link Key" path="hero.secondaryCtaLinkKey" value={getIn(content, "hero.secondaryCtaLinkKey")} options={linkKeys} onChange={update} />
-              <ImageField label="Hero Section Image" path="sectionImages.hero" value={getIn(content, "sectionImages.hero")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
-              <StringList title="Benefit Chips" items={getIn(content, "hero.benefits", [])} onChange={(items) => update("hero.benefits", items)} />
-            </Section>
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-slate-900 mb-2">Hero Section</h2>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Field label="Award Badge" path="hero.badge" value={getIn(content, "hero.badge")} onChange={update} />
+                <Field label="Title" path="hero.title" value={getIn(content, "hero.title")} onChange={update} />
+                <Field label="Tagline" path="hero.tagline" value={getIn(content, "hero.tagline")} onChange={update} />
+                <Field label="Kicker" path="hero.kicker" value={getIn(content, "hero.kicker")} onChange={update} />
+                <TextareaField label="Description" path="hero.description" value={getIn(content, "hero.description")} onChange={update} wide />
+                <Field label="Primary Button Text" path="hero.primaryCta" value={getIn(content, "hero.primaryCta")} onChange={update} />
+                <Field label="Primary Button Link" path="hero.primaryCtaHref" value={getIn(content, "hero.primaryCtaHref")} onChange={update} />
+                <SelectPathField label="Primary Link Key" path="hero.primaryCtaLinkKey" value={getIn(content, "hero.primaryCtaLinkKey")} options={linkKeys} onChange={update} />
+                <Field label="Secondary Button Text" path="hero.secondaryCta" value={getIn(content, "hero.secondaryCta")} onChange={update} />
+                <Field label="Secondary Button Link" path="hero.secondaryCtaHref" value={getIn(content, "hero.secondaryCtaHref")} onChange={update} />
+                <SelectPathField label="Secondary Link Key" path="hero.secondaryCtaLinkKey" value={getIn(content, "hero.secondaryCtaLinkKey")} options={linkKeys} onChange={update} />
+                <ImageField label="Hero Section Image" path="sectionImages.hero" value={getIn(content, "sectionImages.hero")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+                <StringList title="Benefit Chips" items={getIn(content, "hero.benefits", [])} onChange={(items) => update("hero.benefits", items)} />
+              </div>
+            </div>
           )}
 
           {activeSection === "screens" && (
-            <Section title="Website & App Images">
-              {screenOptions.map((screen) => (
-                <ImageField key={screen} label={`${screen[0].toUpperCase()}${screen.slice(1)} Screen`} path={`screens.${screen}`} value={getIn(content, `screens.${screen}`)} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
-              ))}
-              {sectionImageOptions.map((section) => (
-                <ImageField key={section} label={`${section} Section Image`} path={`sectionImages.${section}`} value={getIn(content, `sectionImages.${section}`)} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
-              ))}
-            </Section>
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-slate-900 mb-2">Website & App Images</h2>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {screenOptions.map((screen) => (
+                  <ImageField key={screen} label={`${screen[0].toUpperCase()}${screen.slice(1)} Screen`} path={`screens.${screen}`} value={getIn(content, `screens.${screen}`)} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+                ))}
+                {sectionImageOptions.map((section) => (
+                  <ImageField key={section} label={`${section} Section Image`} path={`sectionImages.${section}`} value={getIn(content, `sectionImages.${section}`)} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+                ))}
+              </div>
+            </div>
           )}
 
           {activeSection === "features" && (
-            <Section title="Features Section">
-              <Field label="Section Title" path="features.title" value={getIn(content, "features.title")} onChange={update} />
-              <ImageField label="Section Image" path="sectionImages.features" value={getIn(content, "sectionImages.features")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-slate-900 mb-2">Features Section</h2>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Field label="Section Title" path="features.title" value={getIn(content, "features.title")} onChange={update} />
+                <ImageField label="Section Image" path="sectionImages.features" value={getIn(content, "sectionImages.features")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+              </div>
               <FeatureList items={getIn(content, "features.items", [])} onChange={(items) => update("features.items", items)} />
-            </Section>
+            </div>
           )}
 
           {activeSection === "dashboard" && (
-            <Section title="Dashboard Section">
-              <Field label="Title" path="dashboard.title" value={getIn(content, "dashboard.title")} onChange={update} />
-              <Field label="Subtitle" path="dashboard.subtitle" value={getIn(content, "dashboard.subtitle")} onChange={update} />
-              <Field label="Button Text" path="dashboard.cta" value={getIn(content, "dashboard.cta")} onChange={update} />
-              <Field label="Button Link" path="dashboard.ctaHref" value={getIn(content, "dashboard.ctaHref")} onChange={update} />
-              <SelectPathField label="Button Link Key" path="dashboard.ctaLinkKey" value={getIn(content, "dashboard.ctaLinkKey")} options={linkKeys} onChange={update} />
-              <ImageField label="Section Image" path="sectionImages.dashboard" value={getIn(content, "sectionImages.dashboard")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
-              <StringList title="Metrics" items={getIn(content, "dashboard.metrics", [])} onChange={(items) => update("dashboard.metrics", items)} />
-            </Section>
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-slate-900 mb-2">Dashboard Section</h2>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Field label="Title" path="dashboard.title" value={getIn(content, "dashboard.title")} onChange={update} />
+                <Field label="Subtitle" path="dashboard.subtitle" value={getIn(content, "dashboard.subtitle")} onChange={update} />
+                <Field label="Button Text" path="dashboard.cta" value={getIn(content, "dashboard.cta")} onChange={update} />
+                <Field label="Button Link" path="dashboard.ctaHref" value={getIn(content, "dashboard.ctaHref")} onChange={update} />
+                <SelectPathField label="Button Link Key" path="dashboard.ctaLinkKey" value={getIn(content, "dashboard.ctaLinkKey")} options={linkKeys} onChange={update} />
+                <ImageField label="Section Image" path="sectionImages.dashboard" value={getIn(content, "sectionImages.dashboard")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+                <StringList title="Metrics" items={getIn(content, "dashboard.metrics", [])} onChange={(items) => update("dashboard.metrics", items)} />
+              </div>
+            </div>
           )}
 
           {activeSection === "howItWorks" && (
-            <Section title="How It Works Section">
-              <Field label="Section Title" path="howItWorks.title" value={getIn(content, "howItWorks.title")} onChange={update} />
-              <ImageField label="Section Image" path="sectionImages.howItWorks" value={getIn(content, "sectionImages.howItWorks")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-slate-900 mb-2">How It Works Section</h2>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Field label="Section Title" path="howItWorks.title" value={getIn(content, "howItWorks.title")} onChange={update} />
+                <ImageField label="Section Image" path="sectionImages.howItWorks" value={getIn(content, "sectionImages.howItWorks")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+              </div>
               <StepList items={getIn(content, "howItWorks.steps", [])} onChange={(items) => update("howItWorks.steps", items)} />
-            </Section>
+            </div>
           )}
 
           {activeSection === "pricing" && (
-            <Section title="Pricing Section">
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-slate-900 mb-2">Pricing Section</h2>
               <ImageField label="Section Image" path="sectionImages.pricing" value={getIn(content, "sectionImages.pricing")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
               <PlanList items={getIn(content, "pricing.plans", [])} onChange={(items) => update("pricing.plans", items)} />
-            </Section>
+            </div>
           )}
 
           {activeSection === "comparison" && (
-            <Section title="Comparison Section">
-              <Field label="Section Title" path="comparison.title" value={getIn(content, "comparison.title")} onChange={update} />
-              <Field label="Others Column Title" path="comparison.othersTitle" value={getIn(content, "comparison.othersTitle")} onChange={update} />
-              <Field label="Others Item" path="comparison.othersItem" value={getIn(content, "comparison.othersItem")} onChange={update} />
-              <Field label="Krita Column Title" path="comparison.kritaTitle" value={getIn(content, "comparison.kritaTitle")} onChange={update} />
-              <ImageField label="Section Image" path="sectionImages.comparison" value={getIn(content, "sectionImages.comparison")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-slate-900 mb-2">Comparison Section</h2>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Field label="Section Title" path="comparison.title" value={getIn(content, "comparison.title")} onChange={update} />
+                <Field label="Others Column Title" path="comparison.othersTitle" value={getIn(content, "comparison.othersTitle")} onChange={update} />
+                <Field label="Others Item" path="comparison.othersItem" value={getIn(content, "comparison.othersItem")} onChange={update} />
+                <Field label="Krita Column Title" path="comparison.kritaTitle" value={getIn(content, "comparison.kritaTitle")} onChange={update} />
+                <ImageField label="Section Image" path="sectionImages.comparison" value={getIn(content, "sectionImages.comparison")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+              </div>
               <StringList title="Krita Items" items={getIn(content, "comparison.kritaItems", [])} onChange={(items) => update("comparison.kritaItems", items)} />
-            </Section>
+            </div>
           )}
 
           {activeSection === "roadmap" && (
-            <Section title="Roadmap Section">
-              <Field label="Section Title" path="roadmap.title" value={getIn(content, "roadmap.title")} onChange={update} />
-              <ImageField label="Section Image" path="sectionImages.roadmap" value={getIn(content, "sectionImages.roadmap")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-slate-900 mb-2">Roadmap Section</h2>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Field label="Section Title" path="roadmap.title" value={getIn(content, "roadmap.title")} onChange={update} />
+                <ImageField label="Section Image" path="sectionImages.roadmap" value={getIn(content, "sectionImages.roadmap")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+              </div>
               <StringList title="Workflow Stages" items={getIn(content, "roadmap.workflow", [])} onChange={(items) => update("roadmap.workflow", items)} />
-            </Section>
+            </div>
           )}
 
           {activeSection === "faq" && (
-            <Section title="FAQ Section">
-              <Field label="Section Title" path="faq.title" value={getIn(content, "faq.title")} onChange={update} />
-              <ImageField label="Section Image" path="sectionImages.faq" value={getIn(content, "sectionImages.faq")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-slate-900 mb-2">FAQ Section</h2>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Field label="Section Title" path="faq.title" value={getIn(content, "faq.title")} onChange={update} />
+                <ImageField label="Section Image" path="sectionImages.faq" value={getIn(content, "sectionImages.faq")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+              </div>
               <FaqList items={getIn(content, "faq.items", [])} onChange={(items) => update("faq.items", items)} />
-            </Section>
+            </div>
           )}
 
           {activeSection === "instagramVideos" && (
-            <Section title="Instagram Videos">
-              <Field label="Section Title" path="instagramVideos.title" value={getIn(content, "instagramVideos.title")} onChange={update} />
-              <CheckPathField label="Show Instagram videos section" path="instagramVideos.enabled" checked={Boolean(getIn(content, "instagramVideos.enabled", true))} onChange={update} />
-              <TextareaField label="Section Subtitle" path="instagramVideos.subtitle" value={getIn(content, "instagramVideos.subtitle")} onChange={update} />
-              <TextareaField label="Bottom Description" path="instagramVideos.description" value={getIn(content, "instagramVideos.description")} onChange={update} />
-              <Field label="Profile Button Text" path="instagramVideos.ctaText" value={getIn(content, "instagramVideos.ctaText")} onChange={update} />
-              <Field label="View All Videos Profile URL" path="instagramVideos.profileUrl" value={getIn(content, "instagramVideos.profileUrl")} onChange={update} />
-              <CheckPathField label="Auto Play selected video" path="instagramVideos.autoPlay" checked={Boolean(getIn(content, "instagramVideos.autoPlay", false))} onChange={update} />
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-slate-900 mb-2">Instagram Videos</h2>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Field label="Section Title" path="instagramVideos.title" value={getIn(content, "instagramVideos.title")} onChange={update} />
+                <CheckPathField label="Show Instagram videos section" path="instagramVideos.enabled" checked={Boolean(getIn(content, "instagramVideos.enabled", true))} onChange={update} />
+                <TextareaField label="Section Subtitle" path="instagramVideos.subtitle" value={getIn(content, "instagramVideos.subtitle")} onChange={update} wide />
+                <TextareaField label="Bottom Description" path="instagramVideos.description" value={getIn(content, "instagramVideos.description")} onChange={update} wide />
+                <Field label="Profile Button Text" path="instagramVideos.ctaText" value={getIn(content, "instagramVideos.ctaText")} onChange={update} />
+                <Field label="View All Videos Profile URL" path="instagramVideos.profileUrl" value={getIn(content, "instagramVideos.profileUrl")} onChange={update} />
+                <CheckPathField label="Auto Play selected video" path="instagramVideos.autoPlay" checked={Boolean(getIn(content, "instagramVideos.autoPlay", false))} onChange={update} />
+              </div>
               <InstagramVideoList
                 value={getIn(content, "instagramVideos", defaultContent.instagramVideos)}
                 onChange={(value) => update("instagramVideos", normalizeInstagramVideosConfig(value))}
@@ -635,48 +681,60 @@ export function WebsiteContentPage() {
                 onVideoUpload={uploadVideo}
                 uploadingPath={uploadingPath}
               />
-            </Section>
+            </div>
           )}
 
           {activeSection === "contact" && (
-            <Section title="Contact Section">
-              <Field label="Title" path="contact.title" value={getIn(content, "contact.title")} onChange={update} />
-              <TextareaField label="Description" path="contact.description" value={getIn(content, "contact.description")} onChange={update} />
-              <Field label="Email" path="contact.email" value={getIn(content, "contact.email")} onChange={update} />
-              <Field label="Phone" path="contact.phone" value={getIn(content, "contact.phone")} onChange={update} />
-              <TextareaField label="Address" path="contact.address" value={getIn(content, "contact.address")} onChange={update} />
-              <ImageField label="Section Image" path="sectionImages.contact" value={getIn(content, "sectionImages.contact")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
-            </Section>
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-slate-900 mb-2">Contact Section</h2>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Field label="Title" path="contact.title" value={getIn(content, "contact.title")} onChange={update} />
+                <TextareaField label="Description" path="contact.description" value={getIn(content, "contact.description")} onChange={update} wide />
+                <Field label="Email" path="contact.email" value={getIn(content, "contact.email")} onChange={update} />
+                <Field label="Phone" path="contact.phone" value={getIn(content, "contact.phone")} onChange={update} />
+                <TextareaField label="Address" path="contact.address" value={getIn(content, "contact.address")} onChange={update} wide />
+                <ImageField label="Section Image" path="sectionImages.contact" value={getIn(content, "sectionImages.contact")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+              </div>
+            </div>
           )}
 
           {activeSection === "finalCta" && (
-            <Section title="Final CTA Section">
-              <Field label="Eyebrow" path="finalCta.eyebrow" value={getIn(content, "finalCta.eyebrow")} onChange={update} />
-              <TextareaField label="Title" path="finalCta.title" value={getIn(content, "finalCta.title")} onChange={update} />
-              <ImageField label="Section Image" path="sectionImages.finalCta" value={getIn(content, "sectionImages.finalCta")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-slate-900 mb-2">Final CTA Section</h2>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <Field label="Eyebrow" path="finalCta.eyebrow" value={getIn(content, "finalCta.eyebrow")} onChange={update} />
+                <TextareaField label="Title" path="finalCta.title" value={getIn(content, "finalCta.title")} onChange={update} wide />
+                <ImageField label="Section Image" path="sectionImages.finalCta" value={getIn(content, "sectionImages.finalCta")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+              </div>
               <StringList title="Word Tiles" items={getIn(content, "finalCta.words", [])} onChange={(items) => update("finalCta.words", items)} />
               <ButtonList items={getIn(content, "finalCta.buttons", [])} onChange={(items) => update("finalCta.buttons", items)} />
-            </Section>
+            </div>
           )}
 
           {activeSection === "footer" && (
-            <Section title="Footer Section">
-              <TextareaField label="Description" path="footer.description" value={getIn(content, "footer.description")} onChange={update} />
-              <Field label="Copyright" path="footer.copyright" value={getIn(content, "footer.copyright")} onChange={update} />
-              <ImageField label="Section Image" path="sectionImages.footer" value={getIn(content, "sectionImages.footer")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
-            </Section>
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-slate-900 mb-2">Footer Section</h2>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <TextareaField label="Description" path="footer.description" value={getIn(content, "footer.description")} onChange={update} wide />
+                <Field label="Copyright" path="footer.copyright" value={getIn(content, "footer.copyright")} onChange={update} />
+                <ImageField label="Section Image" path="sectionImages.footer" value={getIn(content, "sectionImages.footer")} onUpload={uploadImage} uploadingPath={uploadingPath} onChange={update} />
+              </div>
+            </div>
           )}
 
           {activeSection === "advanced" && (
-            <Section title="Advanced JSON">
+            <div className="space-y-2">
+              <h2 className="text-xs font-semibold text-slate-900 mb-2">Advanced JSON Editor</h2>
               <textarea
-                className="min-h-[620px] w-full resize-y rounded-lg border border-slate-200 bg-slate-950 px-4 py-3 font-mono text-xs leading-6 text-slate-50 outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                className="w-full min-h-[400px] resize-y rounded-lg border border-slate-200 bg-slate-950 px-3 py-2 font-mono text-[10px] leading-5 text-slate-50 outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20"
                 value={advancedText}
                 onChange={(event) => setAdvancedText(event.target.value)}
                 spellCheck={false}
               />
-              {!advancedParsed.ok ? <p className="mt-3 text-sm font-semibold text-rose-600">JSON error: {advancedParsed.error}</p> : null}
-            </Section>
+              {!advancedParsed.ok && (
+                <p className="text-[10px] font-medium text-rose-600">JSON error: {advancedParsed.error}</p>
+              )}
+            </div>
           )}
         </section>
       </div>
@@ -684,72 +742,88 @@ export function WebsiteContentPage() {
   );
 }
 
-function Section({ title, children }) {
+// Compact Field Component
+function Field({ label, path, value, onChange, type = "text" }) {
+  const compactInput = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all";
   return (
-    <div>
-      <h2 className="mb-5 text-xl font-black tracking-tight text-slate-950">{title}</h2>
-      <div className="grid gap-5 lg:grid-cols-2">{children}</div>
+    <div className="flex flex-col gap-0.5">
+      <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">{label}</label>
+      <input type={type} className={compactInput} value={value || ""} onChange={(event) => onChange(path, event.target.value)} />
     </div>
   );
 }
 
-function Field({ label, path, value, onChange, type = "text" }) {
+function TextareaField({ label, path, value, onChange, wide = false }) {
+  const compactTextarea = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-y min-h-[50px]";
   return (
-    <label className={ui.field}>
-      {label}
-      <input type={type} className={ui.input} value={value || ""} onChange={(event) => onChange(path, event.target.value)} />
-    </label>
-  );
-}
-
-function TextareaField({ label, path, value, onChange }) {
-  return (
-    <label className={cn(ui.field, "lg:col-span-2")}>
-      {label}
-      <textarea className={ui.textarea} rows={4} value={value || ""} onChange={(event) => onChange(path, event.target.value)} />
-    </label>
+    <div className={cn("flex flex-col gap-0.5", wide && "sm:col-span-2")}>
+      <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">{label}</label>
+      <textarea className={compactTextarea} rows={3} value={value || ""} onChange={(event) => onChange(path, event.target.value)} />
+    </div>
   );
 }
 
 function ImageField({ label, path, value, onChange, onUpload, uploadingPath }) {
+  const compactInput = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all";
   const preview = assetUrl(value);
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-bold text-slate-800">{label}</p>
-          <p className="mt-1 text-xs text-slate-500">Upload or paste an image URL/path.</p>
-        </div>
-        <label className={cn(ui.buttonBase, ui.buttonSecondary, "cursor-pointer")}>
-          <Upload size={16} />
-          {uploadingPath === path ? "Uploading..." : "Upload"}
+    <div className="bg-slate-50 rounded-lg border border-slate-200/50 p-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[8px] font-medium text-slate-600">{label}</span>
+        <label className={cn("inline-flex items-center gap-0.5 px-2 py-0.5 text-[7px] font-medium rounded transition-colors cursor-pointer", "bg-slate-200 hover:bg-slate-300 text-slate-700")}>
+          <Upload size={9} /> {uploadingPath === path ? "..." : "Upload"}
           <input type="file" accept="image/*" className="hidden" onChange={(event) => onUpload(path, event)} disabled={uploadingPath === path} />
         </label>
       </div>
-      <input className={cn(ui.input, "mt-4")} value={value || ""} onChange={(event) => onChange(path, event.target.value)} placeholder="/uploads/website-content/image.webp" />
-      {preview ? (
-        <img src={preview} alt={label} className="mt-4 h-40 w-full rounded-lg border border-slate-200 bg-white object-contain" />
-      ) : (
-        <div className="mt-4 flex h-40 items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white text-slate-400">
-          <Image size={28} />
-        </div>
+      <input className={cn(compactInput, "mt-1")} value={value || ""} onChange={(event) => onChange(path, event.target.value)} placeholder="/uploads/..." />
+      {preview && (
+        <img src={preview} alt={label} className="mt-1 h-16 w-full rounded border border-slate-200 bg-white object-contain" />
       )}
+    </div>
+  );
+}
+
+function SelectPathField({ label, path, value, options, onChange }) {
+  const compactSelect = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none";
+  return (
+    <div className="flex flex-col gap-0.5">
+      <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">{label}</label>
+      <select className={compactSelect} value={value || ""} onChange={(event) => onChange(path, event.target.value)}>
+        {options.map((option) => (
+          <option key={option || "custom"} value={option}>{option || "Custom URL"}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function CheckPathField({ label, path, checked, onChange }) {
+  return (
+    <div className="flex items-center gap-1.5 bg-slate-50 rounded-lg border border-slate-200/50 px-2 py-0.5">
+      <input type="checkbox" className="h-3 w-3 rounded border-slate-300 text-indigo-600 focus:ring-1 focus:ring-indigo-500/20" checked={checked} onChange={(event) => onChange(path, event.target.checked)} />
+      <span className="text-[7px] font-medium text-slate-600">{label}</span>
     </div>
   );
 }
 
 function StringList({ title, items, onChange }) {
   const list = Array.isArray(items) ? items : [];
+  const compactInput = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all";
   return (
-    <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <ListHeader title={title} onAdd={() => onChange([...list, "New item"])} />
-      <div className="mt-4 space-y-3">
+    <div className="bg-slate-50 rounded-lg border border-slate-200/50 p-2.5 sm:col-span-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[8px] font-medium text-slate-600 uppercase tracking-wider">{title}</span>
+        <button type="button" className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-200 hover:bg-slate-300 text-[8px] font-medium text-slate-700 rounded transition-colors" onClick={() => onChange([...list, "New item"])}>
+          <Plus size={9} /> Add
+        </button>
+      </div>
+      <div className="mt-1.5 space-y-1">
         {list.map((item, index) => (
-          <div key={index} className="flex gap-2">
-            <input className={ui.input} value={item || ""} onChange={(event) => onChange(list.map((current, itemIndex) => (itemIndex === index ? event.target.value : current)))} />
-            <IconButton label="Remove" onClick={() => onChange(list.filter((_, itemIndex) => itemIndex !== index))}>
-              <Trash2 size={16} />
-            </IconButton>
+          <div key={index} className="flex gap-1">
+            <input className={compactInput} value={item || ""} onChange={(event) => onChange(list.map((current, itemIndex) => (itemIndex === index ? event.target.value : current)))} />
+            <button type="button" className="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-200 bg-white text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 transition-colors" onClick={() => onChange(list.filter((_, itemIndex) => itemIndex !== index))}>
+              <Trash2 size={10} />
+            </button>
           </div>
         ))}
       </div>
@@ -931,243 +1005,184 @@ function InstagramVideoList({ value, onChange, onImageUpload, onVideoUpload, upl
   }
 
   return (
-    <>
-    <Repeatable title="Tabs Management" onAdd={addTab}>
-      <div className="rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-xs font-semibold text-sky-800">
-        Tabs shown here appear on the website automatically. Assign each reel to a tab below.
-      </div>
-      {tabs.map((tab, index) => (
-        <Card key={tab.id} title={`${index + 1}. ${tab.name || "Instagram Tab"}`} onRemove={tabs.length > 1 ? () => removeTab(index) : undefined}>
-          <InlineField label="Tab Name" value={tab.name} onChange={(name) => updateTab(index, { name })} />
-          <CheckField label="Enable this tab" checked={tab.enabled !== false} onChange={(enabled) => updateTab(index, { enabled })} />
-          <div className="flex flex-wrap items-center gap-2 lg:col-span-2">
-            <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => moveTab(index, -1)} disabled={index === 0}>
-              <ArrowUp size={16} /> Move Up
-            </button>
-            <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => moveTab(index, 1)} disabled={index === tabs.length - 1}>
-              <ArrowDown size={16} /> Move Down
-            </button>
-            <span className="text-xs font-semibold text-slate-500">ID: {tab.id}</span>
-          </div>
-        </Card>
-      ))}
-    </Repeatable>
-    <Repeatable title="Instagram Video Links" onAdd={() => commit([...list, emptyInstagramVideo(list.length + 1)])}>
-      <div className="rounded-lg border border-sky-100 bg-sky-50 px-4 py-3 text-xs font-semibold text-sky-800">
-        Use the Instagram URL for reference. Upload a video or paste a direct MP4/WebM URL for the custom website player; thumbnails are optional because the website can preview the video frame automatically.
-      </div>
-      {list.map((item, index) => {
-        const invalid = item.url && !isInstagramUrl(item.url);
-        const missingVideo = !item.videoUrl;
-        const isDefault = config.defaultVideoId === item.id;
-        const selectedTabId = resolveInstagramVideoTabId(item, tabs);
-        const selectedTab = tabs.find((tab) => tab.id === selectedTabId);
-        return (
-          <Card key={item.id || index} title={`${index + 1}. ${item.title || "Instagram Video"}`} onRemove={() => removeVideo(index)}>
-            <InlineField label="Title" value={item.title} onChange={(title) => updateVideo(index, { title })} />
-            <InlineField label="Student / Author Name" value={item.studentName} onChange={(studentName) => updateVideo(index, { studentName })} />
-            <InlineField label="Badge" value={item.badge} onChange={(badge) => updateVideo(index, { badge })} />
-            <div className={ui.field}>
+    <div className="space-y-3">
+      <Repeatable title="Tabs Management" onAdd={addTab}>
+        <div className="bg-sky-50 rounded-lg border border-sky-200 px-3 py-1.5 text-[8px] font-medium text-sky-700">
+          Tabs shown here appear on the website automatically. Assign each reel to a tab below.
+        </div>
+        {tabs.map((tab, index) => (
+          <Card key={tab.id} title={`${index + 1}. ${tab.name || "Instagram Tab"}`} onRemove={tabs.length > 1 ? () => removeTab(index) : undefined}>
+            <InlineField label="Tab Name" value={tab.name} onChange={(name) => updateTab(index, { name })} />
+            <CheckField label="Enable this tab" checked={tab.enabled !== false} onChange={(enabled) => updateTab(index, { enabled })} />
+            <div className="flex flex-wrap items-center gap-1 lg:col-span-2">
+              <button type="button" className={cn("inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[8px] font-medium rounded transition-colors", "bg-slate-100 hover:bg-slate-200 text-slate-700")} onClick={() => moveTab(index, -1)} disabled={index === 0}>
+                <ArrowUp size={10} /> Up
+              </button>
+              <button type="button" className={cn("inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[8px] font-medium rounded transition-colors", "bg-slate-100 hover:bg-slate-200 text-slate-700")} onClick={() => moveTab(index, 1)} disabled={index === tabs.length - 1}>
+                <ArrowDown size={10} /> Down
+              </button>
+              <span className="text-[7px] text-slate-400">ID: {tab.id}</span>
+            </div>
+          </Card>
+        ))}
+      </Repeatable>
+
+      <Repeatable title="Instagram Video Links" onAdd={() => commit([...list, emptyInstagramVideo(list.length + 1)])}>
+        <div className="bg-sky-50 rounded-lg border border-sky-200 px-3 py-1.5 text-[8px] font-medium text-sky-700">
+          Use the Instagram URL for reference. Upload a video or paste a direct MP4/WebM URL for the custom website player.
+        </div>
+        {list.map((item, index) => {
+          const invalid = item.url && !isInstagramUrl(item.url);
+          const missingVideo = !item.videoUrl;
+          const isDefault = config.defaultVideoId === item.id;
+          const selectedTabId = resolveInstagramVideoTabId(item, tabs);
+          const selectedTab = tabs.find((tab) => tab.id === selectedTabId);
+          return (
+            <Card key={item.id || index} title={`${index + 1}. ${item.title || "Instagram Video"}`} onRemove={() => removeVideo(index)}>
+              <InlineField label="Title" value={item.title} onChange={(title) => updateVideo(index, { title })} />
+              <InlineField label="Student / Author Name" value={item.studentName} onChange={(studentName) => updateVideo(index, { studentName })} />
+              <InlineField label="Badge" value={item.badge} onChange={(badge) => updateVideo(index, { badge })} />
               <SelectField label="Tab / Category" value={selectedTabId || tabs[0]?.id || ""} options={tabOptions} onChange={(tabId) => updateVideo(index, tabPatchFor(tabId, tabs))} />
-              <p className="text-xs font-semibold text-slate-500">Selected tab: {selectedTab?.name || "Unassigned"}</p>
-            </div>
-            <InlineField label="Instagram URL" value={item.url} onChange={(url) => updateVideo(index, { url })} />
-            <div className={ui.field}>
-              Playable Video URL / Upload
-              <div className="flex gap-2">
-                <input className={ui.input} value={item.videoUrl || ""} onChange={(event) => updateVideo(index, { videoUrl: event.target.value })} placeholder="https://.../video.mp4 or /uploads/..." />
-                <label className={cn(ui.buttonBase, ui.buttonSecondary, "shrink-0 cursor-pointer")}>
-                  <Upload size={16} />
-                  {uploadingPath === `instagramVideos.items.${index}.videoUrl` ? "Uploading..." : "Upload"}
-                  <input
-                    type="file"
-                    accept="video/*"
-                    className="hidden"
-                    disabled={uploadingPath === `instagramVideos.items.${index}.videoUrl`}
-                    onChange={(event) => onVideoUpload(`instagramVideos.items.${index}.videoUrl`, event)}
-                  />
-                </label>
+              <InlineField label="Instagram URL" value={item.url} onChange={(url) => updateVideo(index, { url })} />
+              <InlineField label="Playable Video URL" value={item.videoUrl || ""} onChange={(videoUrl) => updateVideo(index, { videoUrl })} />
+              <InlineField label="Thumbnail URL" value={item.thumbnailUrl || ""} onChange={(thumbnailUrl) => updateVideo(index, { thumbnailUrl })} />
+              <InlineField label="Description" value={item.description} onChange={(description) => updateVideo(index, { description })} textarea />
+              <InlineField label="Duration" value={item.duration} onChange={(duration) => updateVideo(index, { duration })} />
+              <InlineField label="Views" value={item.views} onChange={(views) => updateVideo(index, { views })} />
+              <InlineField label="Likes" value={item.likes} onChange={(likes) => updateVideo(index, { likes })} />
+              <InlineField label="Comments" value={item.comments} onChange={(comments) => updateVideo(index, { comments })} />
+              <CheckField label="Enable this video" checked={item.enabled !== false} onChange={(enabled) => updateVideo(index, { enabled })} />
+              <div className="flex flex-wrap items-center gap-1 lg:col-span-2">
+                <button type="button" className={cn("inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[8px] font-medium rounded transition-colors", isDefault ? "bg-indigo-600 text-white" : "bg-slate-100 hover:bg-slate-200 text-slate-700")} onClick={() => onChange({ ...config, defaultVideoId: item.id })}>
+                  {isDefault ? "Default" : "Set Default"}
+                </button>
+                <button type="button" className={cn("inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[8px] font-medium rounded transition-colors", "bg-slate-100 hover:bg-slate-200 text-slate-700")} onClick={() => moveVideo(index, -1)} disabled={index === 0}>
+                  <ArrowUp size={10} /> Up
+                </button>
+                <button type="button" className={cn("inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[8px] font-medium rounded transition-colors", "bg-slate-100 hover:bg-slate-200 text-slate-700")} onClick={() => moveVideo(index, 1)} disabled={index === list.length - 1}>
+                  <ArrowDown size={10} /> Down
+                </button>
+                <button type="button" className={cn("inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[8px] font-medium rounded transition-colors", item.enabled === false ? "bg-slate-100 hover:bg-slate-200 text-slate-700" : "bg-slate-100 hover:bg-slate-200 text-slate-700")} onClick={() => updateVideo(index, { enabled: item.enabled === false })}>
+                  {item.enabled === false ? <Eye size={10} /> : <EyeOff size={10} />}
+                  {item.enabled === false ? "Enable" : "Disable"}
+                </button>
               </div>
-            </div>
-            <div className={ui.field}>
-              Thumbnail URL
-              <div className="flex gap-2">
-                <input className={ui.input} value={item.thumbnailUrl || ""} onChange={(event) => updateVideo(index, { thumbnailUrl: event.target.value })} placeholder="https://.../thumbnail.jpg or /uploads/..." />
-                <label className={cn(ui.buttonBase, ui.buttonSecondary, "shrink-0 cursor-pointer")}>
-                  <Upload size={16} />
-                  {uploadingPath === `instagramVideos.items.${index}.thumbnailUrl` ? "Uploading..." : "Upload"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={uploadingPath === `instagramVideos.items.${index}.thumbnailUrl`}
-                    onChange={(event) => onImageUpload(`instagramVideos.items.${index}.thumbnailUrl`, event)}
-                  />
-                </label>
-              </div>
-              {item.thumbnailUrl ? <img src={assetUrl(item.thumbnailUrl)} alt={item.title || "Video thumbnail"} className="mt-3 h-36 w-24 rounded-lg border border-slate-200 bg-white object-cover" /> : null}
-            </div>
-            <InlineField label="Description" value={item.description} onChange={(description) => updateVideo(index, { description })} textarea />
-            <InlineField label="Duration" value={item.duration} onChange={(duration) => updateVideo(index, { duration })} />
-            <InlineField label="Views" value={item.views} onChange={(views) => updateVideo(index, { views })} />
-            <InlineField label="Likes" value={item.likes} onChange={(likes) => updateVideo(index, { likes })} />
-            <InlineField label="Comments" value={item.comments} onChange={(comments) => updateVideo(index, { comments })} />
-            <CheckField label="Enable this video" checked={item.enabled !== false} onChange={(enabled) => updateVideo(index, { enabled })} />
-            <div className="flex flex-wrap items-center gap-2 lg:col-span-2">
-              <button type="button" className={cn(ui.buttonBase, isDefault ? ui.buttonPrimary : ui.buttonSecondary)} onClick={() => onChange({ ...config, defaultVideoId: item.id })}>
-                {isDefault ? "Default Video" : "Set Default"}
-              </button>
-              <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => moveVideo(index, -1)} disabled={index === 0}>
-                <ArrowUp size={16} /> Move Up
-              </button>
-              <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => moveVideo(index, 1)} disabled={index === list.length - 1}>
-                <ArrowDown size={16} /> Move Down
-              </button>
-              <button type="button" className={cn(ui.buttonBase, item.enabled === false ? ui.buttonSecondary : ui.buttonGhost)} onClick={() => updateVideo(index, { enabled: item.enabled === false })}>
-                {item.enabled === false ? <Eye size={16} /> : <EyeOff size={16} />}
-                {item.enabled === false ? "Enable" : "Disable"}
-              </button>
-            </div>
-            {invalid ? <p className="text-sm font-semibold text-rose-600 lg:col-span-2">Enter a valid Instagram reel, post, or TV URL.</p> : null}
-            {missingVideo ? <p className="text-sm font-semibold text-amber-600 lg:col-span-2">Add a playable video URL or upload a video so the website can show this without Instagram UI. A normal Instagram page link cannot be used by the custom player.</p> : null}
-          </Card>
-        );
-      })}
-      {!list.length ? <div className="rounded-lg border border-dashed border-slate-300 bg-white px-4 py-8 text-center text-sm font-semibold text-slate-500">No Instagram videos added.</div> : null}
-    </Repeatable>
-    <Repeatable title="Review / Download Cards" onAdd={() => null}>
-      {Array.from({ length: 4 }).map((_, index) => {
-        const item = { ...defaultInstagramStat(index), ...(stats[index] || {}) };
-        const type = item.type || (index >= 2 ? (index === 2 ? "android" : "ios") : "metric");
-        return (
-          <Card key={index} title={`${index + 1}. ${item.label || "Card"}`} onRemove={undefined}>
-            <SelectField label="Card Type" value={type} options={["metric", "android", "ios"]} onChange={(value) => updateStat(index, { type: value })} />
-            <CheckField label="Enable this card" checked={item.enabled !== false} onChange={(enabled) => updateStat(index, { enabled })} />
-            {type === "metric" ? (
-              <>
-                <InlineField label="Value" value={item.value} onChange={(value) => updateStat(index, { value })} />
-                <InlineField label="Label" value={item.label} onChange={(label) => updateStat(index, { label })} />
-                <SelectField label="Icon" value={item.icon || "users"} options={["users", "star", "play", "quote"]} onChange={(icon) => updateStat(index, { icon })} />
-                <SelectField label="Color" value={item.tone || "blue"} options={["blue", "yellow", "rose", "purple"]} onChange={(tone) => updateStat(index, { tone })} />
-              </>
-            ) : (
-              <>
-                <InlineField label="Accessible Label" value={item.label} onChange={(label) => updateStat(index, { label })} />
-                <SelectField label="Link Key" value={item.linkKey || (type === "android" ? "googlePlay" : "")} options={linkKeys} onChange={(linkKey) => updateStat(index, { linkKey })} />
-                <InlineField label="Custom URL" value={item.href} onChange={(href) => updateStat(index, { href })} />
-              </>
-            )}
-          </Card>
-        );
-      })}
-    </Repeatable>
-    </>
+              {invalid && <p className="text-[10px] font-medium text-rose-600 lg:col-span-2">Enter a valid Instagram reel, post, or TV URL.</p>}
+              {missingVideo && <p className="text-[10px] font-medium text-amber-600 lg:col-span-2">Add a playable video URL so the website can show this without Instagram UI.</p>}
+            </Card>
+          );
+        })}
+        {!list.length && (
+          <div className="bg-white rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-[10px] font-medium text-slate-500">
+            No Instagram videos added.
+          </div>
+        )}
+      </Repeatable>
+
+      <Repeatable title="Review / Download Cards" onAdd={() => null}>
+        {Array.from({ length: 4 }).map((_, index) => {
+          const item = { ...defaultInstagramStat(index), ...(stats[index] || {}) };
+          const type = item.type || (index >= 2 ? (index === 2 ? "android" : "ios") : "metric");
+          return (
+            <Card key={index} title={`${index + 1}. ${item.label || "Card"}`} onRemove={undefined}>
+              <SelectField label="Card Type" value={type} options={["metric", "android", "ios"]} onChange={(value) => updateStat(index, { type: value })} />
+              <CheckField label="Enable this card" checked={item.enabled !== false} onChange={(enabled) => updateStat(index, { enabled })} />
+              {type === "metric" ? (
+                <>
+                  <InlineField label="Value" value={item.value} onChange={(value) => updateStat(index, { value })} />
+                  <InlineField label="Label" value={item.label} onChange={(label) => updateStat(index, { label })} />
+                  <SelectField label="Icon" value={item.icon || "users"} options={["users", "star", "play", "quote"]} onChange={(icon) => updateStat(index, { icon })} />
+                  <SelectField label="Color" value={item.tone || "blue"} options={["blue", "yellow", "rose", "purple"]} onChange={(tone) => updateStat(index, { tone })} />
+                </>
+              ) : (
+                <>
+                  <InlineField label="Accessible Label" value={item.label} onChange={(label) => updateStat(index, { label })} />
+                  <SelectField label="Link Key" value={item.linkKey || (type === "android" ? "googlePlay" : "")} options={linkKeys} onChange={(linkKey) => updateStat(index, { linkKey })} />
+                  <InlineField label="Custom URL" value={item.href} onChange={(href) => updateStat(index, { href })} />
+                </>
+              )}
+            </Card>
+          );
+        })}
+      </Repeatable>
+    </div>
   );
 }
 
 function Repeatable({ title, onAdd, children }) {
   return (
-    <div className="lg:col-span-2 rounded-xl border border-slate-200 bg-slate-50 p-4">
-      <ListHeader title={title} onAdd={onAdd} />
-      <div className="mt-4 space-y-4">{children}</div>
-    </div>
-  );
-}
-
-function ListHeader({ title, onAdd }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <h3 className="text-base font-black text-slate-900">{title}</h3>
-      {onAdd ? (
-        <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={onAdd}>
-          <Plus size={16} />
-          Add
-        </button>
-      ) : null}
+    <div className="bg-slate-50 rounded-lg border border-slate-200/50 p-2.5 sm:col-span-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[8px] font-medium text-slate-600 uppercase tracking-wider">{title}</span>
+        {onAdd && (
+          <button type="button" className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-200 hover:bg-slate-300 text-[8px] font-medium text-slate-700 rounded transition-colors" onClick={onAdd}>
+            <Plus size={9} /> Add
+          </button>
+        )}
+      </div>
+      <div className="mt-2 space-y-2">{children}</div>
     </div>
   );
 }
 
 function Card({ title, onRemove, children }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h4 className="font-bold text-slate-900">{title}</h4>
-        {onRemove ? (
-          <IconButton label="Remove" onClick={onRemove}>
-            <Trash2 size={16} />
-          </IconButton>
-        ) : null}
+    <div className="bg-white rounded-lg border border-slate-200 p-2.5">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <span className="text-[8px] font-medium text-slate-700">{title}</span>
+        {onRemove && (
+          <button type="button" className="inline-flex h-6 w-6 items-center justify-center rounded border border-slate-200 bg-white text-slate-500 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 transition-colors" onClick={onRemove}>
+            <Trash2 size={10} />
+          </button>
+        )}
       </div>
-      <div className="grid gap-4 lg:grid-cols-2">{children}</div>
+      <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">{children}</div>
     </div>
   );
 }
 
 function InlineField({ label, value, onChange, textarea = false }) {
+  const compactInput = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all";
+  const compactTextarea = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-y min-h-[40px]";
   return (
-    <label className={cn(ui.field, textarea && "lg:col-span-2")}>
-      {label}
+    <div className={cn("flex flex-col gap-0.5", textarea && "sm:col-span-2")}>
+      <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">{label}</label>
       {textarea ? (
-        <textarea className={ui.textarea} rows={3} value={value || ""} onChange={(event) => onChange(event.target.value)} />
+        <textarea className={compactTextarea} rows={2} value={value || ""} onChange={(event) => onChange(event.target.value)} />
       ) : (
-        <input className={ui.input} value={value || ""} onChange={(event) => onChange(event.target.value)} />
+        <input className={compactInput} value={value || ""} onChange={(event) => onChange(event.target.value)} />
       )}
-    </label>
+    </div>
   );
 }
 
 function SelectField({ label, value, options, onChange }) {
+  const compactSelect = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none";
   return (
-    <label className={ui.field}>
-      {label}
-      <select className={ui.input} value={value} onChange={(event) => onChange(event.target.value)}>
+    <div className="flex flex-col gap-0.5">
+      <label className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">{label}</label>
+      <select className={compactSelect} value={value} onChange={(event) => onChange(event.target.value)}>
         {options.map((option) => {
           const optionValue = typeof option === "object" ? option.value : option;
           const optionLabel = typeof option === "object" ? option.label : option || "Custom URL";
           return <option key={optionValue || "custom"} value={optionValue}>{optionLabel}</option>;
         })}
       </select>
-    </label>
-  );
-}
-
-function SelectPathField({ label, path, value, options, onChange }) {
-  return (
-    <label className={ui.field}>
-      {label}
-      <select className={ui.input} value={value || ""} onChange={(event) => onChange(path, event.target.value)}>
-        {options.map((option) => (
-          <option key={option || "custom"} value={option}>{option || "Custom URL"}</option>
-        ))}
-      </select>
-    </label>
+    </div>
   );
 }
 
 function CheckField({ label, checked, onChange }) {
   return (
-    <label className="flex items-center gap-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-bold text-slate-700">
-      <input type="checkbox" className={ui.checkbox} checked={checked} onChange={(event) => onChange(event.target.checked)} />
-      {label}
-    </label>
+    <div className="flex items-center gap-1.5 bg-slate-50 rounded-lg border border-slate-200/50 px-2 py-0.5">
+      <input type="checkbox" className="h-3 w-3 rounded border-slate-300 text-indigo-600 focus:ring-1 focus:ring-indigo-500/20" checked={checked} onChange={(event) => onChange(event.target.checked)} />
+      <span className="text-[7px] font-medium text-slate-600">{label}</span>
+    </div>
   );
-}
-
-function CheckPathField({ label, path, checked, onChange }) {
-  return <CheckField label={label} checked={checked} onChange={(value) => onChange(path, value)} />;
 }
 
 function isInstagramUrl(value) {
   return /^https?:\/\/(www\.)?instagram\.com\/(reel|p|tv)\/[A-Za-z0-9_-]+\/?/i.test(String(value || "").trim());
-}
-
-function IconButton({ label, onClick, children }) {
-  return (
-    <button type="button" aria-label={label} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600" onClick={onClick}>
-      {children}
-    </button>
-  );
 }
 
 function updateItem(list, index, patch) {

@@ -13,6 +13,63 @@ import { Pagination } from "../components/tables/Pagination";
 import { SearchBar } from "../components/tables/SearchBar";
 import { useToast } from "../context/ToastContext";
 import { cn, ui } from "../ui";
+import {
+  Mail,
+  FileText,
+  Plus,
+  Edit,
+  Trash2,
+  Copy,
+  Eye,
+  Send,
+  RefreshCw,
+  Filter,
+  Search,
+  Upload,
+  Download,
+  Save,
+  X,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Clock,
+  Calendar,
+  Tag,
+  Layers,
+  Zap,
+  Shield,
+  Database,
+  Server,
+  Globe,
+  Link,
+  Type,
+  Palette,
+  AlignCenter,
+  AlignLeft,
+  AlignRight,
+  Bold,
+  Italic,
+  Underline,
+  List,
+  Quote,
+  Code,
+  Image,
+  Video,
+  Music,
+  File,
+  Folder,
+  HardDrive,
+  Cloud,
+  Smartphone,
+  Tablet,
+  Monitor,
+  Layout,
+  Columns,
+  Grid,
+  List as ListIcon,
+  ChevronDown,
+  ChevronRight
+} from "lucide-react";
 
 const typeOptions = [
   { value: "all", label: "All Types" },
@@ -532,176 +589,185 @@ export function EmailTemplatesPage() {
     }
   }
 
+  // Compact input classes
+  const compactInput = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all";
+  const compactSelect = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none";
+  const compactTextarea = "w-full px-2 py-0.5 text-[10px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all resize-y min-h-[60px]";
+
   return (
-    <div className="flex flex-col gap-6">
-      <section className={ui.panel}>
-        <div className={ui.sectionHead}>
-          <div>
-            <div className={ui.eyebrow}>System</div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900">Email Template Management</h1>
-            <p className={ui.muted}>Create and manage customizable email templates for different system events.</p>
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="bg-white rounded-lg border border-slate-200/60 px-4 py-2.5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg shadow-indigo-500/25">
+              <Mail size={14} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-slate-900">Email Templates</h1>
+              <p className="text-xs text-slate-500">Manage customizable email templates</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-[9px] font-medium text-indigo-700">
+              {meta?.total || items.length} templates
+            </span>
           </div>
         </div>
-      </section>
+      </div>
 
-      <section className={ui.panel}>
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+      {/* Filters & Actions */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-2.5 shadow-sm">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="flex-1 min-w-0">
             <SearchBar value={search} onChange={setSearch} placeholder="Search templates..." />
-            <select
-              className={ui.input}
-              value={query.type}
-              onChange={(event) => setQuery((current) => ({ ...current, type: event.target.value, page: 1 }))}
-            >
-              {typeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <select
-              className={ui.input}
-              value={moduleFilter}
-              onChange={(event) => {
-                setModuleFilter(event.target.value);
-                setQuery((current) => ({ ...current, page: 1 }));
-              }}
-            >
-              <option value="all">All Modules</option>
-              {(catalog?.modules || []).map((module) => (
-                <option key={module} value={module}>
-                  {module}
-                </option>
-              ))}
-            </select>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={openCreate}>
-              Create Template
+          <div className="flex flex-wrap items-center gap-1">
+            <div className="flex items-center gap-0.5">
+              <Filter size={9} className="text-slate-400" />
+              <span className="text-sm font-medium text-slate-400 uppercase tracking-wider">Type:</span>
+              <select className={cn(compactSelect, "w-24")} value={query.type} onChange={(event) => setQuery((current) => ({ ...current, type: event.target.value, page: 1 }))}>
+                {typeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </div>
+            <div className="flex items-center gap-0.5">
+              <span className="text-sm font-medium text-slate-400 uppercase tracking-wider">Module:</span>
+              <select className={cn(compactSelect, "w-24")} value={moduleFilter} onChange={(event) => { setModuleFilter(event.target.value); setQuery((current) => ({ ...current, page: 1 })); }}>
+                <option value="all">All</option>
+                {(catalog?.modules || []).map((module) => <option key={module} value={module}>{module}</option>)}
+              </select>
+            </div>
+            <div className="flex items-center gap-0.5">
+              <label className="flex items-center gap-0.5 text-sm font-medium text-slate-500">
+                <input type="checkbox" className="h-3 w-3 rounded border-slate-300 text-indigo-600 focus:ring-1 focus:ring-indigo-500/20" checked={updateExisting} onChange={(event) => setUpdateExisting(event.target.checked)} />
+                Update
+              </label>
+            </div>
+            <button className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-sm font-medium text-slate-700 rounded transition-colors" onClick={() => importRef.current?.click()}>
+              <Upload size={8} /> Import
             </button>
-            <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={seedDefaultTemplates}>
-              Create Missing Defaults
+            <button className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-sm font-medium text-slate-700 rounded transition-colors" onClick={seedDefaultTemplates}>
+              <RefreshCw size={8} /> Seed
             </button>
-            <label className="flex items-center gap-2 text-sm font-semibold text-slate-600">
-              <input type="checkbox" checked={updateExisting} onChange={(event) => setUpdateExisting(event.target.checked)} />
-              Update existing
-            </label>
+            <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-sm font-medium rounded-lg transition-all shadow-sm shadow-indigo-500/25" onClick={openCreate}>
+              <Plus size={8} /> New
+            </button>
             <input ref={importRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleBulkUpload} />
-            <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => importRef.current?.click()}>
-              Bulk Upload CSV/XLSX
-            </button>
           </div>
         </div>
+      </div>
 
+      {/* Loading/Empty States */}
+      {loading && <LoadingSpinner />}
+      {!loading && !items.length && <EmptyState title="No email templates found" description="Create your first email template to get started." />}
 
-        {loading ? (
-          <LoadingSpinner />
-        ) : items.length ? (
-          <>
-            <table className={ui.table}>
-              <thead>
+      {/* Templates Table */}
+      {!loading && items.length && (
+        <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full divide-y divide-slate-100">
+              <thead className="bg-slate-50/50">
                 <tr>
-                  <th className={ui.tableHead}>Template Name</th>
-                  <th className={ui.tableHead}>Type</th>
-                  <th className={ui.tableHead}>Module</th>
-                  <th className={ui.tableHead}>Variables</th>
-                  <th className={ui.tableHead}>CTA</th>
-                  <th className={ui.tableHead}>Status</th>
-                  <th className={ui.tableHead}>Last Updated</th>
-                  <th className={ui.tableHead}>Actions</th>
+                  {["Template", "Type", "Module", "Variables", "CTA", "Status", "Updated", "Actions"].map((x) => (
+                    <th key={x} className="px-2.5 py-1.5 text-left">
+                      <span className="text-sm font-bold uppercase tracking-wider text-slate-400">{x}</span>
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-100">
                 {items.map((item) => (
-                  <tr key={item.id}>
-                    <td className={ui.tableCell}>
-                      <div>
-                        <div className="font-medium text-slate-900">{item.name}</div>
-                        <div className="text-sm text-slate-500">{item.key}</div>
-                      </div>
+                  <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-2.5 py-1.5">
+                      <div className="text-[10px] font-semibold text-slate-900">{item.name}</div>
+                      <div className="text-sm text-slate-400">{item.key}</div>
                     </td>
-                    <td className={ui.tableCell}>
-                      <span className={ui.pill}>{getTypeLabel(item.type)}</span>
+                    <td className="px-2.5 py-1.5">
+                      <span className="inline-flex px-1.5 py-0.5 bg-slate-100 rounded text-sm font-medium text-slate-600">{getTypeLabel(item.type)}</span>
                     </td>
-                    <td className={ui.tableCell}>
-                      <span className={ui.pill}>{item.module || item.type}</span>
+                    <td className="px-2.5 py-1.5">
+                      <span className="inline-flex px-1.5 py-0.5 bg-indigo-50 rounded text-sm font-medium text-indigo-600">{item.module || item.type}</span>
                     </td>
-                    <td className={ui.tableCell}>
-                      <div className="max-w-xs truncate text-sm text-slate-500">
+                    <td className="px-2.5 py-1.5">
+                      <div className="text-sm text-slate-500 truncate max-w-[120px]">
                         {(item.variables || []).map((name) => `{{${name}}}`).join(", ")}
                       </div>
                     </td>
-                    <td className={ui.tableCell}>
-                      <div className="flex max-w-xs flex-col gap-1">
-                        <span className={cn(ui.pill, item.ctaEnabled ? ui.pillSuccess : ui.pillGray)}>
-                          {item.ctaEnabled ? "Enabled" : "Disabled"}
-                        </span>
-                        {item.ctaEnabled ? (
-                          <div className="text-xs text-slate-500">
-                            {getCtaTypeLabel(item.ctaType)}
-                            {item.ctaText ? ` - ${item.ctaText}` : ""}
-                          </div>
-                        ) : null}
-                      </div>
+                    <td className="px-2.5 py-1.5">
+                      <span className={cn(
+                        "inline-flex px-1.5 py-0.5 rounded text-sm font-medium",
+                        item.ctaEnabled ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500 border border-slate-200"
+                      )}>
+                        {item.ctaEnabled ? "Enabled" : "Disabled"}
+                      </span>
                     </td>
-                    <td className={ui.tableCell}>
-                      <span className={cn(ui.pill, item.isActive ? ui.pillSuccess : ui.pillGray)}>
+                    <td className="px-2.5 py-1.5">
+                      <span className={cn(
+                        "inline-flex px-1.5 py-0.5 rounded text-sm font-medium",
+                        item.isActive ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500 border border-slate-200"
+                      )}>
                         {item.isActive ? "Active" : "Inactive"}
                       </span>
                     </td>
-                    <td className={ui.tableCell}>
+                    <td className="px-2.5 py-1.5 text-sm text-slate-400">
                       {new Date(item.updatedAt).toLocaleDateString()}
                     </td>
-                    <td className={ui.tableCell}>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => openEdit(item)}>Edit</button>
-                        <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => previewTemplate(item)}>Preview</button>
-                        <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => sendTestEmail(item)}>Send Test</button>
-                        <button className={cn(ui.buttonBase, item.isActive ? ui.buttonSecondary : ui.buttonPrimary)} onClick={() => toggleTemplateActive(item)}>
-                          {item.isActive ? "Deactivate" : "Activate"}
+                    <td className="px-2.5 py-1.5">
+                      <div className="flex items-center gap-0.5">
+                        <button className="p-0.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors" onClick={() => openEdit(item)}>
+                          <Edit size={10} />
                         </button>
-                        <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => openDuplicate(item)}>Duplicate</button>
-                        <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteItem(item)}>Delete</button>
+                        <button className="p-0.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors" onClick={() => previewTemplate(item)}>
+                          <Eye size={10} />
+                        </button>
+                        <button className="p-0.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors" onClick={() => sendTestEmail(item)}>
+                          <Send size={10} />
+                        </button>
+                        <button className="p-0.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors" onClick={() => openDuplicate(item)}>
+                          <Copy size={10} />
+                        </button>
+                        <button className="p-0.5 text-rose-600 hover:bg-rose-50 rounded transition-colors" onClick={() => setDeleteItem(item)}>
+                          <Trash2 size={10} />
+                        </button>
                       </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {meta && <Pagination meta={meta} onChange={(page) => setQuery((current) => ({ ...current, page }))} />}
-          </>
-        ) : (
-          <EmptyState
-            title="No email templates found"
-            description="Create your first email template to get started with customizable email communications."
-          />
-        )}
-      </section>
+          </div>
+          {meta && <Pagination meta={meta} onChange={(page) => setQuery((current) => ({ ...current, page }))} />}
+        </div>
+      )}
 
-      {preview ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm" onClick={() => setPreview(null)}>
-          <div className="admin-modal w-full max-w-5xl overflow-auto rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xl shadow-slate-950/20" onClick={(event) => event.stopPropagation()}>
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
-                <div>
-                  <h3 className="text-xl font-black tracking-tight text-slate-950">Preview: {preview.item.name}</h3>
-                  <p className="mt-2 text-slate-500">{preview.subject}</p>
-                </div>
-                <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => setPreview(null)}>Close</button>
+      {/* Preview Modal */}
+      {preview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={() => setPreview(null)}>
+          <div className="bg-white rounded-xl border border-slate-200/60 shadow-2xl shadow-slate-950/30 w-full max-w-4xl max-h-[90vh] overflow-hidden animate-in slide-in-from-bottom-4 duration-300" onClick={(e) => e.stopPropagation()}>
+            <div className="px-4 py-2.5 border-b border-slate-200/60 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-900">{preview.item.name}</h3>
+                <p className="text-[10px] text-slate-500">{preview.subject}</p>
               </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+              <button className="p-1 rounded-lg hover:bg-slate-100 transition-colors" onClick={() => setPreview(null)}>
+                <X size={14} />
+              </button>
+            </div>
+            <div className="overflow-y-auto p-4 max-h-[calc(90vh-80px)]">
+              <div className="bg-slate-50 rounded-lg border border-slate-200 p-4">
                 {preview.htmlContent ? (
-                  <div dangerouslySetInnerHTML={{ __html: preview.htmlContent }} />
+                  <div dangerouslySetInnerHTML={{ __html: preview.htmlContent }} className="prose prose-sm max-w-none" />
                 ) : (
-                  <pre className="whitespace-pre-wrap text-sm text-slate-700">{preview.textContent || "No preview available."}</pre>
+                  <pre className="whitespace-pre-wrap text-[10px] text-slate-700 font-mono">{preview.textContent || "No preview available."}</pre>
                 )}
               </div>
             </div>
           </div>
         </div>
-      ) : null}
+      )}
 
-      {showForm ? (
+      {/* Form Modal */}
+      {showForm && (
         <EntityFormWrapper
           title={editingItem ? "Edit Email Template" : "Create Email Template"}
           subtitle="Manage the email template content and delivery variables."
@@ -709,141 +775,144 @@ export function EmailTemplatesPage() {
           onSubmit={handleSubmit}
           submitLabel={editingItem ? "Save Changes" : "Create Template"}
         >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Field label="Catalog Mapping">
-              <SelectDropdown value={formState.key} onChange={applyCatalogTemplate} options={catalogTemplates.map((item) => ({ value: item.key, label: `${item.name} (${item.key})` }))} placeholder="Select mapped email action" />
-            </Field>
-            <Field label="Template Name" error={formErrors.name}>
-              <input className={ui.input} value={formState.name} onChange={(event) => setFormState((current) => ({ ...current, name: event.target.value }))} />
-            </Field>
-            <Field label="Template Key" error={formErrors.key}>
-              <input className={ui.input} value={formState.key} onChange={(event) => setFormState((current) => ({ ...current, key: event.target.value }))} />
-            </Field>
-            <Field label="Template Type" error={formErrors.type}>
-              <SelectDropdown
-                value={formState.type}
-                onChange={(value) => setFormState((current) => ({
-                  ...current,
-                  type: value,
-                  module: current.module.trim() || value,
-                }))}
-                options={formTypeOptions}
-                placeholder="Select template type"
-              />
-            </Field>
-            <Field label="Module">
-              <input className={ui.input} value={formState.module} onChange={(event) => setFormState((current) => ({ ...current, module: event.target.value }))} placeholder="e.g. notification" />
-            </Field>
-            <Field label="Subject" error={formErrors.subject}>
-              <input className={ui.input} value={formState.subject} onChange={(event) => setFormState((current) => ({ ...current, subject: event.target.value }))} />
-            </Field>
-            <Field label="Active">
-              <ToggleSwitch checked={Boolean(formState.isActive)} onChange={(value) => setFormState((current) => ({ ...current, isActive: value }))} label={formState.isActive ? "Active" : "Inactive"} />
-            </Field>
-            <div className="md:col-span-2 rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="text-sm font-black text-slate-900">CTA Settings</div>
-                  <div className="text-sm text-slate-500">Configure the email call-to-action button.</div>
-                </div>
-                <ToggleSwitch
-                  checked={Boolean(formState.ctaEnabled)}
-                  onChange={(value) => setFormState((current) => ({ ...current, ctaEnabled: value }))}
-                  label={formState.ctaEnabled ? "CTA Enabled" : "CTA Disabled"}
-                />
-              </div>
-              {formState.ctaEnabled ? (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Field label="Managed CTA" className="md:col-span-2">
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <select className={ui.input} value={formState.ctaConfigId} onChange={(event) => applyManagedCta(event.target.value)}>
-                      <option value="">Custom CTA / None</option>
-                      {ctaConfigs.map((item) => (
-                        <option key={item.id || item._id} value={item.id || item._id}>
-                          {item.name} - {item.ctaText}
-                        </option>
-                      ))}
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-sm font-medium text-slate-500 uppercase tracking-wider">Catalog Mapping</label>
+              <select className={compactSelect} value={formState.key} onChange={(e) => applyCatalogTemplate(e.target.value)}>
+                <option value="">Select mapped email action</option>
+                {catalogTemplates.map((item) => <option key={item.key} value={item.key}>{item.name} ({item.key})</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-sm font-medium text-slate-500 uppercase tracking-wider">Template Name</label>
+              <input className={compactInput} value={formState.name} onChange={(event) => setFormState((current) => ({ ...current, name: event.target.value }))} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-sm font-medium text-slate-500 uppercase tracking-wider">Template Key</label>
+              <input className={compactInput} value={formState.key} onChange={(event) => setFormState((current) => ({ ...current, key: event.target.value }))} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-sm font-medium text-slate-500 uppercase tracking-wider">Template Type</label>
+              <select className={compactSelect} value={formState.type} onChange={(value) => setFormState((current) => ({ ...current, type: value.target.value, module: current.module.trim() || value.target.value }))}>
+                <option value="">Select type</option>
+                {formTypeOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-sm font-medium text-slate-500 uppercase tracking-wider">Module</label>
+              <input className={compactInput} value={formState.module} onChange={(event) => setFormState((current) => ({ ...current, module: event.target.value }))} placeholder="e.g. notification" />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-sm font-medium text-slate-500 uppercase tracking-wider">Subject</label>
+              <input className={compactInput} value={formState.subject} onChange={(event) => setFormState((current) => ({ ...current, subject: event.target.value }))} />
+            </div>
+            <div className="flex items-center gap-1.5 bg-slate-50 rounded-lg border border-slate-200/50 px-2 py-0.5">
+              <ToggleSwitch checked={Boolean(formState.isActive)} onChange={(value) => setFormState((current) => ({ ...current, isActive: value }))} label="" size="sm" />
+              <span className="text-sm font-medium text-slate-700">{formState.isActive ? "Active" : "Inactive"}</span>
+            </div>
+          </div>
+
+          {/* CTA Settings */}
+          <div className="bg-slate-50 rounded-lg border border-slate-200/50 p-2.5 mt-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <span className="text-sm font-semibold text-slate-700">CTA Settings</span>
+              <ToggleSwitch checked={Boolean(formState.ctaEnabled)} onChange={(value) => setFormState((current) => ({ ...current, ctaEnabled: value }))} label="" size="sm" />
+              <span className="text-sm font-medium text-slate-600">{formState.ctaEnabled ? "Enabled" : "Disabled"}</span>
+            </div>
+            {formState.ctaEnabled && (
+              <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                <div className="flex flex-col gap-0.5 sm:col-span-2">
+                  <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Managed CTA</label>
+                  <div className="flex gap-1">
+                    <select className={cn(compactSelect, "flex-1")} value={formState.ctaConfigId} onChange={(event) => applyManagedCta(event.target.value)}>
+                      <option value="">Custom CTA</option>
+                      {ctaConfigs.map((item) => <option key={item.id || item._id} value={item.id || item._id}>{item.name}</option>)}
                     </select>
-                    <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary, "whitespace-nowrap")} onClick={createManagedCtaFromForm}>
-                      Save As New CTA
+                    <button type="button" className="px-2 py-0.5 bg-slate-200 hover:bg-slate-300 text-sm font-medium text-slate-700 rounded transition-colors" onClick={createManagedCtaFromForm}>
+                      <Save size={8} />
                     </button>
                   </div>
-                </Field>
-                <Field label="CTA Button Text" error={formErrors.ctaText}>
-                  <input className={ui.input} value={formState.ctaText} onChange={(event) => setFormState((current) => ({ ...current, ctaText: event.target.value }))} placeholder="e.g. Start Mock Test" />
-                </Field>
-                <Field label="CTA Destination" error={formErrors.ctaType}>
-                  <SelectDropdown value={formState.ctaType} onChange={handleCtaTypeChange} options={ctaTypeOptions.map(({ value, label }) => ({ value, label }))} placeholder="Select CTA type" />
-                </Field>
-                {formState.ctaType === "custom_url" ? (
-                  <Field label="Custom URL" error={formErrors.ctaUrl} className="md:col-span-2">
-                    <input className={ui.input} value={formState.ctaUrl} onChange={(event) => setFormState((current) => ({ ...current, ctaUrl: event.target.value }))} placeholder="https://kritamcqs.com" />
-                  </Field>
-                ) : null}
-                <Field label="Open In">
-                  <SelectDropdown value={formState.openIn} onChange={(value) => setFormState((current) => ({ ...current, openIn: value }))} options={openInOptions} />
-                </Field>
-                <Field label="Button Alignment">
-                  <SelectDropdown value={formState.buttonAlignment} onChange={(value) => setFormState((current) => ({ ...current, buttonAlignment: value }))} options={alignmentOptions} />
-                </Field>
-                <Field label="Button Color">
-                  <div className="flex items-center gap-3">
-                    <input type="color" className="h-11 w-14 rounded-lg border border-slate-200 bg-white p-1" value={/^#[0-9a-f]{6}$/i.test(formState.buttonColor) ? formState.buttonColor : "#2563eb"} onChange={(event) => setFormState((current) => ({ ...current, buttonColor: event.target.value }))} />
-                    <input className={ui.input} value={formState.buttonColor} onChange={(event) => setFormState((current) => ({ ...current, buttonColor: event.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">CTA Text</label>
+                  <input className={compactInput} value={formState.ctaText} onChange={(event) => setFormState((current) => ({ ...current, ctaText: event.target.value }))} placeholder="Button text" />
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">CTA Type</label>
+                  <select className={compactSelect} value={formState.ctaType} onChange={(e) => handleCtaTypeChange(e.target.value)}>
+                    {ctaTypeOptions.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                </div>
+                {formState.ctaType === "custom_url" && (
+                  <div className="flex flex-col gap-0.5 sm:col-span-2">
+                    <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Custom URL</label>
+                    <input className={compactInput} value={formState.ctaUrl} onChange={(event) => setFormState((current) => ({ ...current, ctaUrl: event.target.value }))} placeholder="https://..." />
                   </div>
-                </Field>
-                <Field label="Button Text Color">
-                  <div className="flex items-center gap-3">
-                    <input type="color" className="h-11 w-14 rounded-lg border border-slate-200 bg-white p-1" value={/^#[0-9a-f]{6}$/i.test(formState.buttonTextColor) ? formState.buttonTextColor : "#ffffff"} onChange={(event) => setFormState((current) => ({ ...current, buttonTextColor: event.target.value }))} />
-                    <input className={ui.input} value={formState.buttonTextColor} onChange={(event) => setFormState((current) => ({ ...current, buttonTextColor: event.target.value }))} />
+                )}
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Open In</label>
+                  <select className={compactSelect} value={formState.openIn} onChange={(e) => setFormState((current) => ({ ...current, openIn: e.target.value }))}>
+                    {openInOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Alignment</label>
+                  <select className={compactSelect} value={formState.buttonAlignment} onChange={(e) => setFormState((current) => ({ ...current, buttonAlignment: e.target.value }))}>
+                    {alignmentOptions.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+                  </select>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Button Color</label>
+                  <div className="flex gap-1">
+                    <input type="color" className="h-6 w-6 rounded border border-slate-200 p-0.5 cursor-pointer" value={/^#[0-9a-f]{6}$/i.test(formState.buttonColor) ? formState.buttonColor : "#2563eb"} onChange={(event) => setFormState((current) => ({ ...current, buttonColor: event.target.value }))} />
+                    <input className={cn(compactInput, "flex-1")} value={formState.buttonColor} onChange={(event) => setFormState((current) => ({ ...current, buttonColor: event.target.value }))} />
                   </div>
-                </Field>
+                </div>
+                <div className="flex flex-col gap-0.5">
+                  <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Text Color</label>
+                  <div className="flex gap-1">
+                    <input type="color" className="h-6 w-6 rounded border border-slate-200 p-0.5 cursor-pointer" value={/^#[0-9a-f]{6}$/i.test(formState.buttonTextColor) ? formState.buttonTextColor : "#ffffff"} onChange={(event) => setFormState((current) => ({ ...current, buttonTextColor: event.target.value }))} />
+                    <input className={cn(compactInput, "flex-1")} value={formState.buttonTextColor} onChange={(event) => setFormState((current) => ({ ...current, buttonTextColor: event.target.value }))} />
+                  </div>
+                </div>
               </div>
-              ) : null}
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 gap-1.5 mt-1">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-sm font-medium text-slate-500 uppercase tracking-wider">HTML Content</label>
+              <textarea className={compactTextarea} rows={4} value={formState.htmlContent} onChange={(event) => setFormState((current) => ({ ...current, htmlContent: event.target.value }))} />
             </div>
-            <Field label="HTML Content" error={formErrors.htmlContent} className="md:col-span-2">
-              <textarea className={ui.textarea} rows={6} value={formState.htmlContent} onChange={(event) => setFormState((current) => ({ ...current, htmlContent: event.target.value }))} />
-            </Field>
-            <Field label="Text Content" error={formErrors.textContent} className="md:col-span-2">
-              <textarea className={ui.textarea} rows={5} value={formState.textContent} onChange={(event) => setFormState((current) => ({ ...current, textContent: event.target.value }))} />
-            </Field>
-            <Field label="Variables" error={formErrors.variables} className="md:col-span-2">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-sm font-medium text-slate-500 uppercase tracking-wider">Text Content</label>
+              <textarea className={compactTextarea} rows={3} value={formState.textContent} onChange={(event) => setFormState((current) => ({ ...current, textContent: event.target.value }))} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-sm font-medium text-slate-500 uppercase tracking-wider">Variables</label>
               <TagInput value={formState.variables} onChange={(nextValue) => setFormState((current) => ({ ...current, variables: nextValue }))} />
-              {allowedVariables.length ? (
-                <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Available variables</div>
-                  <div className="flex flex-wrap gap-2">
+              {allowedVariables.length > 0 && (
+                <div className="mt-1 bg-slate-50 rounded-lg border border-slate-200/50 p-1.5">
+                  <div className="text-[6px] font-medium text-slate-400 uppercase tracking-wider mb-0.5">Available Variables</div>
+                  <div className="flex flex-wrap gap-0.5">
                     {allowedVariables.map((name) => (
-                      <button type="button" key={name} className={cn(ui.buttonBase, ui.buttonSecondary, "min-h-8 px-2.5 py-1 text-xs")} onClick={() => copyVariable(name)}>
+                      <button type="button" key={name} className="px-1.5 py-0.5 bg-white border border-slate-200 rounded text-[6px] font-medium text-slate-600 hover:bg-slate-100 transition-colors" onClick={() => copyVariable(name)}>
                         {`{{${name}}}`}
                       </button>
                     ))}
                   </div>
-                  {selectedCatalog ? (
-                    <div className="mt-4 rounded-lg border border-slate-200 bg-white p-3 text-sm text-slate-700">
-                      <div className="font-semibold text-slate-900">Mapped template info</div>
-                      <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                        <div>
-                          <div className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Trigger</div>
-                          <div>{selectedCatalog.trigger || "Not specified"}</div>
-                        </div>
-                        <div>
-                          <div className="text-[11px] uppercase tracking-[0.24em] text-slate-500">Attachments</div>
-                          <div>{selectedCatalog.supportsAttachments ? "Enabled" : "Disabled"}</div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
                 </div>
-              ) : null}
-            </Field>
-            <Field label="Sample Data (JSON)" error={formErrors.sampleData} className="md:col-span-2">
-              <textarea className={ui.textarea} rows={5} value={formState.sampleData} onChange={(event) => setFormState((current) => ({ ...current, sampleData: event.target.value }))} />
-            </Field>
+              )}
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-sm font-medium text-slate-500 uppercase tracking-wider">Sample Data (JSON)</label>
+              <textarea className={compactTextarea} rows={3} value={formState.sampleData} onChange={(event) => setFormState((current) => ({ ...current, sampleData: event.target.value }))} />
+            </div>
           </div>
         </EntityFormWrapper>
-      ) : null}
+      )}
 
+      {/* Delete Modal */}
       <ConfirmDeleteModal
         open={Boolean(deleteItem)}
         title="Delete email template"
@@ -852,72 +921,82 @@ export function EmailTemplatesPage() {
         onConfirm={handleDelete}
       />
 
-      <section className={ui.panel}>
-        <div className={ui.sectionHead}>
-          <div>
-            <div className={ui.eyebrow}>Delivery</div>
-            <h2 className="text-xl font-black text-slate-900">Recent Email Logs</h2>
-          </div>
+      {/* Email Logs */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+        <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+          <Clock size={14} className="text-indigo-600" />
+          <h2 className="text-xs font-semibold text-slate-900">Recent Email Logs</h2>
+          <span className="text-sm text-slate-400">({logs.length})</span>
         </div>
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-slate-100 mt-2">
           {logs.map((log) => (
-            <div key={log.id} className="flex items-center justify-between gap-4 py-3 text-sm">
+            <div key={log.id} className="flex items-center justify-between gap-2 py-1.5 text-sm">
               <div>
                 <div className="font-medium text-slate-900">{log.subject}</div>
                 <div className="text-slate-500">{log.to} - {log.templateKey || "manual"}</div>
               </div>
-              <span className={cn(ui.pill, log.status === "sent" ? ui.pillSuccess : log.status === "failed" ? ui.pillDanger : ui.pillGray)}>{log.status}</span>
+              <span className={cn(
+                "px-1.5 py-0.5 rounded text-[6px] font-medium",
+                log.status === "sent" ? "bg-emerald-100 text-emerald-700" :
+                log.status === "failed" ? "bg-rose-100 text-rose-700" :
+                "bg-slate-100 text-slate-600"
+              )}>{log.status}</span>
             </div>
           ))}
-          {!logs.length && <p className={ui.muted}>No sent email logs yet.</p>}
+          {!logs.length && <div className="text-sm text-slate-400 py-2">No sent email logs yet.</div>}
         </div>
-      </section>
+      </div>
 
-      <section className={ui.panel}>
-        <div className={ui.sectionHead}>
-          <div>
-            <div className={ui.eyebrow}>Audit</div>
-            <h2 className="text-xl font-black text-slate-900">Email Mapping Report</h2>
-            <p className={ui.muted}>Module triggers, template keys, and current database status.</p>
-          </div>
+      {/* Audit Report */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+        <div className="flex items-center gap-2 pb-2 border-b border-slate-100">
+          <Shield size={14} className="text-indigo-600" />
+          <h2 className="text-xs font-semibold text-slate-900">Email Mapping Report</h2>
+          <span className="text-sm text-slate-400">Audit status</span>
         </div>
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1 mt-2">
           {["Working", "Missing", "Broken"].map((status) => (
-            <span key={status} className={cn(ui.pill, status === "Working" ? ui.pillSuccess : status === "Broken" ? ui.pillDanger : ui.pillWarning)}>
+            <span key={status} className={cn(
+              "px-1.5 py-0.5 rounded text-[6px] font-medium",
+              status === "Working" ? "bg-emerald-100 text-emerald-700" :
+              status === "Broken" ? "bg-rose-100 text-rose-700" :
+              "bg-amber-100 text-amber-700"
+            )}>
               {status}: {audit?.summary?.[status] || 0}
             </span>
           ))}
         </div>
-        <div className="max-h-96 overflow-auto">
-          <table className={ui.table}>
-            <thead>
+        <div className="mt-2 max-h-48 overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="text-slate-500 border-b border-slate-100">
               <tr>
-                <th className={ui.tableHead}>Module Name</th>
-                <th className={ui.tableHead}>Functionality</th>
-                <th className={ui.tableHead}>Email Trigger Event</th>
-                <th className={ui.tableHead}>Template Key</th>
-                <th className={ui.tableHead}>Status</th>
+                <th className="text-left py-0.5 font-medium">Module</th>
+                <th className="text-left py-0.5 font-medium">Event</th>
+                <th className="text-left py-0.5 font-medium">Template</th>
+                <th className="text-left py-0.5 font-medium">Status</th>
               </tr>
             </thead>
             <tbody>
               {(audit?.modules || []).map((item) => (
-                <tr key={item.templateKey}>
-                  <td className={ui.tableCell}>{item.moduleName}</td>
-                  <td className={ui.tableCell}>{item.functionality}</td>
-                  <td className={ui.tableCell}>{item.emailTriggerEvent}</td>
-                  <td className={ui.tableCell}>{item.templateKey}</td>
-                  <td className={ui.tableCell}>
-                    <span className={cn(ui.pill, item.status === "Working" ? ui.pillSuccess : item.status === "Broken" ? ui.pillDanger : ui.pillWarning)}>{item.status}</span>
+                <tr key={item.templateKey} className="border-b border-slate-50">
+                  <td className="py-0.5 text-slate-700">{item.moduleName}</td>
+                  <td className="py-0.5 text-slate-600">{item.emailTriggerEvent}</td>
+                  <td className="py-0.5 text-slate-600">{item.templateKey}</td>
+                  <td className="py-0.5">
+                    <span className={cn(
+                      "px-1 py-0.5 rounded text-[5px] font-medium",
+                      item.status === "Working" ? "bg-emerald-100 text-emerald-700" :
+                      item.status === "Broken" ? "bg-rose-100 text-rose-700" :
+                      "bg-amber-100 text-amber-700"
+                    )}>{item.status}</span>
                   </td>
                 </tr>
               ))}
-              {!audit?.modules?.length ? (
-                <tr><td colSpan={5} className="py-8 text-center text-sm text-slate-500">Audit report has not loaded yet.</td></tr>
-              ) : null}
+              {!audit?.modules?.length && <tr><td colSpan={4} className="py-2 text-center text-slate-400">No audit data</td></tr>}
             </tbody>
           </table>
         </div>
-      </section>
+      </div>
     </div>
   );
 }

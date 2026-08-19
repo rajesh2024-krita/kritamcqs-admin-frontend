@@ -4,6 +4,25 @@ import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { ToggleSwitch } from "../../components/forms/ToggleSwitch";
 import { useToast } from "../../context/ToastContext";
 import { cn, ui } from "../../ui";
+import {
+  RefreshCw,
+  Save,
+  Zap,
+  Layers,
+  Target,
+  Clock,
+  Calendar,
+  TrendingUp,
+  User,
+  Mail,
+  BookOpen,
+  CheckCircle,
+  Settings,
+  BarChart3,
+  Repeat,
+  Brain,
+  Sparkles
+} from "lucide-react";
 
 const defaultSettings = {
   wrong_question_limit: 10,
@@ -139,129 +158,157 @@ export function RevisionManagementPage() {
 
   if (loading) return <LoadingSpinner label="Loading revision management..." />;
 
+  // Compact input classes
+  const compactInput = "w-full px-2 py-0.5 text-xs bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all";
+  const compactSelect = "w-full px-2 py-0.5 text-xs bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none";
+
   return (
-    <div className="flex flex-col gap-6">
-      <section className={ui.panel}>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className={ui.eyebrow}>Revision Control</div>
-            <p className={ui.muted}>Control app revision generation limits, spaced repetition cadence, and module activation.</p>
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="bg-white rounded-lg border border-slate-200/60 px-4 py-2.5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg shadow-indigo-500/25">
+              <Repeat size={14} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-slate-900">Revision Management</h1>
+              <p className="text-xs text-slate-500">Configure revision generation and spaced repetition settings</p>
+            </div>
           </div>
-          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={loadData} type="button">
-            Refresh
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className={cn(
+              "inline-flex px-2 py-0.5 rounded text-[9px] font-medium",
+              settings.revision_enabled ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-slate-100 text-slate-500 border border-slate-200"
+            )}>
+              {settings.revision_enabled ? "Active" : "Disabled"}
+            </span>
+            <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[9px] font-medium text-slate-700 rounded transition-colors" onClick={loadData} type="button">
+              <RefreshCw size={10} /> Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Settings Form */}
+      <form className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm space-y-3" onSubmit={handleSaveSettings}>
+        {/* Header with Save Button */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <Settings size={14} className="text-indigo-600" />
+            <h3 className="text-xs font-semibold text-slate-900">Generation Settings</h3>
+          </div>
+          <button className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-[9px] font-medium rounded-lg transition-all shadow-sm shadow-indigo-500/25 disabled:opacity-50" disabled={saving} type="submit">
+            <Save size={10} /> {saving ? "Saving..." : "Save Settings"}
           </button>
         </div>
-      </section>
 
-      <form className={ui.panel} onSubmit={handleSaveSettings}>
-        <div className={ui.sectionHead}>
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">Generation Settings</h3>
-            <p className={ui.muted}>Update wrong and old question limits used in revision pool generation.</p>
+        {/* Basic Settings Grid */}
+        <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Wrong Question Count</label>
+            <input className={compactInput} type="number" min={1} max={100} value={settings.wrong_question_limit} onChange={(event) => setSettings((current) => ({ ...current, wrong_question_limit: Number(event.target.value || 1) }))} />
           </div>
-          <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={saving} type="submit">
-            {saving ? "Saving..." : "Save Settings"}
-          </button>
-        </div>
-
-        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-          <label className={ui.field}>
-            <span>Wrong Question Revision Count</span>
-            <input
-              className={ui.input}
-              type="number"
-              min={1}
-              max={100}
-              value={settings.wrong_question_limit}
-              onChange={(event) => setSettings((current) => ({ ...current, wrong_question_limit: Number(event.target.value || 1) }))}
-            />
-          </label>
-          <label className={ui.field}>
-            <span>Old Question Revision Count</span>
-            <input
-              className={ui.input}
-              type="number"
-              min={1}
-              max={100}
-              value={settings.old_question_limit}
-              onChange={(event) => setSettings((current) => ({ ...current, old_question_limit: Number(event.target.value || 1) }))}
-            />
-          </label>
-          <label className={ui.field}>
-            <span>Daily Revision Limit</span>
-            <input
-              className={ui.input}
-              type="number"
-              min={1}
-              max={200}
-              value={settings.daily_revision_limit}
-              onChange={(event) => setSettings((current) => ({ ...current, daily_revision_limit: Number(event.target.value || 1) }))}
-            />
-          </label>
-          <label className={ui.field}>
-            <span>Enable Revision Module</span>
-            <div className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white px-4 py-3">
-              <ToggleSwitch checked={Boolean(settings.revision_enabled)} onChange={(value) => setSettings((current) => ({ ...current, revision_enabled: value }))} label="Revision module is active for app users" />
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Old Question Count</label>
+            <input className={compactInput} type="number" min={1} max={100} value={settings.old_question_limit} onChange={(event) => setSettings((current) => ({ ...current, old_question_limit: Number(event.target.value || 1) }))} />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Daily Revision Limit</label>
+            <input className={compactInput} type="number" min={1} max={200} value={settings.daily_revision_limit} onChange={(event) => setSettings((current) => ({ ...current, daily_revision_limit: Number(event.target.value || 1) }))} />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Enable Revision</label>
+            <div className="flex items-center gap-2 bg-slate-50 rounded-lg border border-slate-200/50 px-3 py-1">
+              <ToggleSwitch checked={Boolean(settings.revision_enabled)} onChange={(value) => setSettings((current) => ({ ...current, revision_enabled: value }))} label="" size="sm" />
+              <span className="text-[8px] font-medium text-slate-700">Active for users</span>
             </div>
-          </label>
-          <label className={ui.field}>
-            <span>Difficulty Mode</span>
-            <select className={ui.input} value={settings.difficulty_mode} onChange={(event) => setSettings((current) => ({ ...current, difficulty_mode: event.target.value }))}>
-              <option value="mixed">Mixed</option>
-              <option value="easy">Easy</option>
-              <option value="medium">Medium</option>
-              <option value="moderate">Moderate</option>
-              <option value="hard">Hard</option>
-            </select>
-          </label>
-          <label className={ui.field}>
-            <span>Schedule</span>
-            <select className={ui.input} value={settings.schedule_mode} onChange={(event) => setSettings((current) => ({ ...current, schedule_mode: event.target.value }))}>
-              <option value="daily">Daily Revision</option>
-              <option value="weekly">Weekly Revision</option>
-              <option value="custom">Custom Revision Sets</option>
-            </select>
-          </label>
+          </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-          {[
-            ["include_wrong_questions", "Include wrong questions"],
-            ["include_skipped_questions", "Include skipped questions"],
-            ["include_low_accuracy_questions", "Include low accuracy questions"],
-            ["include_weak_area_questions", "Include weak area questions"],
-            ["auto_generated_revision_tests", "Auto-generated revision tests"],
-          ].map(([key, label]) => (
-            <div key={key} className="flex items-center gap-2 rounded-sm border border-slate-200 bg-white px-4 py-3">
-              <ToggleSwitch checked={Boolean(settings[key])} onChange={(value) => setSettings((current) => ({ ...current, [key]: value }))} label={label} />
+        {/* Include Options */}
+        <div className="pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Layers size={12} className="text-indigo-600" />
+            <h4 className="text-[10px] font-semibold text-slate-900">Include Questions From</h4>
+          </div>
+          <div className="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ["include_wrong_questions", "Wrong Questions"],
+              ["include_skipped_questions", "Skipped Questions"],
+              ["include_low_accuracy_questions", "Low Accuracy"],
+              ["include_weak_area_questions", "Weak Areas"],
+            ].map(([key, label]) => (
+              <div key={key} className="flex items-center gap-2 bg-slate-50 rounded-lg border border-slate-200/50 px-3 py-1">
+                <ToggleSwitch checked={Boolean(settings[key])} onChange={(value) => setSettings((current) => ({ ...current, [key]: value }))} label="" size="sm" />
+                <span className="text-[8px] font-medium text-slate-700">{label}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-1 flex items-center gap-2 bg-slate-50 rounded-lg border border-slate-200/50 px-3 py-1">
+            <ToggleSwitch checked={Boolean(settings.auto_generated_revision_tests)} onChange={(value) => setSettings((current) => ({ ...current, auto_generated_revision_tests: value }))} label="" size="sm" />
+            <span className="text-[8px] font-medium text-slate-700">Auto-generated revision tests</span>
+          </div>
+        </div>
+
+        {/* Additional Settings */}
+        <div className="pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Target size={12} className="text-indigo-600" />
+            <h4 className="text-[10px] font-semibold text-slate-900">Accuracy & Attempt Settings</h4>
+          </div>
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Accuracy Threshold %</label>
+              <input className={compactInput} type="number" min={0} max={100} value={settings.accuracy_threshold} onChange={(event) => setSettings((current) => ({ ...current, accuracy_threshold: Number(event.target.value || 0) }))} />
             </div>
-          ))}
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Min Correct Answers</label>
+              <input className={compactInput} type="number" min={0} max={200} value={settings.minimum_correct_answers} onChange={(event) => setSettings((current) => ({ ...current, minimum_correct_answers: Number(event.target.value || 0) }))} />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Attempts Required</label>
+              <input className={compactInput} type="number" min={1} max={20} value={settings.completion_attempt_count} onChange={(event) => setSettings((current) => ({ ...current, completion_attempt_count: Number(event.target.value || 1) }))} />
+            </div>
+          </div>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <label className={ui.field}>
-            <span>Completion Accuracy %</span>
-            <input className={ui.input} type="number" min={0} max={100} value={settings.accuracy_threshold} onChange={(event) => setSettings((current) => ({ ...current, accuracy_threshold: Number(event.target.value || 0) }))} />
-          </label>
-          <label className={ui.field}>
-            <span>Minimum Correct Answers</span>
-            <input className={ui.input} type="number" min={0} max={200} value={settings.minimum_correct_answers} onChange={(event) => setSettings((current) => ({ ...current, minimum_correct_answers: Number(event.target.value || 0) }))} />
-          </label>
-          <label className={ui.field}>
-            <span>Attempt Count Required</span>
-            <input className={ui.input} type="number" min={1} max={20} value={settings.completion_attempt_count} onChange={(event) => setSettings((current) => ({ ...current, completion_attempt_count: Number(event.target.value || 1) }))} />
-          </label>
+        {/* Mode Settings */}
+        <div className="pt-2 border-t border-slate-100">
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Difficulty Mode</label>
+              <select className={compactSelect} value={settings.difficulty_mode} onChange={(event) => setSettings((current) => ({ ...current, difficulty_mode: event.target.value }))}>
+                <option value="mixed">Mixed</option>
+                <option value="easy">Easy</option>
+                <option value="medium">Medium</option>
+                <option value="moderate">Moderate</option>
+                <option value="hard">Hard</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Schedule Mode</label>
+              <select className={compactSelect} value={settings.schedule_mode} onChange={(event) => setSettings((current) => ({ ...current, schedule_mode: event.target.value }))}>
+                <option value="daily">Daily Revision</option>
+                <option value="weekly">Weekly Revision</option>
+                <option value="custom">Custom Revision Sets</option>
+              </select>
+            </div>
+          </div>
         </div>
 
-        <div className="mt-6">
-          <h4 className="text-lg font-bold text-slate-900">Spaced Repetition Settings</h4>
-          <p className="mb-3 text-sm text-slate-500">Configure spaced intervals for Day 1, Day 2, Day 5, and Day 10 stages.</p>
-          <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        {/* Spaced Repetition */}
+        <div className="pt-2 border-t border-slate-100">
+          <div className="flex items-center gap-2 mb-1.5">
+            <Calendar size={12} className="text-indigo-600" />
+            <h4 className="text-[10px] font-semibold text-slate-900">Spaced Repetition</h4>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
             {["Day 1", "Day 2", "Day 5", "Day 10"].map((label, index) => (
-              <label className={ui.field} key={label}>
-                <span>{label}</span>
+              <div key={label} className="flex flex-col gap-0.5">
+                <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">{label}</label>
                 <input
-                  className={ui.input}
+                  className={compactInput}
                   type="number"
                   min={1}
                   value={normalizedSpacedDays[index]}
@@ -273,68 +320,81 @@ export function RevisionManagementPage() {
                     })
                   }
                 />
-              </label>
+              </div>
             ))}
           </div>
         </div>
       </form>
 
-      <section className={ui.panel}>
-        <div className={ui.sectionHead}>
-          <div>
-            <h3 className="text-xl font-bold text-slate-900">Manual Trigger</h3>
-            <p className={ui.muted}>Generate revision pool on-demand for QA/testing.</p>
+      {/* Manual Trigger Section */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <Zap size={14} className="text-amber-600" />
+            <h3 className="text-xs font-semibold text-slate-900">Manual Trigger</h3>
+            <span className="text-[8px] text-slate-400">Generate revision pool for testing</span>
           </div>
-          <button className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={generating} onClick={handleGeneratePool} type="button">
-            {generating ? "Generating..." : "Generate Revision Pool for Testing"}
+          <button className={cn(
+            "inline-flex items-center gap-1 px-2.5 py-0.5 text-[9px] font-medium rounded-lg transition-all",
+            "bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200",
+            generating && "opacity-50 cursor-not-allowed"
+          )} disabled={generating} onClick={handleGeneratePool} type="button">
+            <Sparkles size={10} className={generating ? "animate-spin" : ""} />
+            {generating ? "Generating..." : "Generate Pool"}
           </button>
         </div>
 
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
-          <label className={ui.field}>
-            <span>Email ID (optional)</span>
-            <input
-              className={ui.input}
-              type="email"
-              value={manualInput.email_id}
-              onChange={(event) => setManualInput((current) => ({ ...current, email_id: event.target.value }))}
-              placeholder="Leave empty to auto-pick latest learner"
-            />
-          </label>
-          <label className={ui.field}>
-            <span>Exam Mode</span>
-            <select
-              className={ui.input}
-              value={manualInput.exam_mode}
-              onChange={(event) => setManualInput((current) => ({ ...current, exam_mode: event.target.value }))}
-            >
+        <div className="grid grid-cols-1 gap-1.5 mt-2 sm:grid-cols-2">
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Email (optional)</label>
+            <input className={compactInput} type="email" value={manualInput.email_id} onChange={(event) => setManualInput((current) => ({ ...current, email_id: event.target.value }))} placeholder="Leave empty for latest" />
+          </div>
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[8px] font-medium text-slate-500 uppercase tracking-wider">Exam Mode</label>
+            <select className={compactSelect} value={manualInput.exam_mode} onChange={(event) => setManualInput((current) => ({ ...current, exam_mode: event.target.value }))}>
               <option value="NEET">NEET</option>
               <option value="JEE">JEE</option>
               <option value="BOTH">BOTH</option>
             </select>
-          </label>
+          </div>
         </div>
 
-        {generatedPool ? (
-          <div className="mt-6 rounded-sm border border-slate-200/80 bg-slate-50/80 p-4">
-            <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-4">
-              <div><span className={ui.metricLabel}>Wrong</span><strong className="mt-1 block text-2xl font-black text-slate-900">{generatedPool.wrong_count ?? 0}</strong></div>
-              <div><span className={ui.metricLabel}>Old</span><strong className="mt-1 block text-2xl font-black text-slate-900">{generatedPool.old_count ?? 0}</strong></div>
-              <div><span className={ui.metricLabel}>Total</span><strong className="mt-1 block text-2xl font-black text-slate-900">{generatedPool.total_count ?? 0}</strong></div>
-              <div><span className={ui.metricLabel}>User</span><strong className="mt-1 block text-sm font-bold text-slate-900">{generatedPool.userId || "-"}</strong></div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-bold text-slate-900">Most Revised Topics</p>
-              <div className="flex flex-wrap gap-2">
-                {(generatedPool.topTopics || []).map((topic) => (
-                  <span className={ui.pill} key={topic}>{topic}</span>
-                ))}
-                {!(generatedPool.topTopics || []).length ? <span className="text-sm text-slate-500">No topic tags generated.</span> : null}
+        {/* Generated Pool Results */}
+        {generatedPool && (
+          <div className="mt-3 bg-slate-50 rounded-lg border border-slate-200/50 p-3 animate-in slide-in-from-top-1 duration-200">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div>
+                <div className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Wrong</div>
+                <div className="text-base font-bold text-slate-900">{generatedPool.wrong_count ?? 0}</div>
+              </div>
+              <div>
+                <div className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Old</div>
+                <div className="text-base font-bold text-slate-900">{generatedPool.old_count ?? 0}</div>
+              </div>
+              <div>
+                <div className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Total</div>
+                <div className="text-base font-bold text-slate-900">{generatedPool.total_count ?? 0}</div>
+              </div>
+              <div>
+                <div className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">User</div>
+                <div className="text-[9px] font-semibold text-slate-900 truncate">{generatedPool.userId || "-"}</div>
               </div>
             </div>
+            {generatedPool.topTopics?.length > 0 && (
+              <div className="mt-2 pt-2 border-t border-slate-200">
+                <div className="text-[8px] font-medium text-slate-500 uppercase tracking-wider mb-1">Top Topics</div>
+                <div className="flex flex-wrap gap-1">
+                  {generatedPool.topTopics.map((topic) => (
+                    <span key={topic} className="inline-flex px-1.5 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-[7px] font-medium text-indigo-700">
+                      {topic}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-        ) : null}
-      </section>
+        )}
+      </div>
     </div>
   );
 }

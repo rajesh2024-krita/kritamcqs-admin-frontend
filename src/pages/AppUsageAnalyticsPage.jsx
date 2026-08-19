@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useState } from "react";
-import { Activity, ChevronDown, Clock, Download, Filter, RefreshCw, Search, Trash2, Users, X } from "lucide-react";
+import { Activity, ChevronDown, Clock, Download, Filter, RefreshCw, Search, Trash2, Users, X, BarChart3, PieChart, TrendingUp, UserCheck, Smartphone, Globe, Zap, Shield, AlertCircle, CheckCircle, ChevronRight } from "lucide-react";
 import { appUsageService } from "../api/appUsageService";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
 import { Pagination } from "../components/tables/Pagination";
@@ -20,15 +20,15 @@ const activityRanges = [
 const providerOptions = ["Google", "Apple", "Email", "Phone", "Guest", "Facebook"];
 const sessionStatusOptions = ["Active", "Completed", "Force Closed", "Crashed"];
 const tabs = [
-  { key: "overview", label: "Overview" },
-  { key: "userAnalytics", label: "User Analytics" },
-  { key: "users", label: "Users" },
-  { key: "devices", label: "Devices" },
-  { key: "sessions", label: "Sessions" },
-  { key: "screens", label: "Screens" },
-  { key: "events", label: "Events" },
-  { key: "performance", label: "Performance" },
-  { key: "logs", label: "Logs" },
+  { key: "overview", label: "Overview", icon: BarChart3 },
+  { key: "userAnalytics", label: "User Analytics", icon: Users },
+  { key: "users", label: "Users", icon: UserCheck },
+  { key: "devices", label: "Devices", icon: Smartphone },
+  { key: "sessions", label: "Sessions", icon: Activity },
+  { key: "screens", label: "Screens", icon: Globe },
+  { key: "events", label: "Events", icon: Zap },
+  { key: "performance", label: "Performance", icon: TrendingUp },
+  { key: "logs", label: "Logs", icon: Shield },
 ];
 
 const tableConfigs = {
@@ -311,84 +311,145 @@ export function AppUsageAnalyticsPage() {
   if (overviewLoading && !analytics.summary) return <LoadingSpinner label="Loading app usage analytics..." />;
 
   return (
-    <div className="flex flex-col gap-5">
-      <section className={cn(ui.panel, "overflow-hidden")}>
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div>
-            <div className={ui.eyebrow}>App Usage Monitoring</div>
-            <h2 className="text-2xl font-black tracking-tight text-slate-950">Usage Dashboard</h2>
-            <p className={ui.muted}>Compact analytics, paginated tables, retention controls, and exports.</p>
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="bg-white rounded-lg border border-slate-200/60 px-4 py-2.5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg shadow-indigo-500/25">
+              <Activity size={14} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-slate-900">App Usage Analytics</h1>
+              <p className="text-xs text-slate-500">Monitor app performance and user activity</p>
+            </div>
           </div>
-          <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:w-auto">
-            <select className={ui.input} value={filters.days} onChange={(event) => updateFilters({ days: Number(event.target.value), from: "", to: "" })}>
-              {dateRangeOptions.map((days) => <option key={days} value={days}>Last {days} {days === 1 ? "day" : "days"}</option>)}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-[9px] font-medium text-indigo-700">
+              {summary.activeUsers ?? 0} active
+            </span>
+            <button type="button" className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[9px] font-medium text-slate-700 rounded transition-colors" onClick={() => { void loadOverview(); if (tableConfigs[activeTab]) void loadTable(activeTab); }}>
+              <RefreshCw size={10} /> Refresh
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Filters Row */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-2.5 shadow-sm">
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-1">
+            <span className="text-[7px] font-medium text-slate-400 uppercase tracking-wider">Period:</span>
+            <select className="px-1.5 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={filters.days} onChange={(event) => updateFilters({ days: Number(event.target.value), from: "", to: "" })}>
+              {dateRangeOptions.map((days) => <option key={days} value={days}>Last {days}d</option>)}
             </select>
-            <select className={ui.input} value={filters.platform} onChange={(event) => updateFilters({ platform: event.target.value })}>
-              <option value="all">All platforms</option>
+            <span className="text-[7px] font-medium text-slate-400 uppercase tracking-wider">Platform:</span>
+            <select className="px-1.5 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={filters.platform} onChange={(event) => updateFilters({ platform: event.target.value })}>
+              <option value="all">All</option>
               <option value="android">Android</option>
               <option value="ios">iOS</option>
               <option value="web">Web</option>
             </select>
-            <select className={ui.input} value={filters.plan} onChange={(event) => updateFilters({ plan: event.target.value })}>
-              <option value="all">All plans</option>
+            <span className="text-[7px] font-medium text-slate-400 uppercase tracking-wider">Plan:</span>
+            <select className="px-1.5 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={filters.plan} onChange={(event) => updateFilters({ plan: event.target.value })}>
+              <option value="all">All</option>
               <option value="Free">Free</option>
               <option value="Premium">Premium</option>
             </select>
-            <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => {
-              void loadOverview();
-              if (tableConfigs[activeTab]) void loadTable(activeTab);
+            <button className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-[8px] font-medium rounded transition-colors" onClick={() => {
+              const details = document.querySelector('details');
+              if (details) details.open = !details.open;
             }}>
-              <RefreshCw size={16} /> Refresh
+              <Filter size={9} /> More
             </button>
           </div>
+
+          {/* More Filters - Collapsible */}
+          <details className="border-t border-slate-100 pt-2">
+            <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-6">
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">From</label>
+                <input className="px-1.5 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" type="datetime-local" value={filters.from} onChange={(event) => updateFilters({ from: event.target.value })} />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">To</label>
+                <input className="px-1.5 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" type="datetime-local" value={filters.to} onChange={(event) => updateFilters({ to: event.target.value })} />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Event</label>
+                <select className="px-1.5 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={filters.eventType} onChange={(event) => updateFilters({ eventType: event.target.value })}>
+                  <option value="all">All</option>
+                  <option value="Login">Login</option>
+                  <option value="ScreenView">Screen views</option>
+                  <option value="Click">Clicks</option>
+                  <option value="Navigation">Navigation</option>
+                  <option value="API Failure">API failures</option>
+                  <option value="Network Failure">Network failures</option>
+                  <option value="JS Error">JS errors</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Screen</label>
+                <input className="px-1.5 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={filters.screen} placeholder="Contains..." onChange={(event) => updateFilters({ screen: event.target.value })} />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">App Version</label>
+                <input className="px-1.5 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={filters.appVersion} placeholder="Version" onChange={(event) => updateFilters({ appVersion: event.target.value })} />
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <label className="text-[6px] font-medium text-slate-400 uppercase tracking-wider">Device</label>
+                <input className="px-1.5 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={filters.deviceModel} placeholder="Model" onChange={(event) => updateFilters({ deviceModel: event.target.value })} />
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 mt-1 pt-1 border-t border-slate-100">
+              <ToggleSwitch checked={Boolean(settings.enabled)} onChange={(enabled) => void saveSettings({ ...settings, enabled })} label="" size="sm" />
+              <span className="text-[8px] font-medium text-slate-600">{settings.enabled ? "Tracking enabled" : "Tracking disabled"}</span>
+            </div>
+          </details>
         </div>
-        <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
-          <summary className="flex cursor-pointer items-center gap-2 text-sm font-bold text-slate-700"><Filter size={16} /> More filters</summary>
-          <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <label className="text-xs font-bold text-slate-600">From date & time<input className={cn(ui.input, "mt-1")} type="datetime-local" value={filters.from} onChange={(event) => updateFilters({ from: event.target.value })} /></label>
-            <label className="text-xs font-bold text-slate-600">To date & time<input className={cn(ui.input, "mt-1")} type="datetime-local" value={filters.to} onChange={(event) => updateFilters({ to: event.target.value })} /></label>
-            <select className={ui.input} value={filters.eventType} onChange={(event) => updateFilters({ eventType: event.target.value })}>
-              <option value="all">All event types</option>
-              <option value="Login">Login</option>
-              <option value="ScreenView">Screen views</option>
-              <option value="Click">Clicks</option>
-              <option value="Navigation">Navigation</option>
-              <option value="API Failure">API failures</option>
-              <option value="Network Failure">Network failures</option>
-              <option value="JS Error">JS errors</option>
-              <option value="Image Loading Error">Image errors</option>
-              <option value="Background">Background</option>
-              <option value="Foreground">Foreground</option>
-            </select>
-            <input className={ui.input} value={filters.screen} placeholder="Screen contains..." onChange={(event) => updateFilters({ screen: event.target.value })} />
-            <input className={ui.input} value={filters.deviceBrand} placeholder="Device brand" onChange={(event) => updateFilters({ deviceBrand: event.target.value })} />
-            <input className={ui.input} value={filters.deviceModel} placeholder="Device model" onChange={(event) => updateFilters({ deviceModel: event.target.value })} />
-            <input className={ui.input} value={filters.appVersion} placeholder="App version" onChange={(event) => updateFilters({ appVersion: event.target.value })} />
-            <input className={ui.input} value={filters.androidVersion} placeholder="Android version" onChange={(event) => updateFilters({ androidVersion: event.target.value })} />
-            <input className={ui.input} value={filters.networkType} placeholder="Network type" onChange={(event) => updateFilters({ networkType: event.target.value })} />
-            <select className={ui.input} value={filters.sessionStatus} onChange={(event) => updateFilters({ sessionStatus: event.target.value })}>
-              <option value="all">All session statuses</option>
-              {sessionStatusOptions.map((status) => <option key={status} value={status}>{status}</option>)}
-            </select>
-            <ToggleSwitch checked={Boolean(settings.enabled)} onChange={(enabled) => void saveSettings({ ...settings, enabled })} label={settings.enabled ? "Tracking enabled" : "Tracking disabled"} />
+      </div>
+
+      {/* KPI Grid */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+        {kpis.slice(0, 6).map(({ label, value, icon: Icon }) => (
+          <div key={label} className="bg-white rounded-lg border border-slate-200/60 px-2.5 py-2 shadow-sm hover:shadow-md transition-shadow">
+            <div className="flex items-center justify-between">
+              <span className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">{label}</span>
+              <Icon size={10} className="text-slate-400" />
+            </div>
+            <div className="text-sm font-bold text-slate-900 mt-0.5">{value}</div>
           </div>
-        </details>
-      </section>
-
-      <KpiGrid cards={kpis} />
-
-      <nav className="sticky top-28 z-10 -mx-1 flex gap-2 overflow-x-auto rounded-xl border border-slate-200 bg-white/95 p-2 shadow-sm backdrop-blur">
-        {tabs.map((tab) => (
-          <button key={tab.key} className={cn("shrink-0 rounded-lg px-4 py-2 text-sm font-bold transition", activeTab === tab.key ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100 hover:text-slate-950")} onClick={() => setActiveTab(tab.key)}>
-            {tab.label}
-          </button>
         ))}
+      </div>
+
+      {/* Tabs */}
+      <nav className="bg-white rounded-lg border border-slate-200/60 p-1 shadow-sm flex flex-wrap gap-0.5">
+        {tabs.map((tab) => {
+          const Icon = tab.icon;
+          const isActive = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              className={cn(
+                "inline-flex items-center gap-1 px-2.5 py-1 text-[9px] font-medium rounded-lg transition-all",
+                isActive
+                  ? "bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-sm shadow-indigo-500/25"
+                  : "text-slate-600 hover:bg-slate-100"
+              )}
+              onClick={() => setActiveTab(tab.key)}
+            >
+              <Icon size={10} />
+              {tab.label}
+            </button>
+          );
+        })}
       </nav>
 
-      {activeTab === "overview" ? <OverviewTab analytics={analytics} /> : null}
-      {activeTab === "performance" ? <PerformanceTab analytics={analytics} /> : null}
-      {activeTab === "logs" ? <LogsTab settings={settings} query={query} saveSettings={saveSettings} deleteLogs={deleteLogs} /> : null}
-      {tableConfigs[activeTab] ? (
+      {/* Content Sections */}
+      {activeTab === "overview" && <OverviewTab analytics={analytics} />}
+      {activeTab === "performance" && <PerformanceTab analytics={analytics} />}
+      {activeTab === "logs" && <LogsTab settings={settings} query={query} saveSettings={saveSettings} deleteLogs={deleteLogs} />}
+      {tableConfigs[activeTab] && (
         <ServerTable
           config={tableConfigs[activeTab]}
           loading={tableLoading}
@@ -400,7 +461,8 @@ export function AppUsageAnalyticsPage() {
           tabKey={activeTab}
           onRowClick={activeTab === "users" ? openUserActivity : undefined}
         />
-      ) : null}
+      )}
+      
       <UserActivityDrawer
         open={Boolean(activityUser)}
         user={activityUser}
@@ -408,38 +470,65 @@ export function AppUsageAnalyticsPage() {
         data={activityData}
         filters={activityFilters}
         onFilterChange={updateActivityFilters}
-        onClose={() => {
-          setActivityUser(null);
-          setActivityData(null);
-        }}
+        onClose={() => { setActivityUser(null); setActivityData(null); }}
       />
     </div>
   );
 }
 
-const KpiGrid = memo(function KpiGrid({ cards }) {
-  return (
-    <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-      {cards.map(({ label, value, icon: Icon }) => (
-        <div key={label} className={cn(ui.metricCard, "transition hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200")}>
-          <div className="flex items-start justify-between gap-3">
-            <span className={ui.metricLabel}>{label}</span>
-            <span className="rounded-lg bg-sky-50 p-2 text-sky-700"><Icon size={18} /></span>
-          </div>
-          <strong className="mt-3 block text-2xl font-black tracking-tight text-slate-950">{value}</strong>
-        </div>
-      ))}
-    </section>
-  );
-});
-
 function OverviewTab({ analytics }) {
   return (
-    <div className="grid gap-5 xl:grid-cols-2">
-      <MiniChart title="Daily Active Users" rows={analytics.dailyActive || []} labelKey="date" valueKey="users" />
-      <MiniChart title="Platform Distribution" rows={analytics.platform || []} labelKey="platform" valueKey="events" />
-      <CompactList title="Most Used Screens" rows={analytics.pages || []} render={(row) => `${row.path || "-"} - ${row.visits || 0} visits`} />
-      <CompactList title="Most Clicked Components" rows={analytics.clicks || []} render={(row) => `${row.componentName || "Unknown"} - ${row.count || 0} clicks`} />
+    <div className="grid gap-3 lg:grid-cols-2">
+      <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+        <h3 className="text-xs font-semibold text-slate-900 mb-2.5">Daily Active Users</h3>
+        <div className="space-y-1.5">
+          {(analytics.dailyActive || []).slice(0, 10).map((row) => (
+            <div key={row.date} className="flex items-center gap-2">
+              <span className="text-[8px] text-slate-600 w-20 truncate">{row.date}</span>
+              <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${Math.min(100, (row.users || 0) / Math.max(1, (analytics.dailyActive || [])[0]?.users || 1) * 100)}%` }} />
+              </div>
+              <span className="text-[8px] font-medium text-slate-700 w-8 text-right">{row.users || 0}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+        <h3 className="text-xs font-semibold text-slate-900 mb-2.5">Platform Distribution</h3>
+        <div className="space-y-1.5">
+          {(analytics.platform || []).slice(0, 5).map((row) => (
+            <div key={row.platform} className="flex items-center gap-2">
+              <span className="text-[8px] text-slate-600 w-16 truncate">{row.platform || "Unknown"}</span>
+              <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div className="h-full bg-purple-500 rounded-full" style={{ width: `${Math.min(100, (row.events || 0) / Math.max(1, (analytics.platform || [])[0]?.events || 1) * 100)}%` }} />
+              </div>
+              <span className="text-[8px] font-medium text-slate-700 w-8 text-right">{row.events || 0}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+        <h3 className="text-xs font-semibold text-slate-900 mb-2.5">Most Used Screens</h3>
+        <div className="space-y-1.5">
+          {(analytics.pages || []).slice(0, 8).map((row, index) => (
+            <div key={index} className="flex items-center justify-between text-[8px]">
+              <span className="text-slate-600 truncate max-w-[120px]">{row.path || "-"}</span>
+              <span className="font-medium text-slate-700">{row.visits || 0} visits</span>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+        <h3 className="text-xs font-semibold text-slate-900 mb-2.5">Most Clicked Components</h3>
+        <div className="space-y-1.5">
+          {(analytics.clicks || []).slice(0, 8).map((row, index) => (
+            <div key={index} className="flex items-center justify-between text-[8px]">
+              <span className="text-slate-600 truncate max-w-[120px]">{row.componentName || "Unknown"}</span>
+              <span className="font-medium text-slate-700">{row.count || 0} clicks</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -453,36 +542,141 @@ function PerformanceTab({ analytics }) {
     ["Android users", summary.androidUsers || 0],
     ["iOS users", summary.iosUsers || 0],
   ];
-  return <CompactList title="Performance Snapshot" rows={rows} render={(row) => `${row[0]} - ${row[1]}`} />;
+  return (
+    <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+      <h3 className="text-xs font-semibold text-slate-900 mb-2.5">Performance Snapshot</h3>
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+        {rows.map((row) => (
+          <div key={row[0]} className="bg-slate-50 rounded-lg border border-slate-200/50 p-2">
+            <div className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">{row[0]}</div>
+            <div className="text-xs font-bold text-slate-900 mt-0.5">{row[1]}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function LogsTab({ settings, query, saveSettings, deleteLogs }) {
   const retentionValue = settings.retentionNeverDelete ? "never" : Number(settings.retentionDays || 90);
   return (
-    <section className={ui.panel}>
-      <div className={ui.sectionHead}>
+    <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
         <div>
-          <h3 className="text-lg font-black text-slate-950">Retention & Data Deletion</h3>
-          <p className={ui.muted}>Current manual delete filter: last {query.days} days, {query.platform}, {query.plan}.</p>
+          <h3 className="text-xs font-semibold text-slate-900">Retention & Data Deletion</h3>
+          <p className="text-[8px] text-slate-500">Current filter: last {query.days} days</p>
         </div>
-        <button className={cn(ui.buttonBase, ui.buttonDanger)} type="button" onClick={deleteLogs}><Trash2 size={16} /> Delete Filtered Logs</button>
+        <button className={cn("inline-flex items-center gap-1 px-2.5 py-0.5 text-[8px] font-medium rounded-lg transition-all", "bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200")} type="button" onClick={deleteLogs}>
+          <Trash2 size={10} /> Delete Filtered Logs
+        </button>
       </div>
-      <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <ToggleSwitch checked={Boolean(settings.automaticCleanupEnabled) && !settings.retentionNeverDelete} disabled={settings.retentionNeverDelete} onChange={(automaticCleanupEnabled) => void saveSettings({ ...settings, automaticCleanupEnabled })} label="Automatic cleanup" />
-        <select className={ui.input} value={retentionValue} onChange={(event) => {
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        <div className="flex items-center gap-1.5 bg-slate-50 rounded-lg border border-slate-200/50 px-3 py-1">
+          <ToggleSwitch checked={Boolean(settings.automaticCleanupEnabled) && !settings.retentionNeverDelete} disabled={settings.retentionNeverDelete} onChange={(automaticCleanupEnabled) => void saveSettings({ ...settings, automaticCleanupEnabled })} label="" size="sm" />
+          <span className="text-[8px] font-medium text-slate-700">Auto cleanup</span>
+        </div>
+        <select className="px-2 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={retentionValue} onChange={(event) => {
           const value = event.target.value;
           void saveSettings({ ...settings, retentionNeverDelete: value === "never", automaticCleanupEnabled: value === "never" ? false : settings.automaticCleanupEnabled, retentionDays: value === "never" ? 365 : Number(value) });
         }}>
           {retentionOptions.map((option) => <option key={option} value={option}>{option === "never" ? "Never Delete" : `${option} ${option === 1 ? "Day" : "Days"}`}</option>)}
         </select>
-        <input className={ui.input} type="number" min="5" max="240" value={settings.sessionTimeoutMinutes || 30} onChange={(event) => void saveSettings({ ...settings, sessionTimeoutMinutes: Number(event.target.value) })} />
+        <input className="px-2 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" type="number" min="5" max="240" value={settings.sessionTimeoutMinutes || 30} onChange={(event) => void saveSettings({ ...settings, sessionTimeoutMinutes: Number(event.target.value) })} placeholder="Timeout min" />
       </div>
-    </section>
+    </div>
+  );
+}
+
+function ServerTable({ config, loading, search, setSearch, state, onChange, exportQuery, tabKey, onRowClick }) {
+  const sortLabel = state.sortOrder === "asc" ? "ASC" : "DESC";
+  const [exporting, setExporting] = useState(false);
+  
+  async function exportComplete() {
+    setExporting(true);
+    try {
+      await appUsageService.exportFile({ ...exportQuery, search, dataset: tabKey === "sessions" ? "sessions" : tabKey === "userAnalytics" || tabKey === "users" ? "user-analytics" : "events", format: "xlsx" });
+    } finally {
+      setExporting(false);
+    }
+  }
+  
+  return (
+    <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex-1 max-w-md">
+          <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input className="w-full pl-7 pr-2 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search..." />
+        </div>
+        <div className="flex flex-wrap items-center gap-1">
+          <select className="px-1.5 py-0.5 text-[8px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={state.limit} onChange={(event) => onChange({ page: 1, limit: Number(event.target.value) })}>
+            {pageSizeOptions.map((limit) => <option key={limit} value={limit}>{limit} rows</option>)}
+          </select>
+          <button type="button" disabled={exporting} className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[8px] font-medium text-slate-700 rounded transition-colors disabled:opacity-50" onClick={() => void exportComplete()}>
+            <Download size={10} /> {exporting ? "..." : "Export"}
+          </button>
+        </div>
+      </div>
+      
+      <div className="mt-2 overflow-x-auto">
+        <table className="w-full divide-y divide-slate-100 text-[9px]">
+          <thead className="bg-slate-50/50">
+            <tr>
+              {config.columns.map((column) => (
+                <th key={column.key} className={cn("px-2 py-1 text-left font-medium text-slate-500", column.fixed && "sticky left-0 bg-slate-50 z-10 min-w-[120px]")}>
+                  <button type="button" disabled={!column.sortable} className="flex items-center gap-1 disabled:cursor-default hover:text-slate-700" onClick={() => onChange({ page: 1, sortBy: column.key, sortOrder: state.sortBy === column.key && state.sortOrder === "desc" ? "asc" : "desc" })}>
+                    {column.label}
+                    {state.sortBy === column.key && <span className="text-[8px] text-indigo-600">{sortLabel}</span>}
+                  </button>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {loading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <tr key={i}>
+                  <td colSpan={config.columns.length} className="px-2 py-2">
+                    <div className="h-4 w-full animate-pulse rounded bg-slate-100" />
+                  </td>
+                </tr>
+              ))
+            ) : state.rows.map((row, index) => (
+              <tr key={row.id || row._id || row.sessionId || `${index}`} className={cn("hover:bg-slate-50/50 transition-colors", onRowClick && "cursor-pointer hover:bg-indigo-50/50")} onClick={() => onRowClick?.(row)}>
+                {config.columns.map((column) => (
+                  <td key={column.key} className={cn("px-2 py-1.5 text-slate-700", column.fixed && "sticky left-0 bg-white font-medium")}>
+                    {column.render ? column.render(row) : row[column.key] ?? "-"}
+                  </td>
+                ))}
+              </tr>
+            ))}
+            {!loading && !state.rows.length && (
+              <tr>
+                <td colSpan={config.columns.length} className="px-2 py-4 text-center text-[9px] text-slate-400">No data found</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      <Pagination meta={state.meta} onChange={(page) => onChange({ page })} />
+    </div>
+  );
+}
+
+function StatusBadge({ value }) {
+  const isPremium = String(value).toLowerCase().includes("premium");
+  return (
+    <span className={cn(
+      "inline-flex px-1.5 py-0.5 rounded text-[7px] font-medium",
+      isPremium ? "bg-amber-50 border border-amber-200 text-amber-700" : "bg-slate-100 text-slate-600"
+    )}>
+      {value || "-"}
+    </span>
   );
 }
 
 function UserActivityDrawer({ open, user, loading, data, filters, onFilterChange, onClose }) {
   if (!open) return null;
+  
   const payload = data?.data || {};
   const summary = payload.summary || {};
   const sessionsByDay = payload.sessionsByDay || [];
@@ -490,8 +684,8 @@ function UserActivityDrawer({ open, user, loading, data, filters, onFilterChange
   const displayUser = payload.user || user || {};
   const metricCards = [
     ["Total Sessions", summary.totalSessions || 0],
-    ["Total Time Spent", formatSeconds(summary.totalTimeSpent)],
-    ["Average Session", formatSeconds(summary.averageSessionDuration)],
+    ["Total Time", formatSeconds(summary.totalTimeSpent)],
+    ["Avg Session", formatSeconds(summary.averageSessionDuration)],
     ["Longest Session", formatSeconds(summary.longestSession)],
     ["Shortest Session", formatSeconds(summary.shortestSession)],
     ["Last Active", formatDateTime(summary.lastActiveDateTime)],
@@ -501,109 +695,106 @@ function UserActivityDrawer({ open, user, loading, data, filters, onFilterChange
     ["Active Days", summary.activeDays || 0],
     ["Inactive Days", summary.inactiveDays || 0],
   ];
+  
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-slate-950/40 backdrop-blur-sm">
-      <button type="button" className="hidden flex-1 lg:block" aria-label="Close activity drawer" onClick={onClose} />
-      <aside className="flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl lg:max-w-6xl">
-        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
-          <div className="flex items-start justify-between gap-3">
+      <button type="button" className="hidden flex-1 lg:block" aria-label="Close" onClick={onClose} />
+      <aside className="flex h-full w-full flex-col overflow-hidden bg-white shadow-2xl lg:max-w-4xl">
+        <header className="sticky top-0 z-20 border-b border-slate-200 bg-white px-3 py-2.5">
+          <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
-              <div className={ui.eyebrow}>User Activity Details</div>
-              <h3 className="truncate text-xl font-black text-slate-950">{displayUser.name || displayUser.userName || user?.userName || "Selected User"}</h3>
-              <p className="truncate text-sm text-slate-500">{displayUser.email || user?.email || displayUser.id}</p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <StatusBadge value={displayUser.loginProvider || user?.loginMethod || "-"} />
-                <StatusBadge value={displayUser.userStatus || user?.userStatus || "Existing User"} />
-              </div>
+              <div className="text-[8px] font-bold uppercase tracking-wider text-indigo-600">User Activity</div>
+              <h3 className="text-sm font-semibold text-slate-900 truncate">{displayUser.name || displayUser.userName || user?.userName || "Selected User"}</h3>
+              <p className="text-[9px] text-slate-500 truncate">{displayUser.email || user?.email || displayUser.id}</p>
             </div>
-            <button type="button" className={cn(ui.buttonBase, ui.buttonSecondary, "shrink-0 px-3")} onClick={onClose} aria-label="Close"><X size={18} /></button>
+            <button type="button" className="p-1 rounded-lg hover:bg-slate-100 transition-colors" onClick={onClose}>
+              <X size={16} />
+            </button>
           </div>
-          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <select className={ui.input} value={filters.range} onChange={(event) => onFilterChange({ range: event.target.value })}>
+          <div className="mt-2 grid grid-cols-2 gap-1 sm:grid-cols-4">
+            <select className="px-1.5 py-0.5 text-[8px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={filters.range} onChange={(event) => onFilterChange({ range: event.target.value })}>
               {activityRanges.map((range) => <option key={range.value} value={range.value}>{range.label}</option>)}
             </select>
-            <select className={ui.input} value={filters.platform} onChange={(event) => onFilterChange({ platform: event.target.value })}>
+            <select className="px-1.5 py-0.5 text-[8px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={filters.platform} onChange={(event) => onFilterChange({ platform: event.target.value })}>
               <option value="all">All platforms</option>
               <option value="android">Android</option>
               <option value="ios">iOS</option>
               <option value="web">Web</option>
             </select>
-            <select className={ui.input} value={filters.loginProvider} onChange={(event) => onFilterChange({ loginProvider: event.target.value })}>
+            <select className="px-1.5 py-0.5 text-[8px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={filters.loginProvider} onChange={(event) => onFilterChange({ loginProvider: event.target.value })}>
               <option value="all">All providers</option>
               {providerOptions.map((provider) => <option key={provider} value={provider}>{provider}</option>)}
             </select>
-            <select className={ui.input} value={filters.sessionStatus} onChange={(event) => onFilterChange({ sessionStatus: event.target.value })}>
+            <select className="px-1.5 py-0.5 text-[8px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={filters.sessionStatus} onChange={(event) => onFilterChange({ sessionStatus: event.target.value })}>
               <option value="all">All statuses</option>
               {sessionStatusOptions.map((status) => <option key={status} value={status}>{status}</option>)}
             </select>
-            {filters.range === "custom" ? (
-              <>
-                <input className={ui.input} type="date" value={filters.from} onChange={(event) => onFilterChange({ from: event.target.value })} />
-                <input className={ui.input} type="date" value={filters.to} onChange={(event) => onFilterChange({ to: event.target.value })} />
-              </>
-            ) : null}
-            <input className={ui.input} value={filters.appVersion} placeholder="App version" onChange={(event) => onFilterChange({ appVersion: event.target.value })} />
-            <input className={ui.input} value={filters.deviceModel} placeholder="Device" onChange={(event) => onFilterChange({ deviceModel: event.target.value })} />
-            <label className="relative md:col-span-2">
-              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <input className={cn(ui.input, "pl-9")} value={filters.search} placeholder="Search screens or events..." onChange={(event) => onFilterChange({ search: event.target.value })} />
-            </label>
+          </div>
+          {filters.range === "custom" && (
+            <div className="mt-1 grid grid-cols-2 gap-1">
+              <input className="px-1.5 py-0.5 text-[8px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" type="date" value={filters.from} onChange={(event) => onFilterChange({ from: event.target.value })} />
+              <input className="px-1.5 py-0.5 text-[8px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" type="date" value={filters.to} onChange={(event) => onFilterChange({ to: event.target.value })} />
+            </div>
+          )}
+          <div className="mt-1 flex gap-1">
+            <input className="flex-1 px-1.5 py-0.5 text-[8px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={filters.appVersion} placeholder="App version" onChange={(event) => onFilterChange({ appVersion: event.target.value })} />
+            <input className="flex-1 px-1.5 py-0.5 text-[8px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={filters.deviceModel} placeholder="Device" onChange={(event) => onFilterChange({ deviceModel: event.target.value })} />
+            <div className="relative flex-1">
+              <Search size={10} className="absolute left-1.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input className="w-full pl-5 pr-1.5 py-0.5 text-[8px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={filters.search} placeholder="Search..." onChange={(event) => onFilterChange({ search: event.target.value })} />
+            </div>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
-          <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            {metricCards.map(([label, value]) => (
-              <div key={label} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <span className="block text-xs font-bold uppercase text-slate-500">{label}</span>
-                <strong className="mt-1 block truncate text-base font-black text-slate-950">{value}</strong>
+        <div className="flex-1 overflow-y-auto px-3 py-3">
+          <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
+            {metricCards.slice(0, 8).map(([label, value]) => (
+              <div key={label} className="bg-slate-50 rounded-lg border border-slate-200/50 p-1.5">
+                <span className="text-[6px] font-medium text-slate-500 uppercase tracking-wider">{label}</span>
+                <div className="text-[9px] font-bold text-slate-900 mt-0.5 truncate">{value}</div>
               </div>
             ))}
-          </section>
+          </div>
 
-          <section className={cn(ui.panel, "mt-5")}>
-            <h4 className="text-base font-black text-slate-950">Most Visited Screens</h4>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-              {(summary.mostVisitedScreens || []).map((screen) => (
-                <div key={screen.screen} className="rounded-lg border border-slate-200 px-3 py-2 text-sm">
-                  <strong className="block truncate text-slate-900">{screen.screen}</strong>
-                  <span className="text-slate-500">{screen.views} views, {formatSeconds(screen.totalSeconds)}</span>
+          {loading ? (
+            <div className="mt-3 space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-20 animate-pulse rounded-lg border border-slate-200 bg-slate-100" />
+              ))}
+            </div>
+          ) : sessionsByDay.length > 0 ? (
+            <div className="mt-3 space-y-3">
+              {sessionsByDay.map((day) => (
+                <div key={day.date}>
+                  <h4 className="text-[9px] font-semibold text-slate-700 mb-1">{day.date}</h4>
+                  {day.sessions.map((session) => (
+                    <details key={session.sessionId} className="mb-1 rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
+                      <summary className="flex cursor-pointer items-center justify-between gap-2 text-[9px]">
+                        <span className="font-medium text-slate-900">{formatDateTime(session.startedAt)}</span>
+                        <span className="flex items-center gap-2 text-slate-600">
+                          {formatSeconds(session.durationSeconds)}
+                          <ChevronDown size={12} />
+                        </span>
+                      </summary>
+                      <div className="mt-2 grid grid-cols-2 gap-1 sm:grid-cols-4">
+                        <InfoItem label="Platform" value={session.platform || "-"} />
+                        <InfoItem label="App Version" value={session.appVersion || "-"} />
+                        <InfoItem label="Device" value={session.deviceModel || "-"} />
+                        <InfoItem label="Status" value={session.status || "-"} />
+                      </div>
+                    </details>
+                  ))}
                 </div>
               ))}
-              {!(summary.mostVisitedScreens || []).length ? <p className={ui.muted}>No screen visits found.</p> : null}
             </div>
-          </section>
-
-          <section className={cn(ui.panel, "mt-5")}>
-            <h4 className="text-base font-black text-slate-950">Most Clicked Features</h4>
-            <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-              {(summary.mostClickedFeatures || []).map((feature) => (
-                <div key={`${feature.componentName}-${feature.screen}`} className="rounded-lg border border-slate-200 px-3 py-2 text-sm">
-                  <strong className="block truncate text-slate-900">{feature.componentName}</strong>
-                  <span className="text-slate-500">{feature.clicks} clicks{feature.screen ? ` on ${feature.screen}` : ""}</span>
-                </div>
-              ))}
-              {!(summary.mostClickedFeatures || []).length ? <p className={ui.muted}>No feature clicks found.</p> : null}
-            </div>
-          </section>
-
-          <section className="mt-5 space-y-4">
-            {loading ? <ActivitySkeleton /> : null}
-            {!loading && sessionsByDay.map((day) => (
-              <div key={day.date}>
-                <h4 className="mb-2 text-sm font-black text-slate-700">{day.date}</h4>
-                <div className="space-y-3">
-                  {day.sessions.map((session) => <SessionCard key={session.sessionId} session={session} />)}
-                </div>
-              </div>
-            ))}
-            {!loading && !sessionsByDay.length ? <div className={cn(ui.panel, "text-sm text-slate-500")}>No activity found for these filters.</div> : null}
-          </section>
+          ) : (
+            <div className="mt-3 text-center text-[9px] text-slate-400">No activity found</div>
+          )}
         </div>
 
-        <footer className="border-t border-slate-200 bg-white px-4 py-3 sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <select className={cn(ui.input, "sm:w-36")} value={filters.limit} onChange={(event) => onFilterChange({ limit: Number(event.target.value) })}>
+        <footer className="border-t border-slate-200 bg-white px-3 py-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <select className="px-1.5 py-0.5 text-[8px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" value={filters.limit} onChange={(event) => onFilterChange({ limit: Number(event.target.value) })}>
               {pageSizeOptions.map((limit) => <option key={limit} value={limit}>{limit} sessions</option>)}
             </select>
             <Pagination meta={meta} onChange={(page) => onFilterChange({ page })} />
@@ -614,183 +805,11 @@ function UserActivityDrawer({ open, user, loading, data, filters, onFilterChange
   );
 }
 
-function SessionCard({ session }) {
-  return (
-    <details className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <summary className="flex cursor-pointer list-none flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <strong className="text-sm text-slate-950">{formatDateTime(session.startedAt)}</strong>
-            <StatusBadge value={session.status || "Active"} />
-          </div>
-          <p className="mt-1 truncate text-xs text-slate-500">{session.platform || "-"} / {session.appVersion || "-"} / {session.deviceBrand || "-"} {session.deviceModel || "Unknown device"}</p>
-        </div>
-        <div className="flex shrink-0 items-center gap-3 text-sm font-bold text-slate-700">
-          {formatSeconds(session.durationSeconds)}
-          <ChevronDown size={16} />
-        </div>
-      </summary>
-      <div className="mt-4 grid grid-cols-1 gap-3 rounded-lg bg-slate-50 p-3 text-sm sm:grid-cols-2 xl:grid-cols-4">
-        <InfoItem label="Start Time" value={formatDateTime(session.startedAt)} />
-        <InfoItem label="End Time" value={formatDateTime(session.endedAt)} />
-        <InfoItem label="Login Provider" value={session.loginMethod || "-"} />
-        <InfoItem label="IP Address" value={session.ipAddress || "-"} />
-        <InfoItem label="Platform" value={session.platform || "-"} />
-        <InfoItem label="App Version" value={session.appVersion || "-"} />
-        <InfoItem label="Device Brand" value={session.deviceBrand || "-"} />
-        <InfoItem label="Device" value={session.deviceModel || "-"} />
-        <InfoItem label="OS" value={session.osVersion || "-"} />
-        <InfoItem label="Android Version" value={session.androidVersion || "-"} />
-        <InfoItem label="Network" value={session.networkType || "-"} />
-        <InfoItem label="Resolution" value={session.screenResolution || "-"} />
-        <InfoItem label="Foreground" value={formatSeconds(session.foregroundSeconds)} />
-        <InfoItem label="Background" value={formatSeconds(session.backgroundSeconds)} />
-        <InfoItem label="Battery" value={session.batteryLevel !== undefined && session.batteryLevel !== null ? `${session.batteryLevel}%${session.batteryCharging ? " charging" : ""}` : "-"} />
-      </div>
-      <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-3">
-        <div className="flex min-w-max items-center gap-2 text-sm font-bold text-slate-700">
-          {(session.navigationFlow || []).map((screen, index) => (
-            <span key={`${screen}-${index}`} className="flex items-center gap-2">
-              <span className="rounded-full bg-white px-3 py-1 shadow-sm">{screen}</span>
-              {index < session.navigationFlow.length - 1 ? <span className="text-slate-400">-&gt;</span> : null}
-            </span>
-          ))}
-          {!(session.navigationFlow || []).length ? <span className="text-slate-500">No navigation flow captured.</span> : null}
-        </div>
-      </div>
-      <div className="mt-4 space-y-3">
-        {(session.screens || []).map((screen, index) => (
-          <div key={`${screen.screenName}-${index}`} className="rounded-lg border border-slate-200 p-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <strong className="text-sm text-slate-950">{screen.screenName}</strong>
-              <span className="text-xs font-bold text-slate-500">{formatSeconds(screen.durationSeconds)}</span>
-            </div>
-            <p className="mt-1 text-xs text-slate-500">{formatDateTime(screen.entryTime)} to {formatDateTime(screen.exitTime)}</p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {(screen.actions || []).map((action, actionIndex) => (
-                <span key={actionIndex} className={cn(ui.pill, "max-w-full truncate")}>{action.componentName || action.action || action.eventType}</span>
-              ))}
-              {!(screen.actions || []).length ? <span className="text-xs text-slate-400">No actions captured on this screen.</span> : null}
-            </div>
-          </div>
-        ))}
-      </div>
-    </details>
-  );
-}
-
 function InfoItem({ label, value }) {
   return (
     <div className="min-w-0">
-      <span className="block text-xs font-bold uppercase text-slate-500">{label}</span>
-      <strong className="mt-1 block truncate text-slate-900">{value}</strong>
+      <span className="text-[6px] font-medium text-slate-500 uppercase tracking-wider">{label}</span>
+      <div className="text-[8px] text-slate-900 truncate">{value || "-"}</div>
     </div>
-  );
-}
-
-function ActivitySkeleton() {
-  return Array.from({ length: 3 }).map((_, index) => (
-    <div key={index} className="h-28 animate-pulse rounded-lg border border-slate-200 bg-slate-100" />
-  ));
-}
-
-function ServerTable({ config, loading, search, setSearch, state, onChange, exportQuery, tabKey, onRowClick }) {
-  const sortLabel = state.sortOrder === "asc" ? "ASC" : "DESC";
-  const [exporting, setExporting] = useState(false);
-  async function exportComplete() {
-    setExporting(true);
-    try {
-      await appUsageService.exportFile({ ...exportQuery, search, dataset: tabKey === "sessions" ? "sessions" : tabKey === "userAnalytics" || tabKey === "users" ? "user-analytics" : "events", format: "xlsx" });
-    } finally {
-      setExporting(false);
-    }
-  }
-  return (
-    <section className={ui.panel}>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <label className="relative max-w-md flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-          <input className={cn(ui.input, "pl-9")} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search user, email, mobile, activity, page..." />
-        </label>
-        <div className="flex flex-wrap items-center gap-2">
-          <select className={ui.input} value={state.limit} onChange={(event) => onChange({ page: 1, limit: Number(event.target.value) })}>
-            {pageSizeOptions.map((limit) => <option key={limit} value={limit}>{limit} rows</option>)}
-          </select>
-          <button type="button" disabled={exporting} className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => void exportComplete()}><Download size={16} /> {exporting ? "Exporting..." : "Export Complete"}</button>
-        </div>
-      </div>
-      <div className={cn(ui.tableWrap, "mt-4")}>
-        <div className="max-h-[62vh] overflow-auto">
-          <table className={cn(ui.table, "min-w-[980px]")}>
-            <thead className="sticky top-0 z-10">
-              <tr>
-                {config.columns.map((column) => (
-                  <th key={column.key} className={cn(ui.tableHead, column.fixed && "sticky left-0 z-20 min-w-48 bg-slate-50")}>
-                    <button type="button" disabled={!column.sortable} className="flex items-center gap-1 disabled:cursor-default" onClick={() => onChange({ page: 1, sortBy: column.key, sortOrder: state.sortBy === column.key && state.sortOrder === "desc" ? "asc" : "desc" })}>
-                      {column.label} {state.sortBy === column.key ? sortLabel : ""}
-                    </button>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? <SkeletonRows colSpan={config.columns.length} /> : null}
-              {!loading && state.rows.map((row, index) => (
-                <tr key={row.id || row._id || row.sessionId || `${index}`} className={cn(onRowClick && "cursor-pointer hover:bg-sky-50")} onClick={() => onRowClick?.(row)}>
-                  {config.columns.map((column) => (
-                    <td key={column.key} className={cn(ui.tableCell, column.fixed && "sticky left-0 z-0 min-w-48 bg-white font-bold text-slate-900", onRowClick && column.fixed && "hover:bg-sky-50")}>
-                      {column.render ? column.render(row) : row[column.key] ?? "-"}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-              {!loading && !state.rows.length ? <tr><td className={ui.tableCell} colSpan={config.columns.length}>No data found for this filter.</td></tr> : null}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <Pagination meta={state.meta} onChange={(page) => onChange({ page })} />
-    </section>
-  );
-}
-
-function SkeletonRows({ colSpan }) {
-  return Array.from({ length: 6 }).map((_, index) => (
-    <tr key={index}><td className={ui.tableCell} colSpan={colSpan}><div className="h-4 w-full animate-pulse rounded bg-slate-100" /></td></tr>
-  ));
-}
-
-function StatusBadge({ value }) {
-  return <span className={cn(ui.pill, String(value).toLowerCase().includes("premium") ? "border-amber-200 bg-amber-50 text-amber-700" : "")}>{value}</span>;
-}
-
-function MiniChart({ title, rows, labelKey, valueKey }) {
-  const max = Math.max(...rows.map((row) => Number(row[valueKey] || 0)), 1);
-  return (
-    <section className={ui.panel}>
-      <h3 className="text-lg font-black text-slate-950">{title}</h3>
-      <div className="mt-4 space-y-3">
-        {rows.slice(0, 10).map((row) => (
-          <div key={row[labelKey]} className="grid grid-cols-[minmax(80px,140px)_1fr_auto] items-center gap-3 text-sm">
-            <span className="truncate font-semibold text-slate-700">{row[labelKey] || "Unknown"}</span>
-            <span className="h-2 overflow-hidden rounded-full bg-slate-100"><span className="block h-full rounded-full bg-sky-500" style={{ width: `${Math.max(4, (Number(row[valueKey] || 0) / max) * 100)}%` }} /></span>
-            <strong>{row[valueKey] || 0}</strong>
-          </div>
-        ))}
-        {!rows.length ? <p className={ui.muted}>No chart data for this period.</p> : null}
-      </div>
-    </section>
-  );
-}
-
-function CompactList({ title, rows, render }) {
-  return (
-    <section className={ui.panel}>
-      <h3 className="text-lg font-black text-slate-950">{title}</h3>
-      <div className="mt-4 grid gap-2">
-        {rows.slice(0, 8).map((row, index) => <div key={index} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">{render(row)}</div>)}
-        {!rows.length ? <p className={ui.muted}>No data for this period.</p> : null}
-      </div>
-    </section>
   );
 }

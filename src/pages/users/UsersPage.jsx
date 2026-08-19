@@ -17,6 +17,26 @@ import { useToast } from "../../context/ToastContext";
 import { cn, ui } from "../../ui";
 import { formatDate } from "../../utils/format";
 import { DownloadIcon, EditIcon, EyeIcon, PlusIcon, RefreshIcon, TrashIcon, XIcon } from "../../components/common/AdminIcons";
+import {
+  Users,
+  User,
+  Mail,
+  Phone,
+  Crown,
+  Shield,
+  Calendar,
+  Clock,
+  BarChart3,
+  TrendingUp,
+  Award,
+  AlertCircle,
+  CheckCircle,
+  XCircle,
+  Upload,
+  FileSpreadsheet,
+  Database,
+  Zap
+} from "lucide-react";
 
 const defaultForm = {
   mobile: "",
@@ -62,9 +82,9 @@ const exportOptions = [
   { value: "filtered", label: "Export Filtered Users" },
   { value: "all", label: "Export All Users" },
   { value: "selected", label: "Export Selected Users" },
-  { value: "mobile", label: "Export Users with Mobile Number" },
+  { value: "mobile", label: "Export Users with Mobile" },
   { value: "google", label: "Export Google Login Users" },
-  { value: "email", label: "Export Email & Password Users" },
+  { value: "email", label: "Export Email Users" },
   { value: "apple", label: "Export Apple Login Users" },
   { value: "neet", label: "Export NEET Users" },
   { value: "jee", label: "Export JEE Users" },
@@ -542,568 +562,431 @@ export function UsersPage() {
     }
   }
 
+  // Compact input class
+  const compactInput = "w-full px-2 py-0.5 text-xs bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all";
+  const compactSelect = "w-full px-2 py-0.5 text-xs bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all appearance-none";
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="rounded-sm border border-white/60 bg-white/85 p-5 shadow-xl shadow-slate-200/60 backdrop-blur-xl">
-        <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-          <div>
-            <div className="mb-2 text-[11px] font-black uppercase tracking-[0.28em] text-blue-700">User Intelligence</div>
-            <p className="text-slate-500">
-              View full learner performance, attendance, reports, subscriptions, mistakes, weak areas, and submission trails in one place.
-            </p>
+    <div className="space-y-3">
+      {/* Header */}
+      <div className="bg-white rounded-lg border border-slate-200/60 px-4 py-2.5 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg shadow-lg shadow-indigo-500/25">
+              <Users size={14} className="text-white" />
+            </div>
+            <div>
+              <h1 className="text-sm font-semibold text-slate-900">User Management</h1>
+              <p className="text-xs text-slate-500">View and manage all learner accounts</p>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex items-center rounded-sm bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-blue-700">{meta?.total ?? users.length} learners</div>
-            <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={openCreate}>
-              <PlusIcon size={16} />
-              Create User
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-[9px] font-medium text-indigo-700">
+              {meta?.total ?? users.length} learners
+            </span>
+            <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-[9px] font-medium rounded-lg transition-all shadow-sm shadow-indigo-500/25" onClick={openCreate}>
+              <PlusIcon size={10} /> Create User
             </button>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col gap-4 rounded-sm border border-white/60 bg-white/85 p-5 shadow-xl shadow-slate-200/60 backdrop-blur-xl lg:flex-row lg:items-end lg:justify-between">
-        <SearchBar value={search} onChange={setSearch} placeholder="Search users by name, mobile, or email..." />
-        <div className="flex flex-wrap items-center gap-3">
-          {selectedIds.length > 0 ? (
-            <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setBulkDeleteOpen(true)}>
-              <TrashIcon size={16} />
-              Delete Selected ({selectedIds.length})
-            </button>
-          ) : null}
-          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-            Provider
-            <select className={ui.input} value={loginProviderFilter} onChange={handleProviderChange}>
-              {loginProviderOptions.map((option) => (
-                <option key={option.value || "all"} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-            Exam
-            <select
-              className={ui.input}
-              value={examAudienceFilter}
-              onChange={(event) => {
-                const examAudience = event.target.value;
-                setExamAudienceFilter(examAudience);
-                applyFilters({ examAudience });
-              }}
-            >
-              {examAudienceOptions.map((option) => (
-                <option key={option.value || "all"} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-            <input
-              type="checkbox"
-              checked={mobileAvailableFilter}
-              onChange={(event) => {
-                const mobileAvailable = event.target.checked;
-                setMobileAvailableFilter(mobileAvailable);
-                applyFilters({ mobileAvailable });
-              }}
-            />
-            Mobile
-          </label>
-          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-            From
-            <input
-              className={ui.input}
-              type="date"
-              value={fromDate}
-              onChange={(event) => setFromDate(event.target.value)}
-            />
-          </label>
-          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-            To
-            <input
-              className={ui.input}
-              type="date"
-              value={toDate}
-              onChange={(event) => setToDate(event.target.value)}
-            />
-          </label>
-          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-            Export
-            <select className={ui.input} value={exportType} onChange={(event) => setExportType(event.target.value)}>
-              {exportOptions.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
-            Rows
-            <select className={ui.input} value={query.limit} onChange={handleLimitChange}>
-              {[10, 25, 50, 100, 200, 500].map((limit) => (
-                <option key={limit} value={limit}>{limit}</option>
-              ))}
-            </select>
-          </label>
-          <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => {
-            const nextQuery = { ...query, page: 1 };
-            setQuery(nextQuery);
-            loadUsers(nextQuery);
-          }}>Search</button>
-          <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={handleExportUsers} disabled={exporting}>
-            <DownloadIcon size={16} />
-            {exporting ? "Exporting..." : "Export Users"}
-          </button>
+      {/* Filters & Actions */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-2.5 shadow-sm">
+        <div className="flex flex-col gap-2">
+          {/* Search Bar */}
+          <SearchBar value={search} onChange={setSearch} placeholder="Search users by name, mobile, or email..." />
+
+          <div className="flex flex-col gap-1.5 lg:flex-row lg:items-center lg:justify-between">
+            {/* Left: Filter Groups */}
+            <div className="flex flex-wrap items-center gap-1">
+              {/* Provider Group */}
+              <div className="flex items-center gap-0.5 bg-slate-50 rounded px-1.5 py-0.5 border border-slate-200/50">
+                <span className="text-[7px] font-medium text-slate-400 uppercase tracking-wider">Provider:</span>
+                <select className="px-1 py-0.5 text-[9px] bg-transparent border-0 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 rounded cursor-pointer" value={loginProviderFilter} onChange={handleProviderChange}>
+                  {loginProviderOptions.map((option) => (
+                    <option key={option.value || "all"} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Exam Group */}
+              <div className="flex items-center gap-0.5 bg-slate-50 rounded px-1.5 py-0.5 border border-slate-200/50">
+                <span className="text-[7px] font-medium text-slate-400 uppercase tracking-wider">Exam:</span>
+                <select className="px-1 py-0.5 text-[9px] bg-transparent border-0 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 rounded cursor-pointer" value={examAudienceFilter} onChange={(event) => {
+                  const examAudience = event.target.value;
+                  setExamAudienceFilter(examAudience);
+                  applyFilters({ examAudience });
+                }}>
+                  {examAudienceOptions.map((option) => (
+                    <option key={option.value || "all"} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Mobile Checkbox */}
+              <label className="flex items-center gap-0.5 px-1.5 py-0.5 bg-slate-50 rounded border border-slate-200/50 text-[8px] font-medium text-slate-500 cursor-pointer hover:bg-slate-100 transition-colors">
+                <input type="checkbox" className="h-3 w-3 rounded border-slate-300 text-indigo-600 focus:ring-1 focus:ring-indigo-500/20" checked={mobileAvailableFilter} onChange={(event) => {
+                  const mobileAvailable = event.target.checked;
+                  setMobileAvailableFilter(mobileAvailable);
+                  applyFilters({ mobileAvailable });
+                }} />
+                Mobile
+              </label>
+
+              {/* Date Range Group */}
+              <div className="flex items-center gap-0.5 bg-slate-50 rounded px-1.5 py-0.5 border border-slate-200/50">
+                <span className="text-[7px] font-medium text-slate-400 uppercase tracking-wider">From:</span>
+                <input className="px-1 py-0.5 text-[9px] bg-transparent border-0 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 rounded w-20" type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
+                <span className="text-[7px] text-slate-300">|</span>
+                <span className="text-[7px] font-medium text-slate-400 uppercase tracking-wider">To:</span>
+                <input className="px-1 py-0.5 text-[9px] bg-transparent border-0 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 rounded w-20" type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} />
+              </div>
+            </div>
+
+            {/* Right: Actions */}
+            <div className="flex flex-wrap items-center gap-1">
+              {/* Bulk Delete */}
+              {selectedIds.length > 0 && (
+                <button className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-rose-50 hover:bg-rose-100 text-rose-600 text-[8px] font-medium rounded transition-colors" onClick={() => setBulkDeleteOpen(true)}>
+                  <TrashIcon size={16} /> {selectedIds.length}
+                </button>
+              )}
+
+              {/* Export Group */}
+              <div className="flex items-center gap-0.5 bg-slate-50 rounded px-1.5 py-0.5 border border-slate-200/50">
+                <span className="text-[7px] font-medium text-slate-400 uppercase tracking-wider">Export:</span>
+                <select className="px-1 py-0.5 text-[9px] bg-transparent border-0 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 rounded cursor-pointer" value={exportType} onChange={(event) => setExportType(event.target.value)}>
+                  {exportOptions.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Rows Group */}
+              <div className="flex items-center gap-0.5 bg-slate-50 rounded px-1.5 py-0.5 border border-slate-200/50">
+                <span className="text-[7px] font-medium text-slate-400 uppercase tracking-wider">Rows:</span>
+                <select className="px-1 py-0.5 text-[8px] bg-transparent border-0 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 rounded cursor-pointer" value={query.limit} onChange={handleLimitChange}>
+                  {[10, 25, 50, 100, 200, 500].map((limit) => (
+                    <option key={limit} value={limit}>{limit}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Action Buttons */}
+              <button className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-[8px] font-medium rounded transition-colors" onClick={() => {
+                const nextQuery = { ...query, page: 1 };
+                setQuery(nextQuery);
+                loadUsers(nextQuery);
+              }}>
+                Search
+              </button>
+              <button className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-[8px] font-medium rounded transition-colors" onClick={handleExportUsers} disabled={exporting}>
+                <DownloadIcon size={9} /> {exporting ? "..." : "Export"}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="rounded-sm border border-white/60 bg-white/85 p-5 shadow-xl shadow-slate-200/60 backdrop-blur-xl">
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-start">
-          <div>
-            <div className="mb-2 text-[11px] font-black uppercase tracking-[0.28em] text-emerald-700">Old App Migration</div>
-            <h2 className="text-xl font-black tracking-tight text-slate-900">Import MySQL Users</h2>
-            <p className="mt-1 text-slate-500">Upload exported users from MySQL. Email is required, phone is optional, passwords are hashed before saving, and duplicates are checked by email.</p>
+      {/* Migration Section */}
+      <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Database size={14} className="text-emerald-600" />
+            <div>
+              <h3 className="text-xs font-semibold text-slate-900">Import MySQL Users</h3>
+              <p className="text-[9px] text-slate-500">Upload exported users from MySQL</p>
+            </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <input
-              className={ui.input}
-              type="file"
-              accept=".sql,.csv,.xlsx,.xls"
-              onChange={(event) => {
-                setMigrationFile(event.target.files?.[0] || null);
-                setMigrationPreview(null);
-                setMigrationPreviewReady(false);
-              }}
-            />
-            <button className={cn(ui.buttonBase, ui.buttonSecondary)} disabled={migrationLoading} onClick={handlePreviewMigration}>
-              {migrationLoading ? "Processing..." : "Preview"}
+          <div className="flex flex-wrap items-center gap-1.5">
+            <input className="px-2 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded focus:outline-none focus:ring-1 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all" type="file" accept=".sql,.csv,.xlsx,.xls" onChange={(event) => {
+              setMigrationFile(event.target.files?.[0] || null);
+              setMigrationPreview(null);
+              setMigrationPreviewReady(false);
+            }} />
+            <button className="px-2 py-0.5 bg-slate-100 hover:bg-slate-200 text-[9px] font-medium text-slate-700 rounded transition-colors disabled:opacity-50" disabled={migrationLoading} onClick={handlePreviewMigration}>
+              {migrationLoading ? "..." : "Preview"}
             </button>
-            <button
-              className={cn(ui.buttonBase, ui.buttonPrimary)}
-              disabled={migrationLoading || !migrationPreviewReady || Number(migrationPreview?.importableUsers ?? 0) <= 0}
-              onClick={handleImportMigration}
-            >
+            <button className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[9px] font-medium rounded transition-colors disabled:opacity-50" disabled={migrationLoading || !migrationPreviewReady || Number(migrationPreview?.importableUsers ?? 0) <= 0} onClick={handleImportMigration}>
               Start Import
             </button>
           </div>
         </div>
 
-        {migrationPreview ? (
-          <>
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {migrationPreview && (
+          <div className="mt-2 pt-2 border-t border-slate-100">
+            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-4">
               {[
-                ["Total Users", migrationPreview.totalUsers],
-                ["Imported / Ready", migrationPreview.status === "processing" ? "Processing" : migrationPreview.importedUsers ?? migrationPreview.importableUsers],
-                ["Duplicates Skipped", migrationPreview.duplicateUsers],
-                ["Invalid Skipped", migrationPreview.invalidUsers],
+                ["Total", migrationPreview.totalUsers],
+                ["Ready", migrationPreview.status === "processing" ? "Processing" : migrationPreview.importedUsers ?? migrationPreview.importableUsers],
+                ["Duplicates", migrationPreview.duplicateUsers],
+                ["Invalid", migrationPreview.invalidUsers],
               ].map(([label, value]) => (
-                <div key={label} className="rounded-sm border border-slate-200/80 bg-slate-50/80 p-4">
-                  <span className="text-xs font-bold uppercase tracking-[0.18em] text-slate-500">{label}</span>
-                  <strong className="mt-2 block text-2xl font-black text-slate-900">{value ?? 0}</strong>
+                <div key={label} className="bg-slate-50 rounded px-2 py-1">
+                  <span className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">{label}</span>
+                  <div className="text-xs font-bold text-slate-900">{value ?? 0}</div>
                 </div>
               ))}
             </div>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
-              <span className="rounded-sm bg-slate-100 px-3 py-2">Source duplicates: {migrationPreview.sourceDuplicateUsers ?? 0}</span>
-              <span className="rounded-sm bg-slate-100 px-3 py-2">Already in MongoDB: {migrationPreview.existingDuplicateUsers ?? 0}</span>
-            </div>
-          </>
-        ) : null}
-
-        {migrationPreview?.invalidRows?.length ? (
-          <div className="mt-5">
-            <h3 className="mb-3 text-sm font-black uppercase tracking-[0.18em] text-slate-500">Invalid Rows Skipped</h3>
-            <div className={ui.tableScroll}>
-              <table className={ui.table}>
-                <thead>
-                  <tr><th>Row</th><th>Name</th><th>Mobile</th><th>Email</th><th>Reason</th></tr>
-                </thead>
-                <tbody>
-                  {migrationPreview.invalidRows.map((row) => (
-                    <tr key={`${row.row}-${row.mobile || ""}-${row.email || ""}`}>
-                      <td>{row.row}</td>
-                      <td>{row.name || "-"}</td>
-                      <td>{row.mobile || "-"}</td>
-                      <td>{row.email || "-"}</td>
-                      <td>{row.reason}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            {Number(migrationPreview.invalidUsers ?? 0) > migrationPreview.invalidRows.length ? (
-              <div className="mt-2 text-sm text-slate-500">
-                Showing first {migrationPreview.invalidRows.length} invalid rows.
+            {migrationPreview.invalidRows?.length > 0 && (
+              <div className="mt-2">
+                <span className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">Invalid Rows: {migrationPreview.invalidRows.length}</span>
               </div>
-            ) : null}
+            )}
           </div>
-        ) : null}
+        )}
 
-        {migrationPreview?.previewRows?.length ? (
-          <div className="mt-5">
-            <h3 className="mb-3 text-sm font-black uppercase tracking-[0.18em] text-slate-500">Preview Rows</h3>
-            <div className={ui.tableScroll}>
-              <table className={ui.table}>
-                <thead>
-                  <tr><th>Name</th><th>Mobile</th><th>Email</th><th>Premium</th><th>Admin</th></tr>
-                </thead>
-                <tbody>
-                  {migrationPreview.previewRows.map((row) => (
-                    <tr key={`${row.email || row.mobile || row.name}`}>
-                      <td>{row.name || "-"}</td>
-                      <td>{row.mobile || "-"}</td>
-                      <td>{row.email || "-"}</td>
-                      <td>{row.isPremium ? "Yes" : "No"}</td>
-                      <td>{row.isAdmin ? "Yes" : "No"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ) : null}
-
-        {migrationLogs.length ? (
-          <div className="mt-5 flex flex-wrap gap-3">
+        {migrationLogs.length > 0 && (
+          <div className="mt-2 pt-2 border-t border-slate-100 flex flex-wrap gap-1.5">
             {migrationLogs.slice(0, 3).map((log) => (
-              <div key={log.id} className="rounded-sm border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
-                <strong className="block text-slate-900">{formatDate(log.migrationDate)}</strong>
-                {log.status === "processing" ? "Processing..." : `${log.importedUsers} imported | ${log.duplicateUsers} duplicates | ${log.invalidUsers} invalid`}
-                {log.status === "failed" ? <span className="mt-1 block text-rose-600">{log.errorMessage || "Import failed"}</span> : null}
+              <div key={log.id} className="bg-slate-50 rounded px-2 py-1 text-[8px] text-slate-600">
+                <strong className="text-slate-900">{formatDate(log.migrationDate)}</strong>
+                {log.status === "processing" ? " Processing..." : ` ${log.importedUsers} imported | ${log.duplicateUsers} dup`}
+                {log.status === "failed" && <span className="text-rose-600 ml-1">{log.errorMessage || "Failed"}</span>}
               </div>
             ))}
           </div>
-        ) : null}
+        )}
       </div>
 
-      <div className="flex flex-col gap-6">
-        {loading ? <LoadingSpinner label="Loading users..." /> : null}
-        {!loading && !users.length ? <EmptyState title="No users found" description="Try a different search or create a new user." /> : null}
-        {!loading && users.length ? (
-          <>
-            <DataTable
-              columns={[
-                {
-                  key: "name",
-                  label: "User",
-                  render: (row) => (
-                    <button
-                      className={cn(
-                        "flex w-full flex-col items-start gap-1 rounded-sm border border-slate-200 bg-white px-4 py-3 text-left transition hover:border-blue-300 hover:bg-blue-50",
-                        selectedUser?.id === row.id && "border-blue-300 bg-blue-50",
-                      )}
-                      onClick={() => handleSelectUser(row)}
-                    >
-                      <div className="font-bold text-slate-900">{row.name || row.mobile}</div>
-                      <div className={ui.muted}>{row.email || row.mobile}</div>
-                    </button>
-                  ),
+      {/* Table */}
+      {loading ? <LoadingSpinner /> : null}
+      {!loading && !users.length ? <EmptyState title="No users found" description="Try a different search or create a new user." /> : null}
+      {!loading && users.length ? (
+        <>
+          <DataTable
+            columns={[
+              {
+                key: "name",
+                label: "User",
+                render: (row) => (
+                  <button className={cn(
+                    "flex flex-col items-start gap-0.5 p-1.5 rounded-lg border transition-all text-left w-full",
+                    selectedUser?.id === row.id ? "border-indigo-300 bg-indigo-50" : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                  )} onClick={() => handleSelectUser(row)}>
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-[8px] font-bold">
+                        {(row.name || row.mobile || "U").slice(0, 1).toUpperCase()}
+                      </div>
+                      <span className="text-[10px] font-semibold text-slate-900">{row.name || row.mobile}</span>
+                    </div>
+                    <span className="text-[8px] text-slate-500">{row.email || row.mobile}</span>
+                  </button>
+                ),
+              },
+              {
+                key: "loginProvider",
+                label: "Provider",
+                render: (row) => {
+                  const provider = resolveLoginProvider(row);
+                  return <span className="inline-flex px-1.5 py-0.5 bg-slate-100 rounded text-[8px] font-medium text-slate-600">{loginProviderLabels[provider] || provider}</span>;
                 },
-                {
-                  key: "loginProvider",
-                  label: "Login Provider",
-                  render: (row) => {
-                    const provider = resolveLoginProvider(row);
-                    return (
-                      <span className={ui.pill}>{loginProviderLabels[provider] || provider}</span>
-                    );
-                  },
-                },
-                { key: "examMode", label: "Exam Mode", render: (row) => modeLabelMap.get(String(row.examMode || "")) || "Not selected" },
-                { key: "level", label: "Level", render: (row) => levelLabelMap.get(String(row.level || "")) || "Not selected" },
-                {
-                  key: "flags",
-                  label: "Flags",
-                  render: (row) => (
-                    <>
-                      {row.isPremium ? <span className={ui.pill}>Premium</span> : null}
-                      {row.isAdmin ? <span className={ui.pill}>Admin</span> : null}
-                      {row.onboardingComplete ? <span className={ui.pill}>Onboarded</span> : null}
-                    </>
-                  ),
-                },
-                { key: "createdAt", label: "Created", render: (row) => formatDate(row.createdAt) },
-                { key: "lastLoginAt", label: "Last Login", render: (row) => row.lastLoginAt ? formatDate(row.lastLoginAt) : "-" },
-              ]}
-              rows={users}
-              selectable
-              selectedRowIds={selectedIds}
-              onToggleRow={toggleRowSelection}
-              onToggleAllRows={toggleAllSelection}
-              renderActions={(row) => (
-                <div className="flex flex-wrap items-center gap-3">
-                  <button className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => handleSelectUser(row)}>
-                    <EyeIcon size={16} />
-                    View
-                  </button>
-                  <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => openEdit(row)}>
-                    <EditIcon size={16} />
-                    Edit
-                  </button>
-                  <button className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => setTruncateUser(row)}>
-                    <RefreshIcon size={16} />
-                    Truncate
-                  </button>
-                  <button className={cn(ui.buttonBase, ui.buttonDanger)} onClick={() => setDeleteUser(row)}>
-                    <TrashIcon size={16} />
-                    Delete
-                  </button>
+              },
+              { key: "examMode", label: "Exam", render: (row) => <span className="text-[9px] text-slate-600">{modeLabelMap.get(String(row.examMode || "")) || "-"}</span> },
+              { key: "level", label: "Level", render: (row) => <span className="text-[9px] text-slate-600">{levelLabelMap.get(String(row.level || "")) || "-"}</span> },
+              {
+                key: "flags",
+                label: "Flags",
+                render: (row) => (
+                  <div className="flex flex-wrap gap-0.5">
+                    {row.isPremium && <span className="inline-flex px-1.5 py-0.5 bg-amber-50 border border-amber-200 rounded text-[7px] font-medium text-amber-700">Premium</span>}
+                    {row.isAdmin && <span className="inline-flex px-1.5 py-0.5 bg-indigo-50 border border-indigo-200 rounded text-[7px] font-medium text-indigo-700">Admin</span>}
+                    {row.onboardingComplete && <span className="inline-flex px-1.5 py-0.5 bg-emerald-50 border border-emerald-200 rounded text-[7px] font-medium text-emerald-700">Onboarded</span>}
+                  </div>
+                ),
+              },
+              { key: "createdAt", label: "Created", render: (row) => <span className="text-[8px] text-slate-500">{formatDate(row.createdAt)}</span> },
+              { key: "lastLoginAt", label: "Last Login", render: (row) => <span className="text-[8px] text-slate-500">{row.lastLoginAt ? formatDate(row.lastLoginAt) : "-"}</span> },
+            ]}
+            rows={users}
+            selectable
+            selectedRowIds={selectedIds}
+            onToggleRow={toggleRowSelection}
+            onToggleAllRows={toggleAllSelection}
+            renderActions={(row) => (
+              <div className="flex items-center justify-end gap-0.5">
+                <button className="p-0.5 text-indigo-600 hover:bg-indigo-50 rounded transition-colors" onClick={() => handleSelectUser(row)}>
+                  <EyeIcon size={11} />
+                </button>
+                <button className="p-0.5 text-slate-600 hover:bg-slate-50 rounded transition-colors" onClick={() => openEdit(row)}>
+                  <EditIcon size={11} />
+                </button>
+                <button className="p-0.5 text-amber-600 hover:bg-amber-50 rounded transition-colors" onClick={() => setTruncateUser(row)}>
+                  <RefreshIcon size={11} />
+                </button>
+                <button className="p-0.5 text-rose-600 hover:bg-rose-50 rounded transition-colors" onClick={() => setDeleteUser(row)}>
+                  <TrashIcon size={11} />
+                </button>
+              </div>
+            )}
+          />
+          <Pagination meta={meta} onChange={(page) => setQuery((current) => ({ ...current, page }))} />
+        </>
+      ) : null}
+
+      {/* User Details Modal */}
+      {detailsOpen && selectedUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={() => setDetailsOpen(false)}>
+          <div className="bg-white rounded-xl border border-slate-200/60 shadow-2xl shadow-slate-950/30 max-h-[90vh] w-full max-w-6xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300" onClick={(event) => event.stopPropagation()}>
+            <div className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm border-b border-slate-200/60 px-4 py-2.5 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+                  {(selectedUser.name || selectedUser.mobile || "U").slice(0, 1).toUpperCase()}
                 </div>
-              )}
-            />
-            <Pagination meta={meta} onChange={(page) => setQuery((current) => ({ ...current, page }))} />
-          </>
-        ) : null}
-      </div>
-
-      {detailsOpen && selectedUser ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4 backdrop-blur-sm" onClick={() => setDetailsOpen(false)}>
-          <div className="admin-modal max-h-[90vh] w-full max-w-6xl overflow-auto rounded-2xl border border-slate-200/80 bg-white p-6 shadow-2xl shadow-slate-950/20" onClick={(event) => event.stopPropagation()}>
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
                 <div>
-                  <h3 className="text-xl font-bold text-slate-900">{selectedUser.name || selectedUser.mobile}</h3>
-                  <p className="mt-2 text-slate-500">{selectedUser.email || selectedUser.mobile}</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="inline-flex items-center rounded-sm bg-blue-50 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-blue-700">{modeLabelMap.get(String(selectedUser.examMode || "")) || "No mode"}</div>
-                  <button type="button" className={cn(ui.buttonBase, ui.buttonGhost)} onClick={() => setDetailsOpen(false)}>
-                    <XIcon size={16} />
-                    Close
-                  </button>
+                  <h3 className="text-sm font-semibold text-slate-900">{selectedUser.name || selectedUser.mobile}</h3>
+                  <p className="text-[10px] text-slate-500">{selectedUser.email || selectedUser.mobile}</p>
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <div className="rounded-sm border border-slate-200/80 bg-slate-50/80 p-4"><span className="text-slate-500">Level</span><strong className="mt-2 block text-lg font-bold text-slate-900">{levelLabelMap.get(String(selectedUser.level || "")) || "-"}</strong></div>
-                <div className="rounded-sm border border-slate-200/80 bg-slate-50/80 p-4"><span className="text-slate-500">Premium</span><strong className="mt-2 block text-lg font-bold text-slate-900">{selectedUser.isPremium ? "Yes" : "No"}</strong></div>
-                <div className="rounded-sm border border-slate-200/80 bg-slate-50/80 p-4"><span className="text-slate-500">Admin</span><strong className="mt-2 block text-lg font-bold text-slate-900">{selectedUser.isAdmin ? "Yes" : "No"}</strong></div>
-                <div className="rounded-sm border border-slate-200/80 bg-slate-50/80 p-4"><span className="text-slate-500">Joined</span><strong className="mt-2 block text-lg font-bold text-slate-900">{formatDate(selectedUser.createdAt)}</strong></div>
+              <div className="flex items-center gap-1.5">
+                <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-[8px] font-medium text-indigo-700">{modeLabelMap.get(String(selectedUser.examMode || "")) || "No mode"}</span>
+                <button className="p-1 rounded-lg hover:bg-slate-100 transition-colors" onClick={() => setDetailsOpen(false)}>
+                  <XIcon size={14} />
+                </button>
               </div>
+            </div>
 
-              {overviewLoading ? <LoadingSpinner label="Loading user insights..." /> : null}
+            <div className="overflow-y-auto p-4 max-h-[calc(90vh-64px)]">
+              {overviewLoading ? <LoadingSpinner /> : null}
 
-              {overview ? (
-                <>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+              {overview && (
+                <div className="space-y-3">
+                  {/* Summary Cards */}
+                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-7">
                     {summaryCards.map(([label, value]) => (
-                      <div key={label} className={ui.metricCard}>
-                        <div className={ui.metricTop}>
-                          <span className={ui.metricLabel}>{label}</span>
-                          <span className={ui.metricDot} />
-                        </div>
-                        <h2 className={ui.metricValue}>{value}</h2>
+                      <div key={label} className="bg-slate-50 rounded-lg border border-slate-200/50 px-2 py-1.5">
+                        <span className="text-[7px] font-medium text-slate-500 uppercase tracking-wider">{label}</span>
+                        <div className="text-xs font-bold text-slate-900 mt-0.5">{value}</div>
                       </div>
                     ))}
                   </div>
 
-                  <div className="grid gap-6 xl:grid-cols-2">
-                    <div className={ui.panel}>
-                      <div className={ui.sectionHead}>
-                        <div>
-                          <h3>Performance Reports</h3>
-                          <p className="text-slate-500">Attendance and test summary for this learner.</p>
-                        </div>
-                      </div>
-                      <div className={ui.activityList}>
+                  {/* Two Column Layout */}
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    {/* Reports */}
+                    <div className="bg-slate-50 rounded-lg border border-slate-200/50 p-2.5">
+                      <h4 className="text-[10px] font-semibold text-slate-700 mb-1.5">Recent Reports</h4>
+                      <div className="space-y-1 max-h-[200px] overflow-y-auto">
                         {overview.reports.slice(0, 8).map((report) => (
-                          <div key={report.id} className={ui.activityItem}>
-                            <div className={ui.activityAvatar}>{report.attemptNumber}</div>
-                            <div className={ui.activityBody}>
-                              <strong>Attempt #{report.attemptNumber}</strong>
-                              <div className={ui.muted}>
-                                Score {report.score ?? 0} | Accuracy {report.accuracy ?? 0}% | Time {report.timeTaken ?? 0}s
-                              </div>
+                          <div key={report.id} className="bg-white rounded border border-slate-200/50 p-1.5 flex items-center justify-between">
+                            <div>
+                              <span className="text-[9px] font-medium text-slate-900">Attempt #{report.attemptNumber}</span>
+                              <div className="text-[7px] text-slate-500">Score {report.score ?? 0} | Acc {report.accuracy ?? 0}%</div>
                             </div>
-                            <div className={ui.activityTime}>{formatDate(report.completedAt || report.createdAt)}</div>
+                            <span className="text-[7px] text-slate-400">{formatDate(report.completedAt || report.createdAt)}</span>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    <div className={ui.panel}>
-                      <div className={ui.sectionHead}>
-                        <div>
-                          <h3>Subscriptions</h3>
-                          <p className="text-slate-500">Premium history and active access details.</p>
-                        </div>
-                      </div>
-                      <div className={ui.activityList}>
+                    {/* Subscriptions */}
+                    <div className="bg-slate-50 rounded-lg border border-slate-200/50 p-2.5">
+                      <h4 className="text-[10px] font-semibold text-slate-700 mb-1.5">Subscriptions</h4>
+                      <div className="space-y-1 max-h-[200px] overflow-y-auto">
                         {(overview.subscriptionSummary.history || []).slice(0, 8).map((item) => (
-                          <div key={item.id} className={ui.activityItem}>
-                            <div className={ui.activityAvatar}>S</div>
-                            <div className={ui.activityBody}>
-                              <strong>{item.planId}</strong>
-                              <div className={ui.muted}>
-                                {item.status} | Amount {item.amount ?? 0}
-                              </div>
+                          <div key={item.id} className="bg-white rounded border border-slate-200/50 p-1.5 flex items-center justify-between">
+                            <div>
+                              <span className="text-[9px] font-medium text-slate-900">{item.planId}</span>
+                              <div className="text-[7px] text-slate-500">{item.status} | ₹{item.amount ?? 0}</div>
                             </div>
-                            <div className={ui.activityTime}>{formatDate(item.createdAt)}</div>
+                            <span className="text-[7px] text-slate-400">{formatDate(item.createdAt)}</span>
                           </div>
                         ))}
-                        {!overview.subscriptionSummary.history.length ? <p className="text-slate-500">No subscriptions found.</p> : null}
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid gap-6 xl:grid-cols-2">
-                    <div className={ui.panel}>
-                      <div className={ui.sectionHead}>
-                        <div>
-                          <h3>Mistakes</h3>
-                          <p className="text-slate-500">Current mistake book and revision queue based on recent mistakes and spaced recall.</p>
+                  {/* Mistakes & Revision */}
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    <div className="bg-slate-50 rounded-lg border border-slate-200/50 p-2.5">
+                      <h4 className="text-[10px] font-semibold text-slate-700 mb-1.5">Mistakes & Revision</h4>
+                      <div className="grid grid-cols-3 gap-1.5 mb-2">
+                        <div className="bg-rose-50 rounded border border-rose-200 p-1.5 text-center">
+                          <span className="text-[6px] font-medium text-rose-600 uppercase tracking-wider">Recovery</span>
+                          <div className="text-sm font-bold text-rose-700">{revisionWrongCount}</div>
+                        </div>
+                        <div className="bg-blue-50 rounded border border-blue-200 p-1.5 text-center">
+                          <span className="text-[6px] font-medium text-blue-600 uppercase tracking-wider">Recall</span>
+                          <div className="text-sm font-bold text-blue-700">{revisionOldCorrectCount}</div>
+                        </div>
+                        <div className="bg-emerald-50 rounded border border-emerald-200 p-1.5 text-center">
+                          <span className="text-[6px] font-medium text-emerald-600 uppercase tracking-wider">Total</span>
+                          <div className="text-sm font-bold text-emerald-700">{revisionTotalCount}</div>
                         </div>
                       </div>
-                      <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
-                        <div className="rounded-sm border border-red-100 bg-red-50/70 p-3">
-                          <span className="text-xs font-bold uppercase tracking-wider text-red-700">Mistake Recovery</span>
-                          <strong className="mt-1 block text-2xl font-black text-red-700">{revisionWrongCount}</strong>
-                        </div>
-                        <div className="rounded-sm border border-blue-100 bg-blue-50/70 p-3">
-                          <span className="text-xs font-bold uppercase tracking-wider text-blue-700">Spaced Recall</span>
-                          <strong className="mt-1 block text-2xl font-black text-blue-700">{revisionOldCorrectCount}</strong>
-                        </div>
-                        <div className="rounded-sm border border-emerald-100 bg-emerald-50/70 p-3">
-                          <span className="text-xs font-bold uppercase tracking-wider text-emerald-700">Revision Total</span>
-                          <strong className="mt-1 block text-2xl font-black text-emerald-700">{revisionTotalCount}</strong>
-                        </div>
-                      </div>
-                      {!overview.revisionSummary?.isPremiumEnabled ? (
-                        <p className="mb-4 rounded-sm border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                          This user is not premium. Revision total is estimated from user stats fallback logic.
-                        </p>
-                      ) : null}
-                      <div className={ui.tableScroll}>
-                        <table className={ui.table}>
-                          <thead>
-                            <tr>
-                              <th>Question</th>
-                              <th>Subject</th>
-                              <th>Status</th>
-                              <th>Attempts</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {overview.mistakes.slice(0, 10).map((item) => (
-                              <tr key={item.id}>
-                                <td><MathText>{item.question}</MathText></td>
-                                <td>{item.subjectName}</td>
-                                <td><span className={ui.pill}>{item.status}</span></td>
-                                <td>{item.attempts}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-                        <div className="rounded-sm border border-red-100 bg-red-50/40 p-3">
-                          <h4 className="text-sm font-bold text-red-700">Recent Mistake Questions</h4>
-                          <div className="mt-2 space-y-2">
-                            {(overview.revisionSummary?.wrongQuestions || []).slice(0, 5).map((item) => (
-                              <div key={item.id} className="rounded-sm border border-red-100 bg-white/80 p-2">
-                                <MathText className="line-clamp-2 text-xs font-semibold text-slate-800">{item.question}</MathText>
-                                <p className="mt-1 text-[11px] text-slate-500">{item.subjectName} | {item.chapterName}</p>
-                              </div>
-                            ))}
-                            {!overview.revisionSummary?.wrongQuestions?.length ? (
-                              <p className="text-xs text-slate-500">No mistake recovery questions in the current revision set.</p>
-                            ) : null}
+                      <div className="space-y-1 max-h-[150px] overflow-y-auto">
+                        {overview.mistakes.slice(0, 6).map((item) => (
+                          <div key={item.id} className="bg-white rounded border border-slate-200/50 p-1.5">
+                            <MathText className="text-[8px] text-slate-700 line-clamp-1">{item.question}</MathText>
+                            <div className="text-[7px] text-slate-500">{item.subjectName} | {item.status}</div>
                           </div>
-                        </div>
-                        <div className="rounded-sm border border-blue-100 bg-blue-50/40 p-3">
-                          <h4 className="text-sm font-bold text-blue-700">Spaced Recall Questions</h4>
-                          <div className="mt-2 space-y-2">
-                            {(overview.revisionSummary?.oldCorrectQuestions || []).slice(0, 5).map((item) => (
-                              <div key={item.id} className="rounded-sm border border-blue-100 bg-white/80 p-2">
-                                <MathText className="line-clamp-2 text-xs font-semibold text-slate-800">{item.question}</MathText>
-                                <p className="mt-1 text-[11px] text-slate-500">{item.subjectName} | {item.chapterName}</p>
-                              </div>
-                            ))}
-                            {!overview.revisionSummary?.oldCorrectQuestions?.length ? (
-                              <p className="text-xs text-slate-500">No spaced recall questions in the current revision set.</p>
-                            ) : null}
-                          </div>
-                        </div>
+                        ))}
                       </div>
                     </div>
 
-                    <div className={ui.panel}>
-                      <div className={ui.sectionHead}>
-                        <div>
-                          <h3>Weak Areas</h3>
-                          <p className="text-slate-500">Chapters flagged as weak from performance analysis.</p>
-                        </div>
-                      </div>
-                      <div className={ui.tableScroll}>
-                        <table className={ui.table}>
-                          <thead>
-                            <tr>
-                              <th>Subject</th>
-                              <th>Chapter</th>
-                              <th>Accuracy</th>
-                              <th>Strength</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {overview.weakAreas.slice(0, 10).map((item) => (
-                              <tr key={item.id}>
-                                <td>
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <span>{item.subjectName}</span>
-                                    {selectedUser.examMode === "BOTH" ? (
-                                      <span className={ui.pill}>{getWeakAreaExamType(item)}</span>
-                                    ) : null}
-                                  </div>
-                                </td>
-                                <td>{item.chapterName}</td>
-                                <td>{item.accuracy ?? 0}%</td>
-                                <td><span className={ui.pill}>{item.strength}</span></td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                    {/* Weak Areas */}
+                    <div className="bg-slate-50 rounded-lg border border-slate-200/50 p-2.5">
+                      <h4 className="text-[10px] font-semibold text-slate-700 mb-1.5">Weak Areas</h4>
+                      <div className="space-y-1 max-h-[250px] overflow-y-auto">
+                        {overview.weakAreas.slice(0, 10).map((item) => (
+                          <div key={item.id} className="bg-white rounded border border-slate-200/50 p-1.5 flex items-center justify-between">
+                            <div>
+                              <span className="text-[9px] font-medium text-slate-900">{item.chapterName}</span>
+                              <div className="text-[7px] text-slate-500">{item.subjectName}</div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-[8px] font-medium text-slate-700">{item.accuracy ?? 0}%</span>
+                              <div className="text-[6px] text-slate-400">{item.strength}</div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
 
-                  <div className={ui.panel}>
-                    <div className={ui.sectionHead}>
-                      <div>
-                        <h3>Submission Details</h3>
-                        <p className="text-slate-500">Recent question-level submissions across the app.</p>
-                      </div>
-                    </div>
-                    <div className={ui.tableScroll}>
-                      <table className={ui.table}>
+                  {/* Submissions */}
+                  <div className="bg-slate-50 rounded-lg border border-slate-200/50 p-2.5">
+                    <h4 className="text-[10px] font-semibold text-slate-700 mb-1.5">Recent Submissions</h4>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-[8px]">
                         <thead>
-                          <tr>
-                            <th>Question</th>
-                            <th>Subject</th>
-                            <th>Chapter</th>
-                            <th>Result</th>
-                            <th>Time Spent</th>
-                            <th>Submitted</th>
+                          <tr className="text-slate-500 border-b border-slate-200">
+                            <th className="text-left py-0.5 font-medium">Question</th>
+                            <th className="text-left py-0.5 font-medium">Subject</th>
+                            <th className="text-left py-0.5 font-medium">Result</th>
+                            <th className="text-left py-0.5 font-medium">Time</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {overview.submissions.slice(0, 12).map((item) => (
-                            <tr key={item.id}>
-                              <td><MathText>{item.question}</MathText></td>
-                              <td>{item.subjectName}</td>
-                              <td>{item.chapterName}</td>
-                              <td><span className={ui.pill}>{item.isCorrect ? "Correct" : item.skipped ? "Skipped" : "Incorrect"}</span></td>
-                              <td>{item.timeSpent ?? 0}s</td>
-                              <td>{formatDate(item.createdAt)}</td>
+                          {overview.submissions.slice(0, 10).map((item) => (
+                            <tr key={item.id} className="border-b border-slate-100">
+                              <td className="py-0.5 max-w-[200px]"><MathText className="line-clamp-1 text-[8px]">{item.question}</MathText></td>
+                              <td className="py-0.5 text-slate-600">{item.subjectName}</td>
+                              <td className="py-0.5">
+                                <span className={cn(
+                                  "px-1 py-0.5 rounded text-[6px] font-medium",
+                                  item.isCorrect ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
+                                )}>
+                                  {item.isCorrect ? "Correct" : "Incorrect"}
+                                </span>
+                              </td>
+                              <td className="py-0.5 text-slate-500">{item.timeSpent ?? 0}s</td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
                     </div>
                   </div>
-                </>
-              ) : null}
+                </div>
+              )}
             </div>
           </div>
         </div>
-      ) : null}
+      )}
 
-      {showForm ? (
+      {/* Modals */}
+      {showForm && (
         <EntityFormWrapper
           title={editingUser ? "Edit User" : "Create User"}
           subtitle="Manage core learner profile and access flags."
@@ -1111,51 +994,28 @@ export function UsersPage() {
           onSubmit={handleSave}
           submitLabel={editingUser ? "Save Changes" : "Create User"}
         >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <Field label="Mobile"><input className={ui.input} value={formState.mobile} onChange={(event) => setFormState((current) => ({ ...current, mobile: event.target.value }))} /></Field>
-            <Field label="Email"><input className={ui.input} type="email" value={formState.email} onChange={(event) => setFormState((current) => ({ ...current, email: event.target.value }))} /></Field>
-            <Field label="Name"><input className={ui.input} value={formState.name} onChange={(event) => setFormState((current) => ({ ...current, name: event.target.value }))} /></Field>
-            <Field label="Password"><input className={ui.input} type="password" value={formState.password} onChange={(event) => setFormState((current) => ({ ...current, password: event.target.value }))} /></Field>
-            <Field label="Exam Mode">
-              <SelectDropdown value={formState.examMode} onChange={(value) => setFormState((current) => ({ ...current, examMode: value }))} options={modeOptions} placeholder="Select exam mode" />
-            </Field>
-            <Field label="Level">
-              <SelectDropdown value={formState.level} onChange={(value) => setFormState((current) => ({ ...current, level: value }))} options={learningLevelOptions} placeholder="Select learning level" />
-            </Field>
-            <Field label="Premium Expiry"><input className={ui.input} type="datetime-local" value={formState.premiumExpiresAt} disabled={Boolean(editingUser)} onChange={(event) => setFormState((current) => ({ ...current, premiumExpiresAt: event.target.value }))} /></Field>
-            <Field label="Onboarding Complete"><ToggleSwitch checked={formState.onboardingComplete} onChange={(value) => setFormState((current) => ({ ...current, onboardingComplete: value }))} /></Field>
-            <Field label="Premium User"><ToggleSwitch checked={formState.isPremium} disabled={Boolean(editingUser)} onChange={(value) => setFormState((current) => ({ ...current, isPremium: value }))} /></Field>
-            <Field label="Admin User"><ToggleSwitch checked={formState.isAdmin} onChange={(value) => setFormState((current) => ({ ...current, isAdmin: value }))} /></Field>
-            <Field label="Active Account"><ToggleSwitch checked={formState.isActive} onChange={(value) => setFormState((current) => ({ ...current, isActive: value }))} /></Field>
-            <Field label="Blocked"><ToggleSwitch checked={formState.isBlocked} onChange={(value) => setFormState((current) => ({ ...current, isBlocked: value }))} /></Field>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Field label="Mobile"><input className={compactInput} value={formState.mobile} onChange={(event) => setFormState((current) => ({ ...current, mobile: event.target.value }))} /></Field>
+            <Field label="Email"><input className={compactInput} type="email" value={formState.email} onChange={(event) => setFormState((current) => ({ ...current, email: event.target.value }))} /></Field>
+            <Field label="Name"><input className={compactInput} value={formState.name} onChange={(event) => setFormState((current) => ({ ...current, name: event.target.value }))} /></Field>
+            <Field label="Password"><input className={compactInput} type="password" value={formState.password} onChange={(event) => setFormState((current) => ({ ...current, password: event.target.value }))} /></Field>
+            <Field label="Exam Mode"><SelectDropdown value={formState.examMode} onChange={(value) => setFormState((current) => ({ ...current, examMode: value }))} options={modeOptions} placeholder="Select exam mode" /></Field>
+            <Field label="Level"><SelectDropdown value={formState.level} onChange={(value) => setFormState((current) => ({ ...current, level: value }))} options={learningLevelOptions} placeholder="Select learning level" /></Field>
+            <Field label="Premium Expiry"><input className={compactInput} type="datetime-local" value={formState.premiumExpiresAt} disabled={Boolean(editingUser)} onChange={(event) => setFormState((current) => ({ ...current, premiumExpiresAt: event.target.value }))} /></Field>
+            <div className="flex flex-wrap gap-2 col-span-2 pt-1">
+              <div className="flex items-center gap-1.5"><ToggleSwitch checked={formState.onboardingComplete} onChange={(value) => setFormState((current) => ({ ...current, onboardingComplete: value }))} label="" size="sm" /><span className="text-[9px] text-slate-600">Onboarding</span></div>
+              <div className="flex items-center gap-1.5"><ToggleSwitch checked={formState.isPremium} disabled={Boolean(editingUser)} onChange={(value) => setFormState((current) => ({ ...current, isPremium: value }))} label="" size="sm" /><span className="text-[9px] text-slate-600">Premium</span></div>
+              <div className="flex items-center gap-1.5"><ToggleSwitch checked={formState.isAdmin} onChange={(value) => setFormState((current) => ({ ...current, isAdmin: value }))} label="" size="sm" /><span className="text-[9px] text-slate-600">Admin</span></div>
+              <div className="flex items-center gap-1.5"><ToggleSwitch checked={formState.isActive} onChange={(value) => setFormState((current) => ({ ...current, isActive: value }))} label="" size="sm" /><span className="text-[9px] text-slate-600">Active</span></div>
+              <div className="flex items-center gap-1.5"><ToggleSwitch checked={formState.isBlocked} onChange={(value) => setFormState((current) => ({ ...current, isBlocked: value }))} label="" size="sm" /><span className="text-[9px] text-slate-600">Blocked</span></div>
+            </div>
           </div>
         </EntityFormWrapper>
-      ) : null}
+      )}
 
-      <ConfirmDeleteModal
-        open={Boolean(deleteUser)}
-        title="Delete user"
-        description="This will remove the user record. Historical analytics collections are not automatically deleted."
-        onCancel={() => setDeleteUser(null)}
-        onConfirm={handleDelete}
-      />
-
-      <ConfirmDeleteModal
-        open={Boolean(truncateUser)}
-        title="Truncate user data"
-        description={`Reset all non-personal data for ${truncateUser?.name || truncateUser?.email || truncateUser?.mobile || "this user"}. Personal details and account identity will be kept.`}
-        confirmLabel="Truncate Data"
-        onCancel={() => setTruncateUser(null)}
-        onConfirm={handleTruncateUserData}
-      />
-
-      <ConfirmDeleteModal
-        open={bulkDeleteOpen}
-        title="Delete selected users"
-        description={`Delete ${selectedIds.length} selected user record(s). This action cannot be undone.`}
-        onCancel={() => setBulkDeleteOpen(false)}
-        onConfirm={handleBulkDelete}
-      />
+      <ConfirmDeleteModal open={Boolean(deleteUser)} title="Delete user" description="This will remove the user record. Historical analytics collections are not automatically deleted." onCancel={() => setDeleteUser(null)} onConfirm={handleDelete} />
+      <ConfirmDeleteModal open={Boolean(truncateUser)} title="Truncate user data" description={`Reset all non-personal data for ${truncateUser?.name || truncateUser?.email || truncateUser?.mobile || "this user"}.`} confirmLabel="Truncate" onCancel={() => setTruncateUser(null)} onConfirm={handleTruncateUserData} />
+      <ConfirmDeleteModal open={bulkDeleteOpen} title="Delete selected users" description={`Delete ${selectedIds.length} selected user record(s).`} onCancel={() => setBulkDeleteOpen(false)} onConfirm={handleBulkDelete} />
     </div>
   );
 }
