@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { userService } from "../../api/userService";
 import { modeService } from "../../api/modeService";
 import { learningLevelService } from "../../api/learningLevelService";
@@ -78,6 +78,12 @@ const examAudienceOptions = [
   { value: "JEE", label: "JEE" },
 ];
 
+const subscriptionStatusOptions = [
+  { value: "", label: "All Users" },
+  { value: "false", label: "Free Users" },
+  { value: "true", label: "Premium Users" },
+];
+
 const exportOptions = [
   { value: "filtered", label: "Export Filtered Users" },
   { value: "all", label: "Export All Users" },
@@ -122,6 +128,7 @@ export function UsersPage() {
   const [query, setQuery] = useState({ page: 1, limit: 10 });
   const [loginProviderFilter, setLoginProviderFilter] = useState("");
   const [examAudienceFilter, setExamAudienceFilter] = useState("");
+  const [subscriptionStatusFilter, setSubscriptionStatusFilter] = useState("");
   const [mobileAvailableFilter, setMobileAvailableFilter] = useState(false);
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
@@ -144,6 +151,7 @@ export function UsersPage() {
   const [migrationLogs, setMigrationLogs] = useState([]);
   const [modes, setModes] = useState([]);
   const [learningLevels, setLearningLevels] = useState([]);
+  const liveRefreshPending = useRef(false);
   const normalizeOptionValue = (item) => String(item?.key ?? item?.id ?? item?._id ?? "").trim();
   const normalizeOptionLabel = (item) => String(item?.label ?? item?.name ?? "").trim();
   const modeOptions = modes
@@ -209,6 +217,7 @@ export function UsersPage() {
     nextSearch = search,
     nextProvider = loginProviderFilter,
     nextExamAudience = examAudienceFilter,
+    nextSubscriptionStatus = subscriptionStatusFilter,
     nextMobileAvailable = mobileAvailableFilter,
     nextFromDate = fromDate,
     nextToDate = toDate,
@@ -221,6 +230,7 @@ export function UsersPage() {
       provider: provider || undefined,
     };
     if (nextExamAudience) params.examAudience = nextExamAudience;
+    if (nextSubscriptionStatus !== "") params.isPremium = nextSubscriptionStatus;
     if (nextMobileAvailable) params.mobileAvailable = true;
     if (nextFromDate) params.fromDate = nextFromDate;
     if (nextToDate) params.toDate = nextToDate;
@@ -232,13 +242,14 @@ export function UsersPage() {
     nextSearch = search,
     nextProvider = loginProviderFilter,
     nextExamAudience = examAudienceFilter,
+    nextSubscriptionStatus = subscriptionStatusFilter,
     nextMobileAvailable = mobileAvailableFilter,
     nextFromDate = fromDate,
     nextToDate = toDate,
   ) {
     setLoading(true);
     try {
-      const response = await userService.list(userListParams(nextQuery, nextSearch, nextProvider, nextExamAudience, nextMobileAvailable, nextFromDate, nextToDate));
+      const response = await userService.list(userListParams(nextQuery, nextSearch, nextProvider, nextExamAudience, nextSubscriptionStatus, nextMobileAvailable, nextFromDate, nextToDate));
       setUsers(response.data || []);
       setMeta(response.meta);
       setSelectedIds([]);
@@ -279,7 +290,7 @@ export function UsersPage() {
       await loadUsers({ ...query, page: 1 });
     }, 5000);
     return () => window.clearInterval(interval);
-  }, [hasProcessingMigration, query.limit, query.page, search, loginProviderFilter, examAudienceFilter, mobileAvailableFilter, fromDate, toDate]);
+  }, [hasProcessingMigration, query.limit, query.page, search, loginProviderFilter, examAudienceFilter, subscriptionStatusFilter, mobileAvailableFilter, fromDate, toDate]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -291,7 +302,32 @@ export function UsersPage() {
     }, 250);
 
     return () => window.clearTimeout(timeout);
-  }, [search, loginProviderFilter, examAudienceFilter, mobileAvailableFilter, fromDate, toDate]);
+  }, [search, loginProviderFilter, examAudienceFilter, subscriptionStatusFilter, mobileAvailableFilter, fromDate, toDate]);
+
+  useEffect(() => {
+    const refresh = async () => {
+      if (document.visibilityState !== "visible" || liveRefreshPending.current) return;
+      liveRefreshPending.current = true;
+      try {
+        const response = await userService.list(userListParams());
+        setUsers(response.data || []);
+        setMeta(response.meta);
+      } catch {
+        // Keep the current table during a transient background refresh failure.
+      } finally {
+        liveRefreshPending.current = false;
+      }
+    };
+    const interval = window.setInterval(refresh, 5000);
+    const handleVisibilityOrFocus = () => { if (document.visibilityState === "visible") void refresh(); };
+    window.addEventListener("focus", handleVisibilityOrFocus);
+    document.addEventListener("visibilitychange", handleVisibilityOrFocus);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", handleVisibilityOrFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityOrFocus);
+    };
+  }, [query, search, loginProviderFilter, examAudienceFilter, subscriptionStatusFilter, mobileAvailableFilter, fromDate, toDate]);
 
   function openCreate() {
     setEditingUser(null);
@@ -519,6 +555,7 @@ export function UsersPage() {
       overrides.search ?? search,
       overrides.provider ?? loginProviderFilter,
       overrides.examAudience ?? examAudienceFilter,
+      overrides.subscriptionStatus ?? subscriptionStatusFilter,
       overrides.mobileAvailable ?? mobileAvailableFilter,
       overrides.fromDate ?? fromDate,
       overrides.toDate ?? toDate,
@@ -584,6 +621,9 @@ export function UsersPage() {
             <span className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 rounded text-[9px] font-medium text-indigo-700">
               {meta?.total ?? users.length} learners
             </span>
+            <span className="inline-flex items-center gap-1 rounded border border-emerald-100 bg-emerald-50 px-2 py-0.5 text-[9px] font-medium text-emerald-700" title="User data refreshes automatically every 5 seconds">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" /> Live
+            </span>
             <button className="inline-flex items-center gap-0.5 px-2 py-0.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white text-[9px] font-medium rounded-lg transition-all shadow-sm shadow-indigo-500/25" onClick={openCreate}>
               <PlusIcon size={10} /> Create User
             </button>
@@ -619,6 +659,20 @@ export function UsersPage() {
                   applyFilters({ examAudience });
                 }}>
                   {examAudienceOptions.map((option) => (
+                    <option key={option.value || "all"} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Subscription Status Group */}
+              <div className="flex items-center gap-0.5 bg-slate-50 rounded px-1.5 py-0.5 border border-slate-200/50">
+                <span className="text-[7px] font-medium text-slate-400 uppercase tracking-wider">Status:</span>
+                <select className="px-1 py-0.5 text-[9px] bg-transparent border-0 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 rounded cursor-pointer" value={subscriptionStatusFilter} onChange={(event) => {
+                  const subscriptionStatus = event.target.value;
+                  setSubscriptionStatusFilter(subscriptionStatus);
+                  applyFilters({ subscriptionStatus });
+                }}>
+                  {subscriptionStatusOptions.map((option) => (
                     <option key={option.value || "all"} value={option.value}>{option.label}</option>
                   ))}
                 </select>
