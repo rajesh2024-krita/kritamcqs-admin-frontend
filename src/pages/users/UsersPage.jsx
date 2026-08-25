@@ -119,6 +119,16 @@ function toDateTimeLocal(value) {
   return value ? new Date(value).toISOString().slice(0, 16) : "";
 }
 
+function dateAfterMonths(months = 6) {
+  const date = new Date();
+  const originalDay = date.getDate();
+  date.setDate(1);
+  date.setMonth(date.getMonth() + months);
+  const daysInTargetMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  date.setDate(Math.min(originalDay, daysInTargetMonth));
+  return date.toISOString().slice(0, 10);
+}
+
 function getWeakAreaExamType(item) {
   const normalized = String(item?.examType ?? item?.examMode ?? "").trim().toUpperCase();
   if (normalized.startsWith("JEE")) return "JEE";
@@ -156,7 +166,7 @@ export function UsersPage() {
   const [migrationPreviewReady, setMigrationPreviewReady] = useState(false);
   const [migrationLoading, setMigrationLoading] = useState(false);
   const [bulkFile, setBulkFile] = useState(null);
-  const [bulkSettings, setBulkSettings] = useState({ onboardingComplete: false, isPremium: false, isActive: true });
+  const [bulkSettings, setBulkSettings] = useState({ onboardingComplete: false, isPremium: false, isActive: true, premiumExpiresAt: dateAfterMonths(6) });
   const [bulkUploading, setBulkUploading] = useState(false);
   const [bulkResult, setBulkResult] = useState(null);
   const [migrationLogs, setMigrationLogs] = useState([]);
@@ -823,6 +833,13 @@ export function UsersPage() {
           </div>
           <button type="button" className="rounded bg-indigo-600 px-4 py-2 text-[10px] font-bold text-white disabled:opacity-50" disabled={!bulkFile || bulkUploading} onClick={() => void handleBulkUserUpload()}>{bulkUploading ? "Processing..." : "Upload Users"}</button>
         </div>
+        {bulkSettings.isPremium && (
+          <div className="mt-3 flex flex-wrap items-end gap-2 rounded-lg border border-amber-200 bg-amber-50 p-2.5">
+            <label className={ui.field}><span>Premium expiry date</span><input className={compactInput} type="date" min={new Date().toISOString().slice(0, 10)} value={bulkSettings.premiumExpiresAt} onChange={(event) => setBulkSettings((current) => ({ ...current, premiumExpiresAt: event.target.value }))} /></label>
+            <button type="button" className="rounded bg-amber-100 px-3 py-1.5 text-[9px] font-bold text-amber-800 hover:bg-amber-200" onClick={() => setBulkSettings((current) => ({ ...current, premiumExpiresAt: dateAfterMonths(6) }))}>Set 6 Months</button>
+            <p className="pb-1 text-[9px] text-amber-800">All successfully uploaded premium users will expire at the end of this date. Default: six calendar months from today.</p>
+          </div>
+        )}
       </div>
 
       {/* Legacy Migration Section */}
@@ -1135,6 +1152,7 @@ export function UsersPage() {
                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4"><p className="text-xs font-semibold text-emerald-700">Successfully inserted</p><p className="mt-1 text-2xl font-black text-emerald-900">{bulkResult.insertedUsers || 0}</p></div>
                 <div className="rounded-xl border border-rose-200 bg-rose-50 p-4"><p className="text-xs font-semibold text-rose-700">Failed users</p><p className="mt-1 text-2xl font-black text-rose-900">{bulkResult.failedUsers || 0}</p></div>
               </div>
+              {bulkResult.appliedSettings?.isPremium && bulkResult.appliedSettings?.premiumExpiresAt && <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">Premium enabled through {new Date(bulkResult.appliedSettings.premiumExpiresAt).toLocaleDateString()}.</p>}
               {bulkResult.failedRecords?.length ? (
                 <div className="mt-5 overflow-x-auto rounded-xl border border-slate-200">
                   <table className="w-full text-left text-xs"><thead className="bg-slate-50 text-slate-600"><tr><th className="px-3 py-2">Row</th><th className="px-3 py-2">Name</th><th className="px-3 py-2">Email</th><th className="px-3 py-2">Mobile</th><th className="px-3 py-2">Failure reason</th></tr></thead>
