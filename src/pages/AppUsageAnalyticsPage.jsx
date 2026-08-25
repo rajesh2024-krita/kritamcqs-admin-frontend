@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { Fragment, memo, useEffect, useMemo, useState } from "react";
 import { Activity, ChevronDown, Clock, Download, Filter, RefreshCw, Search, Trash2, Users, X, BarChart3, PieChart, TrendingUp, UserCheck, Smartphone, Globe, Zap, Shield, AlertCircle, CheckCircle, ChevronRight } from "lucide-react";
 import { appUsageService } from "../api/appUsageService";
 import { LoadingSpinner } from "../components/common/LoadingSpinner";
@@ -781,6 +781,54 @@ function UserActivityDrawer({ open, user, loading, data, filters, onFilterChange
                         <InfoItem label="App Version" value={session.appVersion || "-"} />
                         <InfoItem label="Device" value={session.deviceModel || "-"} />
                         <InfoItem label="Status" value={session.status || "-"} />
+                      </div>
+                      <div className="mt-2 rounded-lg border border-indigo-100 bg-indigo-50/60 p-2">
+                        <p className="text-[7px] font-bold uppercase tracking-wider text-indigo-700">Navigation Flow</p>
+                        {session.navigationFlow?.length ? (
+                          <div className="mt-1 flex flex-wrap items-center gap-1">
+                            {session.navigationFlow.map((screen, index) => (
+                              <Fragment key={`${session.sessionId}-flow-${screen}-${index}`}>
+                                {index > 0 ? <ChevronRight size={10} className="shrink-0 text-indigo-400" /> : null}
+                                <span className="rounded border border-indigo-200 bg-white px-1.5 py-0.5 text-[8px] font-medium text-indigo-800">{screen}</span>
+                              </Fragment>
+                            ))}
+                          </div>
+                        ) : <p className="mt-1 text-[8px] text-slate-400">No navigation flow recorded</p>}
+                      </div>
+
+                      <div className="mt-2">
+                        <p className="text-[7px] font-bold uppercase tracking-wider text-slate-600">Screen & Action Logs</p>
+                        {session.screens?.length ? (
+                          <div className="mt-1 space-y-1.5">
+                            {session.screens.map((screen, screenIndex) => (
+                              <div key={`${session.sessionId}-screen-${screenIndex}`} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+                                <div className="flex flex-wrap items-center justify-between gap-1">
+                                  <span className="text-[8px] font-semibold text-slate-900">{screen.screenName || "Unknown screen"}</span>
+                                  <span className="text-[7px] text-slate-500">{formatSeconds(screen.durationSeconds)} · {formatDateTime(screen.entryTime)} → {formatDateTime(screen.exitTime)}</span>
+                                </div>
+                                {screen.actions?.length ? (
+                                  <div className="mt-1 space-y-1 border-l border-slate-300 pl-2">
+                                    {screen.actions.map((action, actionIndex) => (
+                                      <div key={`${session.sessionId}-action-${screenIndex}-${actionIndex}`} className="flex flex-wrap items-center justify-between gap-1 text-[8px]">
+                                        <span className="text-slate-700"><strong>{action.eventType || "Event"}</strong>{action.action ? ` · ${action.action}` : ""}{action.componentName ? ` · ${action.componentName}` : ""}{action.componentType ? ` (${action.componentType})` : ""}</span>
+                                        <span className="text-[7px] text-slate-400">{formatDateTime(action.timestamp)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : <p className="mt-1 text-[8px] text-slate-400">No actions recorded on this screen</p>}
+                              </div>
+                            ))}
+                          </div>
+                        ) : session.events?.length ? (
+                          <div className="mt-1 space-y-1 rounded-lg border border-slate-200 bg-slate-50 p-2">
+                            {session.events.map((event, eventIndex) => (
+                              <div key={event.id || `${session.sessionId}-event-${eventIndex}`} className="flex flex-wrap items-center justify-between gap-1 border-b border-slate-200 pb-1 text-[8px] last:border-0 last:pb-0">
+                                <span className="text-slate-700"><strong>{event.eventType || "Event"}</strong>{event.screen ? ` · ${event.screen}` : ""}{event.action ? ` · ${event.action}` : ""}{event.componentName ? ` · ${event.componentName}` : ""}</span>
+                                <span className="text-[7px] text-slate-400">{formatDateTime(event.timestamp)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : <p className="mt-1 text-[8px] text-slate-400">No screen or action logs recorded</p>}
                       </div>
                     </details>
                   ))}

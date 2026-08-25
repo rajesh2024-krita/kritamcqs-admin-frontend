@@ -13,6 +13,7 @@ export const MODULES = [
   { key: "questions", label: "Questions", path: "/questions", extraActions: [{ key: "bulkUpload", label: "Bulk Upload" }] },
   { key: "katex-audit", label: "AI Academic Audit", path: "/questions/katex-audit" },
   { key: "mock-tests", label: "Mock Tests", path: "/mock-tests" },
+  { key: "subject-mock-tests", label: "Subject Mock Tests", path: "/subject-mock-tests" },
   { key: "free-mock-tests", label: "Free Mock Tests", path: "/free-mock-tests" },
   { key: "free-questions", label: "Free Questions", path: "/free-questions" },
   { key: "daily-test-management", label: "Daily Test Management", path: "/daily-test-management" },

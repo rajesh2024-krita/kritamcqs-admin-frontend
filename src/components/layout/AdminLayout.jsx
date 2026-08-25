@@ -38,6 +38,7 @@ const navItems = [
   { label: "List Styles", to: "/list-styles", section: "Catalog", icon: FileStackIcon, moduleKey: "list-styles" },
   { label: "Questions", to: "/questions", section: "Content", icon: TagIcon, moduleKey: "questions" },
   { label: "Mock Tests", to: "/mock-tests", section: "Content", icon: OverviewIcon, moduleKey: "mock-tests" },
+  { label: "Subject Mock Tests", to: "/subject-mock-tests", section: "Content", icon: OverviewIcon, moduleKey: "subject-mock-tests" },
   { label: "National Competitions", to: "/national-competitions", section: "Content", icon: ShieldIcon, moduleKey: "national-competitions" },
   { label: "Free Mock Tests", to: "/free-mock-tests", section: "Content", icon: OverviewIcon, moduleKey: "free-mock-tests" },
   { label: "Free Questions", to: "/free-questions", section: "Content", icon: BookIcon, moduleKey: "free-questions" },
@@ -217,11 +218,11 @@ export function AdminLayout() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="relative">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+                  <div className="w-10 h-10 rounded-xl border-blue-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
                     <img 
-                      src="https://adminapi.kritamcqs.com/uploads/invoice-assets/app-logo-1781498798022-a92a1f02.webp" 
+                      src="https://kritatechnosolutions.com/crm/uploads/company/favicon.png" 
                       alt="logo" 
-                      className="h-8 w-8 object-contain brightness-0 invert"
+                      className="h-8 w-8 object-contain"
                     />
                   </div>
                   <div className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full border-2 border-white animate-pulse" />

@@ -34,6 +34,7 @@ import { SessionsPage } from "../pages/SessionsPage";
 import { SettingsPage } from "../pages/settings/SettingsPage";
 import { AuthSettingsPage } from "../pages/settings/AuthSettingsPage";
 import { MockTestsPage } from "../pages/mockTests/MockTestsPage";
+import { SubjectMockTestsPage } from "../pages/mockTests/SubjectMockTestsPage";
 import { RevisionManagementPage } from "../pages/settings/RevisionManagementPage";
 import { DailyTestManagementPage } from "../pages/settings/DailyTestManagementPage";
 import { SupportTicketsPage } from "../pages/SupportTicketsPage";
@@ -129,6 +130,7 @@ export function AppRoutes() {
         <Route path="audit-logs" element={<MainAdminOnly><AuditLogsPage /></MainAdminOnly>} />
         <Route path="ai-configuration" element={<MainAdminOnly><AIConfigurationPage /></MainAdminOnly>} />
         <Route path="mock-tests" element={<ModuleAccess moduleKey="mock-tests"><MockTestsPage /></ModuleAccess>} />
+        <Route path="subject-mock-tests" element={<ModuleAccess moduleKey="subject-mock-tests"><SubjectMockTestsPage /></ModuleAccess>} />
         <Route path="national-competitions" element={<ModuleAccess moduleKey="national-competitions"><NationalCompetitionsPage /></ModuleAccess>} />
         <Route path="free-mock-tests" element={<ModuleAccess moduleKey="free-mock-tests"><MockTestsPage freeOnly /></ModuleAccess>} />
         <Route path="free-questions" element={<ModuleAccess moduleKey="free-questions"><FreeQuestionsPage /></ModuleAccess>} />

@@ -77,4 +77,24 @@ export const mockTestService = {
     const response = await http.put(`/admin/mock-tests/pattern-blueprints/${key}`, payload);
     return response.data;
   },
+  async getSubjectSettings() {
+    const response = await http.get("/admin/mock-tests/subject-settings");
+    return response.data;
+  },
+  async saveSubjectSettings(payload) {
+    const response = await http.put("/admin/mock-tests/subject-settings", payload);
+    return response.data;
+  },
+  async listGeneratedSubjectTests(params = {}) {
+    const response = await http.get("/admin/mock-tests/subject-generated", { params });
+    return response.data;
+  },
+  async searchSubjectAccessUsers(search = "") {
+    const response = await http.get("/admin/mock-tests/subject-access/users", { params: { search } });
+    return response.data;
+  },
+  async updateSubjectUserAccess(userId, access) {
+    const response = await http.put(`/admin/mock-tests/subject-access/users/${userId}`, { access });
+    return response.data;
+  },
 };

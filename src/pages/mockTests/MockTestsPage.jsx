@@ -113,6 +113,16 @@ const defaultForm = {
   title: "",
   description: "",
   examType: "NEET",
+  testType: "full",
+  subjectId: "",
+  difficulty: "mixed",
+  startDate: "",
+  endDate: "",
+  generationMode: "fixed",
+  generationFrequency: "daily",
+  generationTime: "00:00",
+  isOneTimeFree: false,
+  questionCount: 30,
   patternPreset: "NEET_REAL",
   durationMinutes: 180,
   isPremiumOnly: false,
@@ -182,11 +192,28 @@ const defaultGenerationSchedules = {
   JEE: { ...defaultGenerationSchedule, examType: "JEE" },
 };
 
+const defaultSubjectSettings = {
+  enabled: true, premiumAccess: true, freeAccess: false,
+  defaultQuestionCount: 10, maximumQuestionCount: 50,
+  unlimitedQuestions: false,
+  prioritizeUnseenQuestions: true, allowQuestionReuse: true,
+};
+
 function buildFormFromItem(item) {
   return {
     title: item.title || "",
     description: item.description || "",
     examType: item.examType || "NEET",
+    testType: item.testType || "full",
+    subjectId: item.subjectId || "",
+    difficulty: item.difficulty || "mixed",
+    startDate: item.startDate ? String(item.startDate).slice(0, 10) : "",
+    endDate: item.endDate ? String(item.endDate).slice(0, 10) : "",
+    generationMode: item.generationMode || "fixed",
+    generationFrequency: item.generationFrequency || "daily",
+    generationTime: item.generationTime || "00:00",
+    isOneTimeFree: Boolean(item.isOneTimeFree),
+    questionCount: item.totalQuestions || 30,
     patternPreset: item.patternPreset || "CUSTOM",
     durationMinutes: item.durationMinutes || 60,
     isPremiumOnly: Boolean(item.isPremiumOnly),
@@ -288,14 +315,14 @@ function getBlueprintSummaryValue(blueprint, labelPart) {
   return found?.value || "-";
 }
 
-export function MockTestsPage({ freeOnly = false } = {}) {
+export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
   const toast = useToast();
   const [items, setItems] = useState([]);
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [query, setQuery] = useState({ page: 1, limit: 10 });
-  const [filters, setFilters] = useState({ createdDate: "", active: "", examType: "" });
+  const [filters, setFilters] = useState({ createdDate: "", active: "", examType: "", testType: "", subjectId: "", premium: "" });
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [deleteItem, setDeleteItem] = useState(null);
@@ -326,6 +353,13 @@ export function MockTestsPage({ freeOnly = false } = {}) {
   const [generationLogs, setGenerationLogs] = useState([]);
   const [savingGenerationSchedule, setSavingGenerationSchedule] = useState(false);
   const [runningGenerationNow, setRunningGenerationNow] = useState(false);
+  const [subjectSettings, setSubjectSettings] = useState(defaultSubjectSettings);
+  const [savingSubjectSettings, setSavingSubjectSettings] = useState(false);
+  const [accessUserSearch, setAccessUserSearch] = useState("");
+  const [accessUsers, setAccessUsers] = useState([]);
+  const [generatedSubjectTests, setGeneratedSubjectTests] = useState([]);
+  const [generatedSubjectSearch, setGeneratedSubjectSearch] = useState("");
+  const [generatedSubjectLoading, setGeneratedSubjectLoading] = useState(false);
 
   const selectedQuestionIds = formState.questionIds || [];
   const requiredQuestionCount = getRequiredQuestionCount(formState, patternBlueprints);
@@ -344,6 +378,10 @@ export function MockTestsPage({ freeOnly = false } = {}) {
   const filteredChapters = useMemo(
     () => chapters.filter((item) => !questionSubjectId || String(item.subjectId?.id || item.subjectId) === String(questionSubjectId)),
     [chapters, questionSubjectId],
+  );
+  const formSubjects = useMemo(
+    () => subjects.filter((item) => item.examType === formState.examType),
+    [subjects, formState.examType],
   );
 
   const lockedReplacement = Boolean(replacementTarget);
@@ -365,6 +403,9 @@ export function MockTestsPage({ freeOnly = false } = {}) {
       ...(filters.createdDate ? { createdDate: filters.createdDate } : {}),
       ...(filters.active ? { isActive: filters.active } : {}),
       ...(filters.examType ? { examType: filters.examType } : {}),
+      testType: subjectOnly ? "subject" : "full",
+      ...(filters.subjectId ? { subjectId: filters.subjectId } : {}),
+      ...(filters.premium ? { isPremiumOnly: filters.premium } : {}),
       ...(freeOnly ? { isPremiumOnly: "false" } : {}),
     };
   }
@@ -427,6 +468,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
 
   async function loadQuestions(nextPage = questionPage) {
     if (!showForm) return;
+    if (subjectOnly && formState.generationMode === "automatic") return;
     setQuestionLoading(true);
     try {
       const response = await mockTestService.listQuestions({
@@ -434,7 +476,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
         limit: 10,
         search: questionSearch,
         examType: formState.examType,
-        subjectId: questionSubjectId,
+        subjectId: formState.testType === "subject" ? formState.subjectId : questionSubjectId,
         chapterId: lockedReplacement ? replacementTarget.chapterId : questionChapterId,
         topicId: lockedReplacement ? replacementTarget.topicId : undefined,
       });
@@ -452,6 +494,60 @@ export function MockTestsPage({ freeOnly = false } = {}) {
   }, []);
 
   useEffect(() => {
+    if (!subjectOnly) return;
+    setGeneratedSubjectLoading(true);
+    Promise.all([mockTestService.getSubjectSettings(), mockTestService.searchSubjectAccessUsers(""), mockTestService.listGeneratedSubjectTests({ limit: 50 })])
+      .then(([settingsResponse, usersResponse, generatedResponse]) => {
+        setSubjectSettings({ ...defaultSubjectSettings, ...(settingsResponse.data || {}) });
+        setAccessUsers(usersResponse.data || []);
+        setGeneratedSubjectTests(generatedResponse.data || []);
+      })
+      .catch((error) => toast.error(error.message))
+      .finally(() => setGeneratedSubjectLoading(false));
+  }, [subjectOnly]);
+
+  async function loadGeneratedSubjectTests() {
+    setGeneratedSubjectLoading(true);
+    try {
+      const response = await mockTestService.listGeneratedSubjectTests({ limit: 50, search: generatedSubjectSearch });
+      setGeneratedSubjectTests(response.data || []);
+    } catch (error) { toast.error(error.message); }
+    finally { setGeneratedSubjectLoading(false); }
+  }
+
+  async function saveSubjectSettings() {
+    setSavingSubjectSettings(true);
+    try {
+      const response = await mockTestService.saveSubjectSettings({
+        ...subjectSettings,
+        defaultQuestionCount: Number(subjectSettings.defaultQuestionCount),
+        maximumQuestionCount: Number(subjectSettings.maximumQuestionCount),
+      });
+      setSubjectSettings({ ...defaultSubjectSettings, ...(response.data || {}) });
+      toast.success(response.message || "Subject mock settings saved");
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setSavingSubjectSettings(false);
+    }
+  }
+
+  async function searchAccessUsers() {
+    try {
+      const response = await mockTestService.searchSubjectAccessUsers(accessUserSearch);
+      setAccessUsers(response.data || []);
+    } catch (error) { toast.error(error.message); }
+  }
+
+  async function updateAccessUser(userId, access) {
+    try {
+      const response = await mockTestService.updateSubjectUserAccess(userId, access);
+      setAccessUsers((current) => current.map((user) => user.id === userId ? response.data : user));
+      toast.success(response.message);
+    } catch (error) { toast.error(error.message); }
+  }
+
+  useEffect(() => {
     loadItems(query);
   }, [query.page]);
 
@@ -464,7 +560,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
       });
     }, 250);
     return () => window.clearTimeout(timeout);
-  }, [search, filters.createdDate, filters.active, filters.examType]);
+  }, [search, filters.createdDate, filters.active, filters.examType, filters.testType, filters.subjectId, filters.premium]);
 
   useEffect(() => {
     if (!showForm) return;
@@ -472,7 +568,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
       loadQuestions(questionPage);
     }, 200);
     return () => window.clearTimeout(timeout);
-  }, [showForm, questionSearch, questionSubjectId, questionChapterId, formState.examType, questionPage, selectedQuestionIds.join(","), replacementTarget?.id]);
+  }, [showForm, questionSearch, questionSubjectId, questionChapterId, formState.examType, formState.testType, formState.subjectId, questionPage, selectedQuestionIds.join(","), replacementTarget?.id]);
 
   useEffect(() => {
     if (!showForm || formState.markingOverrideEnabled) return;
@@ -493,6 +589,8 @@ export function MockTestsPage({ freeOnly = false } = {}) {
     const scheme = getDefaultSchemeForExam(markingSettings, presetWithMarking.examType);
     setFormState({
       ...defaultForm,
+      testType: subjectOnly ? "subject" : "full",
+      patternPreset: subjectOnly ? "CUSTOM" : defaultForm.patternPreset,
       examType: presetWithMarking.examType,
       durationMinutes: presetWithMarking.durationMinutes,
       marksPerQuestion: presetWithMarking.marksPerQuestion,
@@ -503,7 +601,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
       predictionDescription: presetWithMarking.predictionDescription,
       markingSchemeVersion: scheme.version || "v1",
       markingOverrideEnabled: false,
-      isPremiumOnly: false,
+      isPremiumOnly: subjectOnly,
     });
     setQuestionSearch("");
     setQuestionSubjectId("");
@@ -861,8 +959,12 @@ export function MockTestsPage({ freeOnly = false } = {}) {
   async function handleSubmit(event) {
     event.preventDefault();
     try {
-      if ((formState.questionIds || []).length < 2) {
+      if (formState.generationMode !== "automatic" && (formState.questionIds || []).length < 2) {
         toast.error("Select at least two questions for a manual mock test");
+        return;
+      }
+      if (formState.generationMode === "automatic" && (!Number.isInteger(Number(formState.questionCount)) || Number(formState.questionCount) < 2)) {
+        toast.error("Enter an automatic question count of at least 2");
         return;
       }
       if (questionCountValidationMessage) {
@@ -876,7 +978,8 @@ export function MockTestsPage({ freeOnly = false } = {}) {
         marksPerQuestion: Number(formState.marksPerQuestion),
         negativeMarks: Number(formState.negativeMarks),
         maxScore: Number(formState.maxScore),
-        isPremiumOnly: freeOnly ? false : Boolean(formState.isPremiumOnly),
+        questionCount: Number(formState.questionCount || 0),
+        isPremiumOnly: subjectOnly ? true : freeOnly ? false : Boolean(formState.isPremiumOnly),
         markingSchemeVersion: String(formState.markingSchemeVersion || getDefaultSchemeForExam(markingSettings, formState.examType).version || "v1"),
         markingOverrideEnabled: Boolean(formState.markingOverrideEnabled),
         freeAccessDurationValue: Number(formState.freeAccessDurationValue || 1),
@@ -934,6 +1037,62 @@ export function MockTestsPage({ freeOnly = false } = {}) {
 
   return (
     <div className="flex flex-col gap-6">
+      {subjectOnly ? (
+        <div className={`${ui.panel} space-y-4`}>
+          <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+            <div>
+              <div className={ui.eyebrow}>Subject-Based Mock Tests</div>
+              <p className={ui.muted}>Manage NEET and JEE subject tests independently. Changes here do not affect full mock tests.</p>
+            </div>
+            <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={openCreate}>
+              <PlusIcon size={16} /> Create Subject Mock Test
+            </button>
+          </div>
+          <div className="grid gap-3 border-t border-slate-200 pt-4 md:grid-cols-2 xl:grid-cols-4">
+            <ToggleSwitch checked={subjectSettings.enabled} onChange={(enabled) => setSubjectSettings((current) => ({ ...current, enabled }))} label="Feature enabled" />
+            <ToggleSwitch checked={subjectSettings.premiumAccess} onChange={(premiumAccess) => setSubjectSettings((current) => ({ ...current, premiumAccess }))} label="Premium user access" />
+            <ToggleSwitch checked={subjectSettings.freeAccess} onChange={(freeAccess) => setSubjectSettings((current) => ({ ...current, freeAccess }))} label="Free user access" />
+            <ToggleSwitch checked={subjectSettings.prioritizeUnseenQuestions} onChange={(prioritizeUnseenQuestions) => setSubjectSettings((current) => ({ ...current, prioritizeUnseenQuestions }))} label="Prioritize unseen questions" />
+            <ToggleSwitch checked={subjectSettings.allowQuestionReuse} onChange={(allowQuestionReuse) => setSubjectSettings((current) => ({ ...current, allowQuestionReuse }))} label="Allow question reuse" />
+            <ToggleSwitch checked={subjectSettings.unlimitedQuestions} onChange={(unlimitedQuestions) => setSubjectSettings((current) => ({ ...current, unlimitedQuestions }))} label="Unlimited questions" />
+            <label className={ui.field}><span>Question Limit</span><input className={ui.input} type="number" min="1" max="200" disabled={subjectSettings.unlimitedQuestions} value={subjectSettings.defaultQuestionCount} onChange={(event) => setSubjectSettings((current) => ({ ...current, defaultQuestionCount: event.target.value, maximumQuestionCount: event.target.value }))} /><small className="text-slate-500">{subjectSettings.unlimitedQuestions ? "Disabled while unlimited questions is enabled." : "The app generates exactly this many questions and never exceeds it."}</small></label>
+            <button type="button" className={cn(ui.buttonBase, ui.buttonPrimary, "self-end")} disabled={savingSubjectSettings} onClick={() => void saveSubjectSettings()}>{savingSubjectSettings ? "Saving..." : "Save Common Settings"}</button>
+          </div>
+          <div className="border-t border-slate-200 pt-4">
+            <div className="mb-3 flex gap-2"><input className={ui.input} value={accessUserSearch} onChange={(event) => setAccessUserSearch(event.target.value)} placeholder="Search free user by name, email or mobile" /><button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => void searchAccessUsers()}>Search</button></div>
+            <div className="max-h-56 overflow-auto rounded border border-slate-200">
+              {accessUsers.map((accessUser) => <div key={accessUser.id} className="flex items-center justify-between gap-3 border-b border-slate-100 px-3 py-2 text-xs">
+                <div><p className="font-bold text-slate-800">{accessUser.name || accessUser.mobile || "User"}</p><p className="text-slate-500">{accessUser.email || accessUser.mobile || "-"} {accessUser.isPremium ? "· Premium" : "· Free"}</p></div>
+                <select className={ui.input} value={accessUser.subjectMockTestAccess === true ? "enabled" : accessUser.subjectMockTestAccess === false ? "disabled" : "inherit"} onChange={(event) => void updateAccessUser(accessUser.id, event.target.value === "enabled" ? true : event.target.value === "disabled" ? false : null)}><option value="inherit">Use common rule</option><option value="enabled">Enabled</option><option value="disabled">Disabled</option></select>
+              </div>)}
+            </div>
+          </div>
+          <div className="border-t border-slate-200 pt-4">
+            <div className="mb-3 flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
+              <div><p className="text-sm font-bold text-slate-900">User-generated tests and attempts</p><p className={ui.muted}>Each generated selection and every submitted attempt is shown separately.</p></div>
+              <div className="flex gap-2"><input className={ui.input} value={generatedSubjectSearch} onChange={(event) => setGeneratedSubjectSearch(event.target.value)} placeholder="Search user or selection" /><button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => void loadGeneratedSubjectTests()}>Search</button></div>
+            </div>
+            <div className="max-h-[28rem] overflow-auto rounded border border-slate-200">
+              <table className="w-full min-w-[1100px] text-left text-xs">
+                <thead className="sticky top-0 bg-slate-50 text-[9px] uppercase tracking-wider text-slate-500"><tr><th className="p-2">User</th><th className="p-2">Exam / Selection</th><th className="p-2">Questions</th><th className="p-2">Attempt</th><th className="p-2">Result</th><th className="p-2">Time</th><th className="p-2">Date & Time</th></tr></thead>
+                <tbody className="divide-y divide-slate-100">
+                  {generatedSubjectTests.map((row) => <tr key={`${row.generatedTestId}-${row.attemptId || "generated"}`} className="align-top">
+                    <td className="p-2"><p className="font-bold text-slate-800">{row.user?.name || row.user?.mobile || "User"}</p><p className="text-[10px] text-slate-500">{row.user?.email || row.user?.mobile || row.user?.id}</p></td>
+                    <td className="p-2"><p className="font-bold">{row.examType} · {(row.subjects || []).join(", ") || "-"}</p><p className="text-[10px] text-slate-500">Chapters: {(row.chapters || []).join(", ") || "-"}</p><p className="text-[10px] text-slate-500">Topics: {(row.topics || []).join(", ") || "-"}</p></td>
+                    <td className="p-2 font-semibold">{row.questionCount || row.totalQuestions || 0}</td>
+                    <td className="p-2"><span className={ui.badge}>{row.attemptNumber ? `#${row.attemptNumber}` : "Generated"}</span></td>
+                    <td className="p-2"><p className="font-bold">{row.attemptId ? `${row.score} (${row.percentage}%)` : "Not submitted"}</p>{row.attemptId ? <p className="text-[10px] text-slate-500">{row.correctAnswers} correct · {row.wrongAnswers} wrong · {row.unansweredQuestions} unanswered</p> : null}</td>
+                    <td className="p-2">{row.attemptId ? `${Math.floor(Number(row.timeTaken || 0) / 60)}m ${Number(row.timeTaken || 0) % 60}s` : "-"}</td>
+                    <td className="p-2">{new Date(row.attemptedAt || row.generatedAt).toLocaleString()}</td>
+                  </tr>)}
+                  {!generatedSubjectLoading && !generatedSubjectTests.length ? <tr><td colSpan="7" className="p-6 text-center text-slate-500">No user-generated subject tests found.</td></tr> : null}
+                  {generatedSubjectLoading ? <tr><td colSpan="7" className="p-6 text-center text-slate-500">Loading generated tests...</td></tr> : null}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : null}
       {/* <div className={ui.panel}>
         <div className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div>
@@ -944,13 +1103,13 @@ export function MockTestsPage({ freeOnly = false } = {}) {
             <div className={ui.badge}>{meta?.total ?? items.length} tests</div>
             <button className={cn(ui.buttonBase, ui.buttonPrimary)} onClick={openCreate}>
               <PlusIcon size={16} />
-              {freeOnly ? "Create Free Mock Test" : "Create Mock Test"}
+              {subjectOnly ? "Create Subject Mock Test" : freeOnly ? "Create Free Mock Test" : "Create Mock Test"}
             </button>
           </div>
         </div>
       </div> */}
 
-      <div className="space-y-3">
+      {!subjectOnly ? <div className="space-y-3">
         {/* Pattern Blueprints */}
         <div className="bg-white rounded-lg border border-slate-200/60 p-3 shadow-sm">
           <div className="flex items-center gap-2 mb-2.5">
@@ -1555,6 +1714,12 @@ export function MockTestsPage({ freeOnly = false } = {}) {
                   <option value="JEE">JEE</option>
                 </select>
               </div>
+              {subjectOnly ? <select className="px-1.5 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded" value={filters.subjectId} onChange={(event) => setFilters((current) => ({ ...current, subjectId: event.target.value }))}>
+                <option value="">All Subjects</option>{subjects.filter((subject) => !filters.examType || subject.examType === filters.examType).map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
+              </select> : null}
+              {!freeOnly ? <select className="px-1.5 py-0.5 text-[9px] bg-slate-50 border border-slate-200 rounded" value={filters.premium} onChange={(event) => setFilters((current) => ({ ...current, premium: event.target.value }))}>
+                <option value="">All Access</option><option value="false">Free</option><option value="true">Premium</option>
+              </select> : null}
               <button
                 className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-[8px] font-medium rounded transition-colors"
                 onClick={() => loadItems({ ...query, page: 1 })}
@@ -1565,10 +1730,10 @@ export function MockTestsPage({ freeOnly = false } = {}) {
             </div>
           </div>
         </div>
-      </div>
+      </div>:null}
 
       {loading ? <LoadingSpinner label="Loading mock tests..." /> : null}
-      {!loading && !items.length ? <EmptyState title="No mock tests found" description="Create your first full-length mock test to publish it in the learner app." /> : null}
+      {!loading && !items.length ? <EmptyState title={`No ${subjectOnly ? "subject " : ""}mock tests found`} description={subjectOnly ? "Create a separate NEET or JEE subject mock test." : "Create your first full-length mock test to publish it in the learner app."} /> : null}
       {!loading && items.length ? (
         <div className="bg-white rounded-lg border border-slate-200/60 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
@@ -1581,6 +1746,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
                   <th className="px-2.5 py-1.5 text-left">
                     <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Exam</span>
                   </th>
+                  {subjectOnly ? <th className="px-2.5 py-1.5 text-left"><span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Subject</span></th> : null}
                   <th className="px-2.5 py-1.5 text-left">
                     <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Score</span>
                   </th>
@@ -1624,6 +1790,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
                         {item.examType}
                       </span>
                     </td>
+                    {subjectOnly ? <td className="px-2.5 py-2"><span className="inline-flex px-1.5 py-0.5 bg-violet-50 text-violet-700 rounded text-[9px] font-medium">{item.subject || "-"}</span></td> : null}
 
                     {/* Score Column */}
                     <td className="px-2.5 py-2">
@@ -1764,12 +1931,12 @@ export function MockTestsPage({ freeOnly = false } = {}) {
 
       {showForm ? (
         <EntityFormWrapper
-          title={editingItem ? "Edit Mock Test" : "Create Mock Test"}
+          title={editingItem ? `Edit ${subjectOnly ? "Subject " : ""}Mock Test` : `Create ${subjectOnly ? "Subject " : ""}Mock Test`}
           subtitle="Set up the test paper, prediction copy, learner availability, and fixed question paper."
           onCancel={() => setShowForm(false)}
           onSubmit={handleSubmit}
           submitLabel={editingItem ? "Save Mock Test" : "Create Mock Test"}
-          submitDisabled={Boolean(questionCountValidationMessage)}
+          submitDisabled={Boolean(questionCountValidationMessage || (formState.testType === "subject" && !formState.subjectId))}
         >
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className={ui.field}>
@@ -1780,22 +1947,63 @@ export function MockTestsPage({ freeOnly = false } = {}) {
               <span>Pattern Preset</span>
               <select
                 className={ui.input}
+                disabled={subjectOnly}
                 value={formState.patternPreset}
                 onChange={(event) => setFormState((current) => applyPresetToForm(event.target.value, current, markingSettings))}
               >
-                <option value="NEET_REAL">NEET Real Pattern</option>
-                <option value="JEE_REAL">JEE Real Pattern</option>
+                {!subjectOnly ? <option value="NEET_REAL">NEET Real Pattern</option> : null}
+                {!subjectOnly ? <option value="JEE_REAL">JEE Real Pattern</option> : null}
                 <option value="CUSTOM">Custom Pattern</option>
               </select>
             </label>
+            <input type="hidden" value={subjectOnly ? "subject" : "full"} />
             <label className={ui.field}>
               <span>Exam Type</span>
-              <select className={ui.input} value={formState.examType} onChange={(event) => setFormState((current) => ({ ...current, examType: event.target.value }))}>
+              <select className={ui.input} value={formState.examType} onChange={(event) => setFormState((current) => ({ ...current, examType: event.target.value, subjectId: "", questionIds: [] }))}>
                 <option value="NEET">NEET</option>
                 <option value="JEE">JEE</option>
-                <option value="BOTH">BOTH</option>
+                {!subjectOnly ? <option value="BOTH">BOTH</option> : null}
               </select>
             </label>
+            {subjectOnly ? (
+              <label className={ui.field}>
+                <span>Subject</span>
+                <select className={ui.input} required value={formState.subjectId} onChange={(event) => setFormState((current) => ({ ...current, subjectId: event.target.value, questionIds: [] }))}>
+                  <option value="">Select subject</option>
+                  {formSubjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
+                </select>
+              </label>
+            ) : null}
+            {subjectOnly ? <div className="rounded-sm border border-slate-200 bg-slate-50 p-3">
+              <ToggleSwitch
+                checked={formState.generationMode === "automatic"}
+                onChange={(enabled) => setFormState((current) => ({
+                  ...current,
+                  generationMode: enabled ? "automatic" : "fixed",
+                  isOneTimeFree: enabled ? false : current.isOneTimeFree,
+                  isPremiumOnly: enabled ? true : current.isPremiumOnly,
+                }))}
+                label="Automatic question generation"
+              />
+              <p className="mt-2 text-xs text-slate-500">
+                {formState.generationMode === "automatic"
+                  ? "Enabled: questions are selected automatically from the chosen exam and subject."
+                  : "Disabled: select and assign the questions manually below."}
+              </p>
+            </div> : null}
+            {subjectOnly && formState.generationMode === "automatic" ? <>
+              <label className={ui.field}><span>Frequency</span><select className={ui.input} value="daily" disabled><option value="daily">Daily</option></select></label>
+              <label className={ui.field}><span>Daily Generation Time</span><input className={ui.input} type="time" value={formState.generationTime} onChange={(event) => setFormState((current) => ({ ...current, generationTime: event.target.value }))} /></label>
+              <label className={ui.field}><span>Questions Per Test</span><input className={ui.input} type="number" min="2" max="300" value={formState.questionCount} onChange={(event) => setFormState((current) => ({ ...current, questionCount: event.target.value }))} /><small className="text-xs text-slate-500">Questions are selected automatically from the chosen exam and subject.</small></label>
+            </> : null}
+            <label className={ui.field}>
+              <span>Difficulty</span>
+              <select className={ui.input} value={formState.difficulty} onChange={(event) => setFormState((current) => ({ ...current, difficulty: event.target.value }))}>
+                <option value="mixed">Mixed</option><option value="easy">Easy</option><option value="medium">Medium</option><option value="hard">Hard</option>
+              </select>
+            </label>
+            <label className={ui.field}><span>Start Date</span><input className={ui.input} type="date" value={formState.startDate} onChange={(event) => setFormState((current) => ({ ...current, startDate: event.target.value }))} /></label>
+            <label className={ui.field}><span>End Date</span><input className={ui.input} type="date" min={formState.startDate || undefined} value={formState.endDate} onChange={(event) => setFormState((current) => ({ ...current, endDate: event.target.value }))} /></label>
             <label className={ui.field}>
               <span>Availability</span>
               <select
@@ -1872,7 +2080,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
                 </div>
               </div>
             ) : null}
-            {!freeOnly ? <div className="pt-8"><ToggleSwitch checked={formState.isPremiumOnly} onChange={(value) => setFormState((current) => ({ ...current, isPremiumOnly: value }))} label="Premium only" /></div> : null}
+            {!freeOnly ? <div className="pt-8"><ToggleSwitch checked={subjectOnly || formState.isPremiumOnly} onChange={(value) => !subjectOnly && setFormState((current) => ({ ...current, isPremiumOnly: value }))} label={subjectOnly ? "Premium only (required)" : "Premium only"} /></div> : null}
             {!freeOnly ? (
               <label className={ui.field}>
                 <span>Premium Duration Type</span>
@@ -1889,20 +2097,20 @@ export function MockTestsPage({ freeOnly = false } = {}) {
                 <input className={ui.input} type="number" min="1" value={formState.premiumValidityDays} onChange={(event) => setFormState((current) => ({ ...current, premiumValidityDays: event.target.value }))} />
               </label>
             ) : null}
-            {!freeOnly ? <div className="pt-8"><ToggleSwitch checked={Boolean(formState.autoDailyQuestionRearrangement)} onChange={(value) => setFormState((current) => ({ ...current, autoDailyQuestionRearrangement: value }))} label="Daily random rearrange" /></div> : null}
-            {!freeOnly ? <div className="pt-8"><ToggleSwitch checked={Boolean(formState.autoDailyQuestionGeneration)} onChange={(value) => setFormState((current) => ({ ...current, autoDailyQuestionGeneration: value }))} label="Daily question generation" /></div> : null}
-            <label className={ui.field}>
+            {!freeOnly && !subjectOnly ? <div className="pt-8"><ToggleSwitch checked={Boolean(formState.autoDailyQuestionRearrangement)} onChange={(value) => setFormState((current) => ({ ...current, autoDailyQuestionRearrangement: value }))} label="Daily random rearrange" /></div> : null}
+            {!freeOnly && !subjectOnly ? <div className="pt-8"><ToggleSwitch checked={Boolean(formState.autoDailyQuestionGeneration)} onChange={(value) => setFormState((current) => ({ ...current, autoDailyQuestionGeneration: value }))} label="Daily question generation" /></div> : null}
+            {!subjectOnly ? <label className={ui.field}>
               <span>Free Access Duration</span>
               <input className={ui.input} type="number" min="1" value={formState.freeAccessDurationValue} onChange={(event) => setFormState((current) => ({ ...current, freeAccessDurationValue: event.target.value }))} />
-            </label>
-            <label className={ui.field}>
+            </label> : null}
+            {!subjectOnly ? <label className={ui.field}>
               <span>Free Access Unit</span>
               <select className={ui.input} value={formState.freeAccessDurationUnit} onChange={(event) => setFormState((current) => ({ ...current, freeAccessDurationUnit: event.target.value }))}>
                 <option value="days">Days</option>
                 <option value="weeks">Weeks</option>
                 <option value="months">Months</option>
               </select>
-            </label>
+            </label> : null}
             <div className="pt-8"><ToggleSwitch checked={formState.isActive} onChange={(value) => setFormState((current) => ({ ...current, isActive: value }))} label="Publish as active" /></div>
             <label className={cn(ui.field, ui.fieldFull)}>
               <span>Instructions</span>
@@ -1910,7 +2118,7 @@ export function MockTestsPage({ freeOnly = false } = {}) {
             </label>
           </div>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,1fr)]">
+          {!(subjectOnly && formState.generationMode === "automatic") ? <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,1fr)]">
             <div className={ui.compactPanel}>
               <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-end">
                 <div className="flex-1">
@@ -1998,7 +2206,11 @@ export function MockTestsPage({ freeOnly = false } = {}) {
                 {!selectedQuestions.length ? <EmptyState title="No questions selected" description="Use the question finder to build a fixed test paper." /> : null}
               </div>
             </div>
-          </div>
+          </div> : (
+            <div className="rounded-sm border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-900">
+              The backend will automatically select {Number(formState.questionCount || 0)} questions matching {formState.examType} and the selected subject. Questions from other exams or subjects are rejected.
+            </div>
+          )}
         </EntityFormWrapper>
       ) : null}
 
