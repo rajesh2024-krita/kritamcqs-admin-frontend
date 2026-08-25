@@ -197,6 +197,15 @@ const defaultSubjectSettings = {
   defaultQuestionCount: 10, maximumQuestionCount: 50,
   unlimitedQuestions: false,
   prioritizeUnseenQuestions: true, allowQuestionReuse: true,
+  accessCardTitle: "Subject-Based Mock Test",
+  accessCardMessage: "Subject-based mock test access is not enabled for this account.",
+  accessCardCtaText: "View Plans",
+  accessCardSubscriptionUrl: "/subscription",
+  accessCardHtml: `<div class="subject-mock-access-card__icon" aria-hidden="true">&#128274;</div>
+<h2 id="subject-mock-access-title">{{title}}</h2>
+<p>{{message}}</p>
+<a href="{{subscriptionUrl}}">{{ctaText}}</a>`,
+  accessCardCss: `.subject-mock-access-card{box-sizing:border-box;width:min(100%,680px);margin:24px auto;padding:32px;border:1px solid #ddd6fe;border-radius:24px;background:linear-gradient(135deg,#faf5ff,#eff6ff);color:#1e1b4b;text-align:center;font-family:system-ui,sans-serif}.subject-mock-access-card__icon{font-size:28px}.subject-mock-access-card h2{font-size:clamp(1.25rem,4vw,1.8rem)}.subject-mock-access-card p{color:#475569;line-height:1.65}.subject-mock-access-card a{display:inline-flex;min-height:48px;align-items:center;border-radius:14px;background:#6d28d9;padding:12px 28px;color:#fff;text-decoration:none;font-weight:800}@media(max-width:480px){.subject-mock-access-card{margin:12px 0;padding:22px 16px}.subject-mock-access-card a{width:100%;justify-content:center}}`,
 };
 
 function buildFormFromItem(item) {
@@ -1057,6 +1066,30 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
             <ToggleSwitch checked={subjectSettings.unlimitedQuestions} onChange={(unlimitedQuestions) => setSubjectSettings((current) => ({ ...current, unlimitedQuestions }))} label="Unlimited questions" />
             <label className={ui.field}><span>Question Limit</span><input className={ui.input} type="number" min="1" max="200" disabled={subjectSettings.unlimitedQuestions} value={subjectSettings.defaultQuestionCount} onChange={(event) => setSubjectSettings((current) => ({ ...current, defaultQuestionCount: event.target.value, maximumQuestionCount: event.target.value }))} /><small className="text-slate-500">{subjectSettings.unlimitedQuestions ? "Disabled while unlimited questions is enabled." : "The app generates exactly this many questions and never exceeds it."}</small></label>
             <button type="button" className={cn(ui.buttonBase, ui.buttonPrimary, "self-end")} disabled={savingSubjectSettings} onClick={() => void saveSubjectSettings()}>{savingSubjectSettings ? "Saving..." : "Save Common Settings"}</button>
+          </div>
+          <div className="space-y-4 border-t border-slate-200 pt-4">
+            <div>
+              <div className={ui.eyebrow}>Free User Access Card</div>
+              <p className={ui.muted}>Configure the card returned by the app backend. HTML supports <code>{"{{title}}"}</code>, <code>{"{{message}}"}</code>, <code>{"{{ctaText}}"}</code>, and <code>{"{{subscriptionUrl}}"}</code>.</p>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className={ui.field}><span>Card title</span><input className={ui.input} value={subjectSettings.accessCardTitle || ""} onChange={(event) => setSubjectSettings((current) => ({ ...current, accessCardTitle: event.target.value }))} /></label>
+              <label className={ui.field}><span>Button text</span><input className={ui.input} value={subjectSettings.accessCardCtaText || ""} onChange={(event) => setSubjectSettings((current) => ({ ...current, accessCardCtaText: event.target.value }))} /></label>
+              <label className={`${ui.field} md:col-span-2`}><span>Free-user message</span><textarea className={ui.input} rows={3} value={subjectSettings.accessCardMessage || ""} onChange={(event) => setSubjectSettings((current) => ({ ...current, accessCardMessage: event.target.value }))} /></label>
+              <label className={`${ui.field} md:col-span-2`}><span>Subscription page link</span><input className={ui.input} value={subjectSettings.accessCardSubscriptionUrl || ""} onChange={(event) => setSubjectSettings((current) => ({ ...current, accessCardSubscriptionUrl: event.target.value }))} placeholder="/subscription or https://..." /></label>
+              <label className={ui.field}><span>Card HTML</span><textarea className={`${ui.input} min-h-72 font-mono text-xs`} value={subjectSettings.accessCardHtml || ""} onChange={(event) => setSubjectSettings((current) => ({ ...current, accessCardHtml: event.target.value }))} spellCheck={false} /></label>
+              <label className={ui.field}><span>Card CSS</span><textarea className={`${ui.input} min-h-72 font-mono text-xs`} value={subjectSettings.accessCardCss || ""} onChange={(event) => setSubjectSettings((current) => ({ ...current, accessCardCss: event.target.value }))} spellCheck={false} /></label>
+            </div>
+            <div>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Responsive preview</p>
+              <iframe
+                title="Subject mock access card preview"
+                sandbox=""
+                className="h-96 w-full rounded-xl border border-slate-200 bg-white"
+                srcDoc={`<!doctype html><meta name="viewport" content="width=device-width,initial-scale=1"><style>${String(subjectSettings.accessCardCss || "").replace(/<\/?style\b[^>]*>/gi, "")}</style><section class="subject-mock-access-card">${String(subjectSettings.accessCardHtml || "").replace(/{{title}}/g, subjectSettings.accessCardTitle || "").replace(/{{message}}/g, subjectSettings.accessCardMessage || "").replace(/{{ctaText}}/g, subjectSettings.accessCardCtaText || "").replace(/{{subscriptionUrl}}/g, subjectSettings.accessCardSubscriptionUrl || "/subscription")}</section>`}
+              />
+            </div>
+            <button type="button" className={cn(ui.buttonBase, ui.buttonPrimary)} disabled={savingSubjectSettings} onClick={() => void saveSubjectSettings()}>{savingSubjectSettings ? "Saving..." : "Save Access Card"}</button>
           </div>
           <div className="border-t border-slate-200 pt-4">
             <div className="mb-3 flex gap-2"><input className={ui.input} value={accessUserSearch} onChange={(event) => setAccessUserSearch(event.target.value)} placeholder="Search free user by name, email or mobile" /><button type="button" className={cn(ui.buttonBase, ui.buttonSecondary)} onClick={() => void searchAccessUsers()}>Search</button></div>
