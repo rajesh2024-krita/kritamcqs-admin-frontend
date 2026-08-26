@@ -49,6 +49,7 @@ const navItems = [
   { label: "Users", to: "/users", section: "Operations", icon: UsersIcon, moduleKey: "users" },
   { label: "User Management", to: "/user-management", section: "Operations", icon: UsersIcon, moduleKey: "user-management" },
   { label: "Follow-Ups", to: "/follow-ups", section: "Operations", icon: Bell, moduleKey: "follow-ups" },
+  { label: "School / Course Coordinators", to: "/coordinators", section: "Operations", icon: UsersIcon, moduleKey: "coordinators" },
   { label: "Subscriptions", to: "/subscriptions", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscriptions" },
   { label: "Plan Config", to: "/subscription-plans", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscription-plans" },
   { label: "Free User Cards", to: "/subscription-free-cards", section: "Operations", icon: SubscriptionIcon, moduleKey: "subscription-free-cards" },

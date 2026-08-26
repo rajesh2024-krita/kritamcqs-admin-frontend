@@ -13,7 +13,8 @@ import {
   CalendarDays,
   Award,
   Target,
-  Zap
+  Zap,
+  Bell
 } from "lucide-react";
 import {
   LineChart,
@@ -33,6 +34,7 @@ import { dashboardService } from "../../api/dashboardService";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
 import { useToast } from "../../context/ToastContext";
 import { formatCompactNumber, formatDate } from "../../utils/format";
+import { coordinatorService } from "../../api/coordinatorService";
 
 export function DashboardPage() {
   const toast = useToast();
@@ -40,16 +42,19 @@ export function DashboardPage() {
   const [catalog, setCatalog] = useState(null);
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState([]);
+  const [coordinatorSummary, setCoordinatorSummary] = useState(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const [dashboard, catalogOverview] = await Promise.all([
+        const [dashboard, catalogOverview, coordinatorResult] = await Promise.all([
           dashboardService.getDashboard(),
           dashboardService.getCatalog(),
+          coordinatorService.summary().catch(() => ({ data: null })),
         ]);
         setData(dashboard.data);
         setCatalog(catalogOverview.data);
+        setCoordinatorSummary(coordinatorResult.data);
         
         // Generate chart data from backend if available, otherwise use sample
         if (dashboard.data?.chartData) {
@@ -189,6 +194,18 @@ export function DashboardPage() {
           );
         })}
       </div>
+
+      {coordinatorSummary && (
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2"><span className="rounded-lg bg-indigo-50 p-2 text-indigo-600"><Bell size={15}/></span><div><h2 className="text-xs font-semibold text-slate-900">Coordinator Follow-Ups</h2><p className="text-[10px] text-slate-500">Continuous school and course relationship tracking</p></div></div>
+            <Link to="/coordinators" className="text-[10px] font-medium text-indigo-600">View all →</Link>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {[{label:"Follow-up overdue",value:coordinatorSummary.overdue,style:"border-red-100 bg-red-50 text-red-800",filter:"Overdue"},{label:"Due within 30 days",value:coordinatorSummary.due,style:"border-orange-100 bg-orange-50 text-orange-800",filter:"Follow-Up Scheduled"},{label:"Upcoming follow-ups",value:coordinatorSummary.upcoming,style:"border-amber-100 bg-amber-50 text-amber-800",filter:"Reminder Started"},{label:"Recently contacted",value:coordinatorSummary.recentlyContacted,style:"border-emerald-100 bg-emerald-50 text-emerald-800",filter:"Contacted"}].map(item=><Link key={item.label} to={`/coordinators?followUpStatus=${encodeURIComponent(item.filter)}`} className={`rounded-lg border p-3 ${item.style}`}><div className="text-[10px] font-medium">{item.label}</div><div className="mt-1 text-xl font-bold">{item.value||0}</div></Link>)}
+          </div>
+        </div>
+      )}
 
       {/* Charts Row */}
       <div className="grid gap-4 lg:grid-cols-3">

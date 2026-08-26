@@ -21,6 +21,8 @@ import { UsersPage } from "../pages/users/UsersPage";
 import { UserManagementPage } from "../pages/users/UserManagementPage";
 import { FollowUpsPage } from "../pages/followUps/FollowUpsPage";
 import { FollowUpDetailsPage } from "../pages/followUps/FollowUpDetailsPage";
+import { CoordinatorsPage } from "../pages/coordinators/CoordinatorsPage";
+import { CoordinatorDetailsPage } from "../pages/coordinators/CoordinatorDetailsPage";
 import { SubscriptionsPage } from "../pages/SubscriptionsPage";
 import { SubscriptionPlansPage } from "../pages/SubscriptionPlansPage";
 import { SubscriptionFreeCardsPage } from "../pages/SubscriptionFreeCardsPage";
@@ -138,6 +140,8 @@ export function AppRoutes() {
         <Route path="user-management" element={<ModuleAccess moduleKey="user-management"><UserManagementPage /></ModuleAccess>} />
         <Route path="follow-ups" element={<ModuleAccess moduleKey="follow-ups"><FollowUpsPage /></ModuleAccess>} />
         <Route path="follow-ups/:id" element={<ModuleAccess moduleKey="follow-ups"><FollowUpDetailsPage /></ModuleAccess>} />
+        <Route path="coordinators" element={<ModuleAccess moduleKey="coordinators"><CoordinatorsPage /></ModuleAccess>} />
+        <Route path="coordinators/:id" element={<ModuleAccess moduleKey="coordinators"><CoordinatorDetailsPage /></ModuleAccess>} />
         <Route path="subscriptions" element={<ModuleAccess moduleKey="subscriptions"><SubscriptionsPage /></ModuleAccess>} />
         <Route path="subscription-plans" element={<ModuleAccess moduleKey="subscription-plans"><SubscriptionPlansPage /></ModuleAccess>} />
         <Route path="subscription-free-cards" element={<ModuleAccess moduleKey="subscription-free-cards"><SubscriptionFreeCardsPage /></ModuleAccess>} />

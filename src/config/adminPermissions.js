@@ -23,6 +23,7 @@ export const MODULES = [
   { key: "users", label: "Users", path: "/users" },
   { key: "user-management", label: "User Management", path: "/user-management" },
   { key: "follow-ups", label: "Follow-Ups", path: "/follow-ups" },
+  { key: "coordinators", label: "School / Course Coordinators", path: "/coordinators" },
   { key: "subscriptions", label: "Subscriptions", path: "/subscriptions" },
   { key: "subscription-plans", label: "Plan Config", path: "/subscription-plans" },
   { key: "subscription-free-cards", label: "Free User Cards", path: "/subscription-free-cards" },
