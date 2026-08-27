@@ -77,6 +77,7 @@ const navItems = [
   { label: "Employees", to: "/employees", section: "Security", icon: UsersIcon, mainOnly: true },
   { label: "Audit Logs", to: "/audit-logs", section: "Security", icon: ShieldIcon, mainOnly: true },
   { label: "Database Backup", to: "/database-backups", section: "Security", icon: FileStackIcon, mainOnly: true },
+  { label: "Affiliate Marketing", to: "/affiliate-marketing", section: "Operations", icon: UsersIcon, mainOnly: true },
   { label: "AI Configuration", to: "/ai-configuration", section: "System", icon: SettingsIcon, mainOnly: true },
   { label: "Settings", to: "/settings", section: "System", icon: SettingsIcon, moduleKey: "settings" },
   { label: "Microsoft Clarity", to: "/microsoft-clarity", section: "System", icon: SettingsIcon, mainOnly: true },
