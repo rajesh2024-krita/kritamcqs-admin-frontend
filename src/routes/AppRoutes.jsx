@@ -65,6 +65,7 @@ import { AIConfigurationPage } from "../pages/settings/AIConfigurationPage";
 import { MicrosoftClarityPage } from "../pages/settings/MicrosoftClarityPage";
 import { ThirdPartyScriptsPage } from "../pages/ThirdPartyScriptsPage";
 import { NationalCompetitionsPage } from "../pages/NationalCompetitionsPage";
+import { DatabaseBackupsPage } from "../pages/DatabaseBackupsPage";
 import { useAuth } from "../context/AuthContext";
 import { canViewModule, firstAllowedModulePath, isEmployee } from "../config/adminPermissions";
 
@@ -130,6 +131,7 @@ export function AppRoutes() {
         <Route path="questions/ai-academic-audit" element={<ModuleAccess moduleKey="katex-audit"><KatexAuditPage /></ModuleAccess>} />
         <Route path="employees" element={<MainAdminOnly><EmployeesPage /></MainAdminOnly>} />
         <Route path="audit-logs" element={<MainAdminOnly><AuditLogsPage /></MainAdminOnly>} />
+        <Route path="database-backups" element={<MainAdminOnly><DatabaseBackupsPage /></MainAdminOnly>} />
         <Route path="ai-configuration" element={<MainAdminOnly><AIConfigurationPage /></MainAdminOnly>} />
         <Route path="mock-tests" element={<ModuleAccess moduleKey="mock-tests"><MockTestsPage /></ModuleAccess>} />
         <Route path="subject-mock-tests" element={<ModuleAccess moduleKey="subject-mock-tests"><SubjectMockTestsPage /></ModuleAccess>} />
