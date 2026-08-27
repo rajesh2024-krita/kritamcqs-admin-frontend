@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Database, Download, HardDrive, RefreshCw, RotateCcw } from "lucide-react";
+import { AlertTriangle, CalendarClock, Database, Download, HardDrive, RefreshCw, RotateCcw } from "lucide-react";
 import { databaseBackupService } from "../api/databaseBackupService";
 import { useToast } from "../context/ToastContext";
 
@@ -47,22 +47,40 @@ export function DatabaseBackupsPage() {
   const [loading, setLoading] = useState(true);
   const [dialog, setDialog] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [schedule, setSchedule] = useState(null);
+  const [toggleBusy, setToggleBusy] = useState(false);
 
   const load = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
-    try { const response = await databaseBackupService.list(); setOperations(response.data?.data || []); }
+    try {
+      const response = await databaseBackupService.list();
+      setOperations(response.data?.data || []);
+      setSchedule(response.data?.schedule || null);
+    }
     catch (error) { if (!quiet) toast.error(error.message); }
     finally { if (!quiet) setLoading(false); }
   }, [toast]);
 
   useEffect(() => { void load(); const id = window.setInterval(() => void load(true), 5000); return () => window.clearInterval(id); }, [load]);
   const backups = useMemo(() => operations.filter((item) => item.kind === "backup"), [operations]);
+  const lastBackup = useMemo(() => backups.find((item) => item.status === "completed"), [backups]);
   const hasActive = operations.some((item) => item.status === "in_progress");
 
   async function createBackup(password) {
     setBusy(true);
     try { await databaseBackupService.create(password); setDialog(null); toast.success("Manual backup queued"); window.setTimeout(() => void load(true), 500); }
     catch (error) { toast.error(error.message); } finally { setBusy(false); }
+  }
+
+  async function toggleAutomaticBackups() {
+    const nextEnabled = !schedule?.settings?.automaticEnabled;
+    setToggleBusy(true);
+    try {
+      const response = await databaseBackupService.updateSettings(nextEnabled);
+      setSchedule(response.data?.schedule || schedule);
+      toast.success(`Automatic backups ${nextEnabled ? "enabled" : "disabled"}`);
+      void load(true);
+    } catch (error) { toast.error(error.message); } finally { setToggleBusy(false); }
   }
 
   async function downloadBackup(backup, password) {
@@ -91,14 +109,26 @@ export function DatabaseBackupsPage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div><h1 className="text-2xl font-black text-slate-900">Database Backup</h1><p className="mt-1 text-sm text-slate-500">Daily rolling backups, secure downloads, and audited restore operations.</p></div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            role="switch"
+            aria-checked={Boolean(schedule?.settings?.automaticEnabled)}
+            disabled={!schedule || toggleBusy}
+            onClick={toggleAutomaticBackups}
+            className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-bold disabled:opacity-50 ${schedule?.settings?.automaticEnabled ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-300 bg-white text-slate-600"}`}
+          >
+            <span className={`relative h-5 w-9 rounded-full transition ${schedule?.settings?.automaticEnabled ? "bg-emerald-500" : "bg-slate-300"}`}><span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition ${schedule?.settings?.automaticEnabled ? "left-[18px]" : "left-0.5"}`} /></span>
+            Auto backup {schedule?.settings?.automaticEnabled ? "On" : "Off"}
+          </button>
           <button onClick={() => void load()} className="rounded-xl border border-slate-300 p-2.5 text-slate-600" aria-label="Refresh"><RefreshCw size={18} /></button>
           <button disabled={hasActive || busy} onClick={() => setDialog({ type: "create" })} className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-bold text-white disabled:opacity-50"><Database size={17} /> Create Backup</button>
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-2xl border border-slate-200 bg-white p-5"><HardDrive className="text-indigo-600" /><p className="mt-3 text-2xl font-black">{backups.filter((x) => x.status === "completed").length}</p><p className="text-sm text-slate-500">Available backups</p></div>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="rounded-2xl border border-slate-200 bg-white p-5"><HardDrive className="text-indigo-600" /><p className="mt-3 text-lg font-black text-slate-900">{formatDate(lastBackup?.completedAt)}</p><p className="text-sm text-slate-500">Last backup date</p></div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-5"><CalendarClock className={schedule?.settings?.automaticEnabled ? "text-emerald-600" : "text-slate-400"} /><p className="mt-3 text-lg font-black text-slate-900">{schedule?.settings?.automaticEnabled ? formatDate(schedule?.nextAutomaticBackupAt) : "Disabled"}</p><p className="text-sm text-slate-500">Next automatic backup</p><p className="mt-1 text-xs text-slate-400">Daily at {String(schedule?.settings?.backupHourUtc ?? 0).padStart(2, "0")}:00 UTC</p></div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5"><RefreshCw className="text-amber-600" /><p className="mt-3 text-2xl font-black">{operations.filter((x) => x.status === "in_progress").length}</p><p className="text-sm text-slate-500">In progress</p></div>
         <div className="rounded-2xl border border-slate-200 bg-white p-5"><AlertTriangle className="text-rose-600" /><p className="mt-3 text-2xl font-black">{operations.filter((x) => x.status === "failed").length}</p><p className="text-sm text-slate-500">Failed operations</p></div>
       </div>
