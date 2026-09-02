@@ -1,7 +1,7 @@
 import { http } from "./http";
 export const affiliateMarketingService = {
-  dashboard: () => http.get("/admin/affiliate-marketing/dashboard"), affiliates: () => http.get("/admin/affiliate-marketing/affiliates"),
-  create: (data) => http.post("/admin/affiliate-marketing/affiliates", data), update: (id, data) => http.patch(`/admin/affiliate-marketing/affiliates/${id}`, data),
-  referrals: () => http.get("/admin/affiliate-marketing/referrals"), purchases: () => http.get("/admin/affiliate-marketing/purchases"),
-  settings: () => http.get("/admin/affiliate-marketing/settings"), updateSettings: (data) => http.patch("/admin/affiliate-marketing/settings", data),
+  dashboard: (params) => http.get("/affiliate/admin/dashboard", { params }), affiliates: () => http.get("/affiliate/admin/affiliates"),
+  create: (data) => http.post("/affiliate/admin/affiliates", data), update: (id, data) => http.patch(`/affiliate/admin/affiliates/${id}`, data),
+  referrals: (params) => http.get("/affiliate/admin/referrals", { params }), purchases: (params) => http.get("/affiliate/admin/purchases", { params }),
+  settings: () => http.get("/affiliate/admin/settings"), updateSettings: (data) => http.patch("/affiliate/admin/settings", data),
 };
