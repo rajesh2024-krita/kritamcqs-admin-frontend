@@ -148,6 +148,7 @@ const defaultForm = {
   selectionMix: null,
   generationConfig: null,
   includedQuestionIds: [],
+  automaticQuestionDistribution: [],
 };
 
 const defaultAutoGenerateForm = {
@@ -248,6 +249,9 @@ function buildFormFromItem(item) {
     selectionMix: item.selectionMix || item.generationConfig?.selectionMix || null,
     generationConfig: item.generationConfig || null,
     includedQuestionIds: Array.isArray(item.includedQuestionIds) ? item.includedQuestionIds : [],
+    automaticQuestionDistribution: Array.isArray(item.generationConfig?.automaticQuestionDistribution)
+      ? item.generationConfig.automaticQuestionDistribution
+      : [],
   };
 }
 
@@ -311,6 +315,51 @@ function getRequiredQuestionCount(formState, blueprints = []) {
   return 0;
 }
 
+const DEFAULT_AUTOMATIC_SUBJECT_ROWS = {
+  NEET: [
+    { subject: "Biology", questions: 90 },
+    { subject: "Physics", questions: 45 },
+    { subject: "Chemistry", questions: 45 },
+  ],
+  JEE: [
+    { subject: "Physics", questions: 30 },
+    { subject: "Chemistry", questions: 30 },
+    { subject: "Mathematics", questions: 30 },
+  ],
+};
+
+function getDefaultTypeSplit(examType, subjectName, totalQuestions) {
+  if (examType === "NEET") return { mcqCount: Number(totalQuestions || 0), numericCount: 0 };
+  if (examType === "JEE") {
+    const total = Number(totalQuestions || 0);
+    const numericCount = Math.max(0, Math.round(total / 3));
+    return { mcqCount: Math.max(0, total - numericCount), numericCount };
+  }
+  return { mcqCount: Number(totalQuestions || 0), numericCount: 0 };
+}
+
+function buildDefaultAutomaticDistribution(examType, subjectRows = [], catalogSubjects = []) {
+  const rows = subjectRows.length
+    ? subjectRows
+    : DEFAULT_AUTOMATIC_SUBJECT_ROWS[examType] || catalogSubjects.map((subject) => ({ subject: subject.name, questions: 0 }));
+  return rows.map((row) => {
+    const subjectName = String(row.subject || "").trim();
+    const catalogSubject = catalogSubjects.find((subject) => String(subject.name || "").toLowerCase() === subjectName.toLowerCase());
+    const totalQuestions = parseBlueprintNumber(row.questions);
+    const split = getDefaultTypeSplit(examType, subjectName, totalQuestions);
+    return {
+      subjectId: catalogSubject?.id || "",
+      subjectName,
+      mcqCount: split.mcqCount,
+      numericCount: split.numericCount,
+    };
+  }).filter((row) => row.subjectName);
+}
+
+function getBlueprintForExam(blueprints = [], examType) {
+  return (blueprints || []).find((item) => String(item.key || "").toUpperCase() === String(examType || "").toUpperCase());
+}
+
 const BLUEPRINT_TABLES = [
   { key: "summary", title: "Answer Sheet", fields: [["label", "Question"], ["value", "Answer"]] },
   { key: "subjectWise", title: "Subject Wise", fields: [["subject", "Subject"], ["questions", "Questions"], ["marks", "Marks"], ["weightage", "Weightage %"]] },
@@ -372,7 +421,7 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
 
   const selectedQuestionIds = formState.questionIds || [];
   const requiredQuestionCount = getRequiredQuestionCount(formState, patternBlueprints);
-  const questionCountValidationMessage = requiredQuestionCount && selectedQuestionIds.length !== requiredQuestionCount
+  const questionCountValidationMessage = formState.generationMode !== "automatic" && requiredQuestionCount && selectedQuestionIds.length !== requiredQuestionCount
     ? `The mock test requires ${requiredQuestionCount} questions based on the selected ${formState.examType} pattern, but only ${selectedQuestionIds.length} questions are currently selected.`
     : "";
 
@@ -392,6 +441,28 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
     () => subjects.filter((item) => item.examType === formState.examType),
     [subjects, formState.examType],
   );
+  const automaticDistributionRows = useMemo(() => (
+    formState.automaticQuestionDistribution?.length
+      ? formState.automaticQuestionDistribution
+      : buildDefaultAutomaticDistribution(
+          formState.examType,
+          subjectOnly && formState.subjectId
+            ? [{ subject: formSubjects.find((subject) => subject.id === formState.subjectId)?.name || "Subject", questions: Number(formState.questionCount || 0) }]
+            : getBlueprintForExam(patternBlueprints, formState.examType)?.subjectWise || [],
+          subjectOnly && formState.subjectId ? formSubjects.filter((subject) => subject.id === formState.subjectId) : formSubjects,
+        )
+  ), [formState.automaticQuestionDistribution, formState.examType, formState.questionCount, formState.subjectId, formSubjects, patternBlueprints, subjectOnly]);
+  const automaticSummary = useMemo(() => {
+    const mcqTotal = automaticDistributionRows.reduce((sum, row) => sum + Number(row.mcqCount || 0), 0);
+    const numericTotal = automaticDistributionRows.reduce((sum, row) => sum + Number(row.numericCount || 0), 0);
+    const selectedTotal = mcqTotal + numericTotal;
+    const requiredTotal = requiredQuestionCount || Number(formState.questionCount || 0);
+    const difference = selectedTotal - requiredTotal;
+    return { mcqTotal, numericTotal, selectedTotal, requiredTotal, difference };
+  }, [automaticDistributionRows, formState.questionCount, requiredQuestionCount]);
+  const automaticValidationMessage = formState.generationMode === "automatic" && automaticSummary.requiredTotal > 0 && automaticSummary.selectedTotal !== automaticSummary.requiredTotal
+    ? `Automatic configuration must total exactly ${automaticSummary.requiredTotal} questions. Current total is ${automaticSummary.selectedTotal}.`
+    : "";
 
   const lockedReplacement = Boolean(replacementTarget);
   const autoExamSubjects = useMemo(
@@ -611,6 +682,8 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
       markingSchemeVersion: scheme.version || "v1",
       markingOverrideEnabled: false,
       isPremiumOnly: subjectOnly,
+      generationMode: "fixed",
+      automaticQuestionDistribution: [],
     });
     setQuestionSearch("");
     setQuestionSubjectId("");
@@ -678,6 +751,29 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
       return {
         ...current,
         questionIds: exists ? current.questionIds.filter((id) => id !== questionId) : [...current.questionIds, questionId],
+      };
+    });
+  }
+
+  function resetAutomaticDistribution(examType, currentSubjects = formSubjects) {
+    const blueprint = getBlueprintForExam(patternBlueprints, examType);
+    return buildDefaultAutomaticDistribution(examType, blueprint?.subjectWise || [], currentSubjects.filter((subject) => subject.examType === examType));
+  }
+
+  function updateAutomaticDistribution(index, field, value) {
+    setFormState((current) => {
+      const rows = current.automaticQuestionDistribution?.length
+        ? [...current.automaticQuestionDistribution]
+        : buildDefaultAutomaticDistribution(
+            current.examType,
+            getBlueprintForExam(patternBlueprints, current.examType)?.subjectWise || [],
+            subjects.filter((subject) => subject.examType === current.examType),
+          );
+      rows[index] = { ...(rows[index] || {}), [field]: Math.max(0, Number(value || 0)) };
+      return {
+        ...current,
+        automaticQuestionDistribution: rows,
+        questionCount: rows.reduce((sum, row) => sum + Number(row.mcqCount || 0) + Number(row.numericCount || 0), 0),
       };
     });
   }
@@ -976,6 +1072,10 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
         toast.error("Enter an automatic question count of at least 2");
         return;
       }
+      if (automaticValidationMessage) {
+        toast.error(automaticValidationMessage);
+        return;
+      }
       if (questionCountValidationMessage) {
         toast.error(questionCountValidationMessage);
         return;
@@ -998,6 +1098,7 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
         selectionMix: formState.selectionMix || undefined,
         generationConfig: formState.generationConfig || undefined,
         includedQuestionIds: Array.isArray(formState.includedQuestionIds) ? formState.includedQuestionIds : [],
+        automaticQuestionDistribution: formState.generationMode === "automatic" ? automaticDistributionRows : undefined,
         instructions: formState.instructions
           .split("\n")
           .map((item) => item.trim())
@@ -1969,7 +2070,7 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
           onCancel={() => setShowForm(false)}
           onSubmit={handleSubmit}
           submitLabel={editingItem ? "Save Mock Test" : "Create Mock Test"}
-          submitDisabled={Boolean(questionCountValidationMessage || (formState.testType === "subject" && !formState.subjectId))}
+          submitDisabled={Boolean(questionCountValidationMessage || automaticValidationMessage || (formState.testType === "subject" && !formState.subjectId))}
         >
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <label className={ui.field}>
@@ -1982,7 +2083,14 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
                 className={ui.input}
                 disabled={subjectOnly}
                 value={formState.patternPreset}
-                onChange={(event) => setFormState((current) => applyPresetToForm(event.target.value, current, markingSettings))}
+                onChange={(event) => setFormState((current) => {
+                  const next = applyPresetToForm(event.target.value, current, markingSettings);
+                  return {
+                    ...next,
+                    questionIds: [],
+                    automaticQuestionDistribution: resetAutomaticDistribution(next.examType),
+                  };
+                })}
               >
                 {!subjectOnly ? <option value="NEET_REAL">NEET Real Pattern</option> : null}
                 {!subjectOnly ? <option value="JEE_REAL">JEE Real Pattern</option> : null}
@@ -1992,7 +2100,14 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
             <input type="hidden" value={subjectOnly ? "subject" : "full"} />
             <label className={ui.field}>
               <span>Exam Type</span>
-              <select className={ui.input} value={formState.examType} onChange={(event) => setFormState((current) => ({ ...current, examType: event.target.value, subjectId: "", questionIds: [] }))}>
+              <select className={ui.input} value={formState.examType} onChange={(event) => setFormState((current) => ({
+                ...current,
+                examType: event.target.value,
+                subjectId: "",
+                questionIds: [],
+                generationMode: event.target.value === "BOTH" ? "fixed" : current.generationMode,
+                automaticQuestionDistribution: resetAutomaticDistribution(event.target.value),
+              }))}>
                 <option value="NEET">NEET</option>
                 <option value="JEE">JEE</option>
                 {!subjectOnly ? <option value="BOTH">BOTH</option> : null}
@@ -2001,13 +2116,19 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
             {subjectOnly ? (
               <label className={ui.field}>
                 <span>Subject</span>
-                <select className={ui.input} required value={formState.subjectId} onChange={(event) => setFormState((current) => ({ ...current, subjectId: event.target.value, questionIds: [] }))}>
+                <select className={ui.input} required value={formState.subjectId} onChange={(event) => setFormState((current) => {
+                  const selectedSubject = formSubjects.find((subject) => subject.id === event.target.value);
+                  const row = selectedSubject
+                    ? buildDefaultAutomaticDistribution(current.examType, [{ subject: selectedSubject.name, questions: Number(current.questionCount || 0) }], [selectedSubject])
+                    : [];
+                  return { ...current, subjectId: event.target.value, questionIds: [], automaticQuestionDistribution: row };
+                })}>
                   <option value="">Select subject</option>
                   {formSubjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
                 </select>
               </label>
             ) : null}
-            {subjectOnly ? <div className="rounded-sm border border-slate-200 bg-slate-50 p-3">
+            {formState.examType !== "BOTH" ? <div className="rounded-sm border border-slate-200 bg-slate-50 p-3">
               <ToggleSwitch
                 checked={formState.generationMode === "automatic"}
                 onChange={(enabled) => setFormState((current) => ({
@@ -2015,6 +2136,11 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
                   generationMode: enabled ? "automatic" : "fixed",
                   isOneTimeFree: enabled ? false : current.isOneTimeFree,
                   isPremiumOnly: enabled ? true : current.isPremiumOnly,
+                  questionIds: enabled ? [] : current.questionIds,
+                  questionCount: enabled ? automaticSummary.requiredTotal || current.questionCount : current.questionCount,
+                  automaticQuestionDistribution: enabled
+                    ? (current.automaticQuestionDistribution?.length ? current.automaticQuestionDistribution : resetAutomaticDistribution(current.examType))
+                    : current.automaticQuestionDistribution,
                 }))}
                 label="Automatic question generation"
               />
@@ -2151,7 +2277,87 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
             </label>
           </div>
 
-          {!(subjectOnly && formState.generationMode === "automatic") ? <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,1fr)]">
+          {formState.generationMode === "automatic" ? (
+            <div className="space-y-4 rounded-sm border border-blue-200 bg-blue-50 p-4">
+              <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                <div>
+                  <h3 className="text-sm font-bold text-blue-950">Automatic Question Configuration</h3>
+                  <p className="mt-1 text-xs text-blue-800">
+                    Questions will be selected from the matching exam, subject, type, and available question bank. Chapters and topics are derived from the selected questions.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className={cn(ui.buttonBase, ui.buttonSecondary, "min-h-9 px-3 py-2 text-xs")}
+                  onClick={() => setFormState((current) => ({
+                    ...current,
+                    automaticQuestionDistribution: resetAutomaticDistribution(current.examType),
+                    questionCount: requiredQuestionCount || current.questionCount,
+                  }))}
+                >
+                  Reset Pattern
+                </button>
+              </div>
+
+              <div className="overflow-x-auto rounded-sm border border-blue-100 bg-white">
+                <table className="w-full min-w-[560px] text-left text-xs">
+                  <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="p-2">Subject</th>
+                      <th className="p-2">MCQ Questions</th>
+                      <th className="p-2">Numeric Questions</th>
+                      <th className="p-2">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {automaticDistributionRows.map((row, index) => (
+                      <tr key={`${row.subjectId || row.subjectName}-${index}`}>
+                        <td className="p-2 font-semibold text-slate-800">{row.subjectName}</td>
+                        <td className="p-2">
+                          <input
+                            className={ui.input}
+                            type="number"
+                            min="0"
+                            max="300"
+                            value={row.mcqCount}
+                            onChange={(event) => updateAutomaticDistribution(index, "mcqCount", event.target.value)}
+                          />
+                        </td>
+                        <td className="p-2">
+                          <input
+                            className={ui.input}
+                            type="number"
+                            min="0"
+                            max="300"
+                            disabled={formState.examType === "NEET"}
+                            value={row.numericCount}
+                            onChange={(event) => updateAutomaticDistribution(index, "numericCount", event.target.value)}
+                          />
+                        </td>
+                        <td className="p-2 font-bold text-slate-900">{Number(row.mcqCount || 0) + Number(row.numericCount || 0)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-5">
+                {[
+                  ["Total MCQs", automaticSummary.mcqTotal],
+                  ["Total Numeric", automaticSummary.numericTotal],
+                  ["Required", automaticSummary.requiredTotal],
+                  ["Selected", automaticSummary.selectedTotal],
+                  [automaticSummary.difference > 0 ? "Excess" : "Remaining", Math.abs(automaticSummary.difference)],
+                ].map(([label, value]) => (
+                  <div key={label} className="rounded-sm border border-blue-100 bg-white p-3">
+                    <div className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</div>
+                    <div className="text-lg font-black text-slate-900">{value}</div>
+                  </div>
+                ))}
+              </div>
+              {automaticValidationMessage ? <p className="text-sm font-semibold text-rose-600">{automaticValidationMessage}</p> : null}
+            </div>
+          ) : <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,1fr)]">
             <div className={ui.compactPanel}>
               <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-end">
                 <div className="flex-1">
@@ -2239,11 +2445,7 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
                 {!selectedQuestions.length ? <EmptyState title="No questions selected" description="Use the question finder to build a fixed test paper." /> : null}
               </div>
             </div>
-          </div> : (
-            <div className="rounded-sm border border-blue-200 bg-blue-50 p-4 text-sm font-semibold text-blue-900">
-              The backend will automatically select {Number(formState.questionCount || 0)} questions matching {formState.examType} and the selected subject. Questions from other exams or subjects are rejected.
-            </div>
-          )}
+          </div>}
         </EntityFormWrapper>
       ) : null}
 
