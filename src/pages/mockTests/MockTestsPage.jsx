@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { mockTestService } from "../../api/mockTestService";
 import { subjectService } from "../../api/subjectService";
 import { chapterService } from "../../api/chapterService";
+import { topicService } from "../../api/topicService";
 import { ConfirmDeleteModal } from "../../components/common/ConfirmDeleteModal";
 import { EmptyState } from "../../components/common/EmptyState";
 import { LoadingSpinner } from "../../components/common/LoadingSpinner";
@@ -410,9 +411,11 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
   const [formState, setFormState] = useState(defaultForm);
   const [subjects, setSubjects] = useState([]);
   const [chapters, setChapters] = useState([]);
+  const [topics, setTopics] = useState([]);
   const [questionSearch, setQuestionSearch] = useState("");
   const [questionSubjectId, setQuestionSubjectId] = useState("");
   const [questionChapterId, setQuestionChapterId] = useState("");
+  const [questionTopicId, setQuestionTopicId] = useState("");
   const [questionResults, setQuestionResults] = useState([]);
   const [questionMeta, setQuestionMeta] = useState(null);
   const [questionPage, setQuestionPage] = useState(1);
@@ -459,6 +462,13 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
   const filteredChapters = useMemo(
     () => chapters.filter((item) => !questionSubjectId || String(item.subjectId?.id || item.subjectId) === String(questionSubjectId)),
     [chapters, questionSubjectId],
+  );
+  const filteredTopics = useMemo(
+    () => topics.filter((item) =>
+      (!questionSubjectId || String(item.subjectId?.id || item.subjectId) === String(questionSubjectId)) &&
+      (!questionChapterId || String(item.chapterId?.id || item.chapterId) === String(questionChapterId))
+    ),
+    [topics, questionSubjectId, questionChapterId],
   );
   const formSubjects = useMemo(
     () => subjects.filter((item) => item.examType === formState.examType),
@@ -528,9 +538,10 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
 
   async function loadLookups() {
     try {
-      const [subjectsResponse, chaptersResponse, markingSettingsResponse, patternBlueprintsResponse, scheduleResponse, logsResponse] = await Promise.all([
+      const [subjectsResponse, chaptersResponse, topicsResponse, markingSettingsResponse, patternBlueprintsResponse, scheduleResponse, logsResponse] = await Promise.all([
         subjectService.list({ limit: 200 }),
         chapterService.list({ limit: 500 }),
+        topicService.list({ limit: 1000 }),
         mockTestService.getMarkingSettings(),
         mockTestService.listPatternBlueprints(),
         mockTestService.getGenerationSchedule(),
@@ -538,6 +549,7 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
       ]);
       setSubjects(subjectsResponse.data || []);
       setChapters(chaptersResponse.data || []);
+      setTopics(topicsResponse.data || []);
       setPatternBlueprints(patternBlueprintsResponse.data || []);
       const schedules = Array.isArray(scheduleResponse.data) ? scheduleResponse.data : [scheduleResponse.data].filter(Boolean);
       setGenerationSchedules(Object.fromEntries(["NEET", "JEE"].map((examType) => {
@@ -581,7 +593,7 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
         examType: formState.examType,
         subjectId: formState.testType === "subject" ? formState.subjectId : questionSubjectId,
         chapterId: lockedReplacement ? replacementTarget.chapterId : questionChapterId,
-        topicId: lockedReplacement ? replacementTarget.topicId : undefined,
+        topicId: lockedReplacement ? replacementTarget.topicId : questionTopicId,
       });
       setQuestionResults(response.data || []);
       setQuestionMeta(response.meta);
@@ -671,7 +683,7 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
       loadQuestions(questionPage);
     }, 200);
     return () => window.clearTimeout(timeout);
-  }, [showForm, questionSearch, questionSubjectId, questionChapterId, formState.examType, formState.testType, formState.subjectId, questionPage, selectedQuestionIds.join(","), replacementTarget?.id]);
+  }, [showForm, questionSearch, questionSubjectId, questionChapterId, questionTopicId, formState.examType, formState.testType, formState.subjectId, questionPage, selectedQuestionIds.join(","), replacementTarget?.id]);
 
   useEffect(() => {
     if (!showForm || formState.markingOverrideEnabled) return;
@@ -711,6 +723,7 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
     setQuestionSearch("");
     setQuestionSubjectId("");
     setQuestionChapterId("");
+    setQuestionTopicId("");
     setKnownSelectedQuestions([]);
     setQuestionPage(1);
     setDayInput("");
@@ -734,6 +747,7 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
     setQuestionSearch("");
     setQuestionSubjectId("");
     setQuestionChapterId("");
+    setQuestionTopicId("");
     setKnownSelectedQuestions(Array.isArray(item.manualQuestions) ? item.manualQuestions : Array.isArray(item.questions) ? item.questions : []);
     setQuestionPage(1);
     setDayInput((nextForm.availableDaysOfMonth || []).join(", "));
@@ -813,6 +827,7 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
     setReplacementTarget(item);
     setQuestionSubjectId(item.subjectId);
     setQuestionChapterId(item.chapterId);
+    setQuestionTopicId(item.topicId);
     setQuestionSearch("");
     setQuestionPage(1);
   }
@@ -2173,31 +2188,57 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
               </label>
             ) : null}
             {formState.examType !== "BOTH" ? <div className="rounded-sm border border-slate-200 bg-slate-50 p-3">
-              <ToggleSwitch
-                checked={formState.generationMode === "automatic"}
-                onChange={(enabled) => setFormState((current) => ({
-                  ...current,
-                  generationMode: enabled ? "automatic" : "fixed",
-                  isOneTimeFree: enabled ? false : current.isOneTimeFree,
-                  isPremiumOnly: enabled ? true : current.isPremiumOnly,
-                  questionIds: enabled ? [] : current.questionIds,
-                  questionCount: enabled ? automaticSummary.requiredTotal || current.questionCount : current.questionCount,
-                  automaticQuestionDistribution: enabled
-                    ? (current.automaticQuestionDistribution?.length ? current.automaticQuestionDistribution : resetAutomaticDistribution(current.examType))
-                    : current.automaticQuestionDistribution,
-                }))}
-                label="Automatic question generation"
-              />
+              <span className="mb-2 block text-xs font-bold text-slate-700">Question Selection Mode</span>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: "fixed", label: "Manual" },
+                  { value: "automatic", label: "Automatic" },
+                ].map((mode) => {
+                  const active = formState.generationMode === mode.value;
+                  return (
+                    <button
+                      key={mode.value}
+                      type="button"
+                      className={cn(
+                        "rounded-sm border px-3 py-2 text-sm font-bold transition-colors",
+                        active ? "border-blue-500 bg-blue-600 text-white" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                      )}
+                      onClick={() => {
+                        const enabled = mode.value === "automatic";
+                        setFormState((current) => ({
+                          ...current,
+                          generationMode: mode.value,
+                          isOneTimeFree: enabled ? false : current.isOneTimeFree,
+                          isPremiumOnly: enabled ? true : current.isPremiumOnly,
+                          questionIds: enabled ? [] : current.questionIds,
+                          questionCount: enabled ? automaticSummary.requiredTotal || current.questionCount : current.questionCount,
+                          automaticQuestionDistribution: enabled
+                            ? (current.automaticQuestionDistribution?.length ? current.automaticQuestionDistribution : resetAutomaticDistribution(current.examType))
+                            : current.automaticQuestionDistribution,
+                        }));
+                      }}
+                    >
+                      {mode.label}
+                    </button>
+                  );
+                })}
+              </div>
               <p className="mt-2 text-xs text-slate-500">
                 {formState.generationMode === "automatic"
-                  ? "Enabled: questions are selected automatically from the chosen exam and subject."
-                  : "Disabled: select and assign the questions manually below."}
+                  ? "Automatic mode selects questions from the bank using subject-wise MCQ/Numeric counts."
+                  : "Manual mode uses Subject -> Chapter -> Topic -> Question selection below."}
               </p>
             </div> : null}
             {subjectOnly && formState.generationMode === "automatic" ? <>
               <label className={ui.field}><span>Frequency</span><select className={ui.input} value="daily" disabled><option value="daily">Daily</option></select></label>
               <label className={ui.field}><span>Daily Generation Time</span><input className={ui.input} type="time" value={formState.generationTime} onChange={(event) => setFormState((current) => ({ ...current, generationTime: event.target.value }))} /></label>
-              <label className={ui.field}><span>Questions Per Test</span><input className={ui.input} type="number" min="2" max="300" value={formState.questionCount} onChange={(event) => setFormState((current) => ({ ...current, questionCount: event.target.value }))} /><small className="text-xs text-slate-500">Questions are selected automatically from the chosen exam and subject.</small></label>
+              <label className={ui.field}><span>Questions Per Test</span><input className={ui.input} type="number" min="2" max="300" value={formState.questionCount} onChange={(event) => setFormState((current) => {
+                const questionCount = Number(event.target.value || 0);
+                const automaticQuestionDistribution = current.automaticQuestionDistribution?.length
+                  ? current.automaticQuestionDistribution.map((row, index) => index === 0 ? { ...row, mcqCount: current.examType === "NEET" ? questionCount : row.mcqCount, numericCount: current.examType === "NEET" ? 0 : row.numericCount } : row)
+                  : current.automaticQuestionDistribution;
+                return { ...current, questionCount: event.target.value, automaticQuestionDistribution };
+              })} /><small className="text-xs text-slate-500">Questions are selected automatically from the chosen exam and subject.</small></label>
             </> : null}
             <label className={ui.field}>
               <span>Difficulty</span>
@@ -2408,15 +2449,21 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
                   <div className="mb-2 text-sm font-semibold text-slate-700">Find Questions</div>
                   <SearchBar value={questionSearch} onChange={(value) => { setQuestionSearch(value); setQuestionPage(1); }} placeholder="Search question text..." />
                 </div>
-                <select className={cn(ui.input, "lg:max-w-[220px]")} disabled={lockedReplacement} value={questionSubjectId} onChange={(event) => { setQuestionSubjectId(event.target.value); setQuestionChapterId(""); setQuestionPage(1); }}>
+                <select className={cn(ui.input, "lg:max-w-[220px]")} disabled={lockedReplacement} value={questionSubjectId} onChange={(event) => { setQuestionSubjectId(event.target.value); setQuestionChapterId(""); setQuestionTopicId(""); setQuestionPage(1); }}>
                   <option value="">All Subjects</option>
                   {subjects.filter((item) => formState.examType === "BOTH" || item.examType === formState.examType).map((item) => (
                     <option key={item.id} value={item.id}>{item.name}</option>
                   ))}
                 </select>
-                <select className={cn(ui.input, "lg:max-w-[220px]")} disabled={lockedReplacement} value={questionChapterId} onChange={(event) => { setQuestionChapterId(event.target.value); setQuestionPage(1); }}>
+                <select className={cn(ui.input, "lg:max-w-[220px]")} disabled={lockedReplacement} value={questionChapterId} onChange={(event) => { setQuestionChapterId(event.target.value); setQuestionTopicId(""); setQuestionPage(1); }}>
                   <option value="">All Chapters</option>
                   {filteredChapters.map((item) => (
+                    <option key={item.id} value={item.id}>{item.name}</option>
+                  ))}
+                </select>
+                <select className={cn(ui.input, "lg:max-w-[220px]")} disabled={lockedReplacement} value={questionTopicId} onChange={(event) => { setQuestionTopicId(event.target.value); setQuestionPage(1); }}>
+                  <option value="">All Topics</option>
+                  {filteredTopics.map((item) => (
                     <option key={item.id} value={item.id}>{item.name}</option>
                   ))}
                 </select>
