@@ -50,6 +50,12 @@ export const questionService = {
     });
     return response;
   },
+  async downloadBulkTemplate(format = "csv") {
+    const response = await http.get(`/admin/questions/bulk-upload/template/${format}`, {
+      responseType: "blob",
+    });
+    return response;
+  },
   async history(questionId) {
     const response = await http.get("/admin/question-activity-logs", {
       params: { questionId, limit: 100 },

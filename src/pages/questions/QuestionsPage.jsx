@@ -460,6 +460,7 @@ function uniqueYearOptions(years = []) {
 
 export function QuestionsPage() {
   const { admin } = useAuth();
+  const toast = useToast();
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkMode, setBulkMode] = useState("upload");
   const [bulkCreateMissingQuestions, setBulkCreateMissingQuestions] = useState(false);
@@ -558,6 +559,23 @@ export function QuestionsPage() {
     link.download = "failed-question-upload-records.csv";
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function downloadBulkTemplate(format) {
+    const extension = format === "xlsx" ? "xlsx" : "csv";
+    try {
+      const response = await questionService.downloadBulkTemplate(extension);
+      const contentType = response.headers?.["content-type"] || (extension === "xlsx" ? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" : "text/csv;charset=utf-8");
+      const url = URL.createObjectURL(new Blob([response.data], { type: contentType }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `question-bulk-upload-template.${extension}`;
+      link.click();
+      URL.revokeObjectURL(url);
+      toast.success(`${extension.toUpperCase()} template downloaded.`);
+    } catch (error) {
+      toast.error(error?.response?.data?.message || "Unable to download question template.");
+    }
   }
 
   async function openQuestionHistory(row) {
@@ -963,6 +981,22 @@ export function QuestionsPage() {
         submitLabel="Close"
       >
         <div className="flex flex-col gap-5">
+          <div className="rounded-sm border border-slate-200 bg-slate-50 p-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="text-sm font-bold text-slate-800">Question Upload Template</div>
+                <p className={ui.muted}>Download a ready template with sample NEET, JEE MCQ, and numeric/integer questions.</p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => downloadBulkTemplate("csv")}>
+                  Download CSV
+                </button>
+                <button className={cn(ui.buttonBase, ui.buttonSecondary)} type="button" onClick={() => downloadBulkTemplate("xlsx")}>
+                  Download XLSX
+                </button>
+              </div>
+            </div>
+          </div>
           <div className={ui.field}>
             <label>File Upload</label>
             <input className={ui.input} type="file" accept=".xlsx,.xls,.csv,.json" onChange={(event) => setBulkFile(event.target.files?.[0] || null)} />

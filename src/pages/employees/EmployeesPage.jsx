@@ -56,6 +56,33 @@ const emptyForm = {
   modulePermissions: Object.fromEntries(MODULES.map((module) => [module.key, { view: false, create: false, edit: false, delete: false, bulkUpload: false }])),
 };
 
+function normalizeModulePermissions(modulePermissions = {}) {
+  return Object.fromEntries(MODULES.map((module) => {
+    const permission = modulePermissions[module.key] || {};
+    const create = Boolean(permission.create);
+    const edit = Boolean(permission.edit);
+    const deleteAllowed = Boolean(permission.delete);
+    const bulkUpload = Boolean(permission.bulkUpload);
+    return [module.key, {
+      view: Boolean(permission.view || create || edit || deleteAllowed || bulkUpload),
+      create,
+      edit,
+      delete: deleteAllowed,
+      bulkUpload,
+    }];
+  }));
+}
+
+function applyModuleAction(modulePermissions, moduleKey, action, value) {
+  const current = modulePermissions[moduleKey] || {};
+  const next = { ...current, [action]: value };
+  if (value === true && action !== "view") next.view = true;
+  return {
+    ...modulePermissions,
+    [moduleKey]: next,
+  };
+}
+
 export function EmployeesPage() {
   const toast = useToast();
   const [items, setItems] = useState([]);
@@ -101,10 +128,10 @@ export function EmployeesPage() {
       password: "",
       isActive: item.isActive !== false,
       employeePermissions: { ...emptyForm.employeePermissions, ...(item.employeePermissions || {}) },
-      modulePermissions: {
+      modulePermissions: normalizeModulePermissions({
         ...emptyForm.modulePermissions,
         ...(item.modulePermissions || {}),
-      },
+      }),
     });
   }
 
@@ -113,7 +140,7 @@ export function EmployeesPage() {
     const payload = {
       ...form,
       employeePermissions: { ...form.employeePermissions },
-      modulePermissions: { ...form.modulePermissions },
+      modulePermissions: normalizeModulePermissions(form.modulePermissions),
     };
     if (editing && !payload.password) delete payload.password;
     try {
@@ -336,10 +363,7 @@ export function EmployeesPage() {
                           checked={Boolean(permission[action])}
                           onChange={(value) => setForm((current) => ({
                             ...current,
-                            modulePermissions: {
-                              ...current.modulePermissions,
-                              [module.key]: { ...(current.modulePermissions[module.key] || {}), [action]: value },
-                            },
+                            modulePermissions: applyModuleAction(current.modulePermissions, module.key, action, value),
                           }))}
                           label=""
                           size="sm"
@@ -354,10 +378,7 @@ export function EmployeesPage() {
                           onChange={(value) => setForm((current) => ({
                             ...current,
                             employeePermissions: { ...current.employeePermissions, bulkUploadQuestions: value },
-                            modulePermissions: {
-                              ...current.modulePermissions,
-                              questions: { ...(current.modulePermissions.questions || {}), bulkUpload: value },
-                            },
+                            modulePermissions: applyModuleAction(current.modulePermissions, "questions", "bulkUpload", value),
                           }))}
                           label=""
                           size="sm"

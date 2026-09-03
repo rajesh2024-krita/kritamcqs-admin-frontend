@@ -23,6 +23,14 @@ export function AuthProvider({ children }) {
     clearSession();
   }
 
+  async function refreshAdmin() {
+    if (!localStorage.getItem("krita_admin_token")) return null;
+    const response = await authService.me();
+    localStorage.setItem("krita_admin_user", JSON.stringify(response.data));
+    setAdmin(response.data);
+    return response.data;
+  }
+
   useEffect(() => {
     setUnauthorizedHandler(() => {
       clearSession();
@@ -37,8 +45,7 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const response = await authService.me();
-        setAdmin(response.data);
+        await refreshAdmin();
       } catch {
         clearSession();
       } finally {
@@ -47,6 +54,19 @@ export function AuthProvider({ children }) {
     }
 
     hydrate();
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return undefined;
+    const handleFocus = () => {
+      refreshAdmin().catch(() => undefined);
+    };
+    const interval = window.setInterval(handleFocus, 60000);
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", handleFocus);
+    };
   }, [token]);
 
   function persistSession(nextToken, nextAdmin) {
@@ -83,6 +103,7 @@ export function AuthProvider({ children }) {
       login,
       bootstrap,
       register,
+      refreshAdmin,
       logout,
     }),
     [admin, token, loading],

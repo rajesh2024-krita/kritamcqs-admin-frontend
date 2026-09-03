@@ -55,20 +55,28 @@ export function getModulePermission(admin, moduleKey) {
   const permission = admin?.modulePermissions?.[moduleKey] || {};
   if (moduleKey === "questions") {
     const legacy = admin?.employeePermissions || {};
+    const create = Boolean(permission.create || legacy.createQuestions || legacy.createManualQuestions);
+    const edit = Boolean(permission.edit || legacy.editQuestions);
+    const deleteAllowed = Boolean(permission.delete || legacy.deleteQuestions);
+    const bulkUpload = Boolean(permission.bulkUpload || legacy.bulkUploadQuestions);
     return {
-      view: Boolean(permission.view || legacy.viewQuestions),
-      create: Boolean(permission.create || legacy.createQuestions || legacy.createManualQuestions),
-      edit: Boolean(permission.edit || legacy.editQuestions),
-      delete: Boolean(permission.delete || legacy.deleteQuestions),
-      bulkUpload: Boolean(permission.bulkUpload || legacy.bulkUploadQuestions),
+      view: Boolean(permission.view || legacy.viewQuestions || create || edit || deleteAllowed || bulkUpload),
+      create,
+      edit,
+      delete: deleteAllowed,
+      bulkUpload,
     };
   }
+  const create = Boolean(permission.create);
+  const edit = Boolean(permission.edit);
+  const deleteAllowed = Boolean(permission.delete);
+  const bulkUpload = Boolean(permission.bulkUpload);
   return {
-    view: Boolean(permission.view),
-    create: Boolean(permission.create),
-    edit: Boolean(permission.edit),
-    delete: Boolean(permission.delete),
-    bulkUpload: Boolean(permission.bulkUpload),
+    view: Boolean(permission.view || create || edit || deleteAllowed || bulkUpload),
+    create,
+    edit,
+    delete: deleteAllowed,
+    bulkUpload,
   };
 }
 

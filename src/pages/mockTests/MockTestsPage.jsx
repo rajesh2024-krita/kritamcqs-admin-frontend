@@ -2187,9 +2187,9 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
                 </select>
               </label>
             ) : null}
-            {formState.examType !== "BOTH" ? <div className="rounded-sm border border-slate-200 bg-slate-50 p-3">
-              <span className="mb-2 block text-xs font-bold text-slate-700">Question Selection Mode</span>
-              <div className="grid grid-cols-2 gap-2">
+            {formState.examType !== "BOTH" ? <div className="rounded-sm border border-slate-200 bg-white p-3">
+              <span className="mb-2 block text-xs font-bold text-slate-700">Question Selection</span>
+              <div className="flex border-b border-slate-200" role="tablist" aria-label="Question selection mode">
                 {[
                   { value: "fixed", label: "Manual" },
                   { value: "automatic", label: "Automatic" },
@@ -2199,9 +2199,11 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
                     <button
                       key={mode.value}
                       type="button"
+                      role="tab"
+                      aria-selected={active}
                       className={cn(
-                        "rounded-sm border px-3 py-2 text-sm font-bold transition-colors",
-                        active ? "border-blue-500 bg-blue-600 text-white" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+                        "-mb-px flex-1 border-b-2 px-4 py-2 text-sm font-bold transition-colors",
+                        active ? "border-blue-600 text-blue-700" : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-800"
                       )}
                       onClick={() => {
                         const enabled = mode.value === "automatic";
@@ -2223,7 +2225,7 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
                   );
                 })}
               </div>
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-3 text-xs text-slate-500">
                 {formState.generationMode === "automatic"
                   ? "Automatic mode selects questions from the bank using subject-wise MCQ/Numeric counts."
                   : "Manual mode uses Subject -> Chapter -> Topic -> Question selection below."}
