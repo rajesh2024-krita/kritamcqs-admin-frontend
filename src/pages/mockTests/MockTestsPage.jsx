@@ -317,14 +317,14 @@ function getRequiredQuestionCount(formState, blueprints = []) {
 
 const DEFAULT_AUTOMATIC_SUBJECT_ROWS = {
   NEET: [
-    { subject: "Biology", questions: 90 },
-    { subject: "Physics", questions: 45 },
-    { subject: "Chemistry", questions: 45 },
+    { subject: "Biology", questions: 90, mcqQuestions: 90, numericQuestions: 0 },
+    { subject: "Physics", questions: 45, mcqQuestions: 45, numericQuestions: 0 },
+    { subject: "Chemistry", questions: 45, mcqQuestions: 45, numericQuestions: 0 },
   ],
   JEE: [
-    { subject: "Physics", questions: 30 },
-    { subject: "Chemistry", questions: 30 },
-    { subject: "Mathematics", questions: 30 },
+    { subject: "Physics", questions: 30, mcqQuestions: 20, numericQuestions: 10 },
+    { subject: "Chemistry", questions: 30, mcqQuestions: 20, numericQuestions: 10 },
+    { subject: "Mathematics", questions: 30, mcqQuestions: 20, numericQuestions: 10 },
   ],
 };
 
@@ -346,7 +346,13 @@ function buildDefaultAutomaticDistribution(examType, subjectRows = [], catalogSu
     const subjectName = String(row.subject || "").trim();
     const catalogSubject = catalogSubjects.find((subject) => String(subject.name || "").toLowerCase() === subjectName.toLowerCase());
     const totalQuestions = parseBlueprintNumber(row.questions);
-    const split = getDefaultTypeSplit(examType, subjectName, totalQuestions);
+    const hasAutomaticSplit = row.mcqQuestions !== undefined || row.numericQuestions !== undefined || row.mcqCount !== undefined || row.numericCount !== undefined;
+    const split = hasAutomaticSplit
+      ? {
+          mcqCount: Math.max(0, Number(row.mcqQuestions ?? row.mcqCount ?? 0)),
+          numericCount: Math.max(0, Number(row.numericQuestions ?? row.numericCount ?? 0)),
+        }
+      : getDefaultTypeSplit(examType, subjectName, totalQuestions);
     return {
       subjectId: catalogSubject?.id || "",
       subjectName,
@@ -360,9 +366,26 @@ function getBlueprintForExam(blueprints = [], examType) {
   return (blueprints || []).find((item) => String(item.key || "").toUpperCase() === String(examType || "").toUpperCase());
 }
 
+function getAutomaticPatternRows(blueprint, examType) {
+  if (Array.isArray(blueprint?.automaticPattern) && blueprint.automaticPattern.length) return blueprint.automaticPattern;
+  return DEFAULT_AUTOMATIC_SUBJECT_ROWS[examType] || blueprint?.subjectWise || [];
+}
+
+function getAutomaticPatternSummary(blueprint) {
+  const rows = Array.isArray(blueprint?.automaticPattern) ? blueprint.automaticPattern : [];
+  const mcqTotal = rows.reduce((sum, row) => sum + Number(row.mcqQuestions ?? row.mcqCount ?? 0), 0);
+  const numericTotal = rows.reduce((sum, row) => sum + Number(row.numericQuestions ?? row.numericCount ?? 0), 0);
+  return { mcqTotal, numericTotal, total: mcqTotal + numericTotal };
+}
+
+function getSubjectWiseTotal(blueprint) {
+  return (blueprint?.subjectWise || []).reduce((sum, row) => sum + parseBlueprintNumber(row.questions), 0);
+}
+
 const BLUEPRINT_TABLES = [
   { key: "summary", title: "Answer Sheet", fields: [["label", "Question"], ["value", "Answer"]] },
   { key: "subjectWise", title: "Subject Wise", fields: [["subject", "Subject"], ["questions", "Questions"], ["marks", "Marks"], ["weightage", "Weightage %"]] },
+  { key: "automaticPattern", title: "Automatic Pattern", fields: [["subject", "Subject"], ["mcqQuestions", "MCQ Questions"], ["numericQuestions", "Numeric Questions"]] },
   { key: "chapterWise", title: "Chapter Wise Blueprint", fields: [["subject", "Subject"], ["chapter", "Chapter"], ["expectedQuestions", "Expected Questions"]] },
   { key: "topicWise", title: "Topic Wise Rules", fields: [["subject", "Subject"], ["chapter", "Chapter"], ["topic", "Topic"], ["expectedQuestions", "Expected Questions"]] },
   { key: "rules", title: "Mock Test Rules", fields: [["rule", "Rule"], ["value", "Value"]] },
@@ -448,7 +471,7 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
           formState.examType,
           subjectOnly && formState.subjectId
             ? [{ subject: formSubjects.find((subject) => subject.id === formState.subjectId)?.name || "Subject", questions: Number(formState.questionCount || 0) }]
-            : getBlueprintForExam(patternBlueprints, formState.examType)?.subjectWise || [],
+            : getAutomaticPatternRows(getBlueprintForExam(patternBlueprints, formState.examType), formState.examType),
           subjectOnly && formState.subjectId ? formSubjects.filter((subject) => subject.id === formState.subjectId) : formSubjects,
         )
   ), [formState.automaticQuestionDistribution, formState.examType, formState.questionCount, formState.subjectId, formSubjects, patternBlueprints, subjectOnly]);
@@ -757,7 +780,7 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
 
   function resetAutomaticDistribution(examType, currentSubjects = formSubjects) {
     const blueprint = getBlueprintForExam(patternBlueprints, examType);
-    return buildDefaultAutomaticDistribution(examType, blueprint?.subjectWise || [], currentSubjects.filter((subject) => subject.examType === examType));
+    return buildDefaultAutomaticDistribution(examType, getAutomaticPatternRows(blueprint, examType), currentSubjects.filter((subject) => subject.examType === examType));
   }
 
   function updateAutomaticDistribution(index, field, value) {
@@ -766,7 +789,7 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
         ? [...current.automaticQuestionDistribution]
         : buildDefaultAutomaticDistribution(
             current.examType,
-            getBlueprintForExam(patternBlueprints, current.examType)?.subjectWise || [],
+            getAutomaticPatternRows(getBlueprintForExam(patternBlueprints, current.examType), current.examType),
             subjects.filter((subject) => subject.examType === current.examType),
           );
       rows[index] = { ...(rows[index] || {}), [field]: Math.max(0, Number(value || 0)) };
@@ -985,7 +1008,10 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
       await mockTestService.verifyEditPassword(adminPassword);
       setBlueprintEditor({
         adminPassword,
-        data: JSON.parse(JSON.stringify(blueprint)),
+        data: {
+          ...JSON.parse(JSON.stringify(blueprint)),
+          automaticPattern: getAutomaticPatternRows(blueprint, blueprint.key),
+        },
       });
       toast.success("Admin password verified");
     } catch (error) {
@@ -1032,6 +1058,16 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
   async function handleSaveBlueprint(event) {
     event.preventDefault();
     if (!blueprintEditor?.data?.key) return;
+    const subjectTotal = getSubjectWiseTotal(blueprintEditor.data);
+    const automaticPatternSummary = getAutomaticPatternSummary(blueprintEditor.data);
+    if (blueprintEditor.data.key === "NEET" && automaticPatternSummary.numericTotal > 0) {
+      toast.error("NEET automatic pattern supports MCQ questions only");
+      return;
+    }
+    if (subjectTotal > 0 && automaticPatternSummary.total > 0 && automaticPatternSummary.total !== subjectTotal) {
+      toast.error(`Automatic pattern total must equal subject-wise total questions (${subjectTotal})`);
+      return;
+    }
     setSavingBlueprint(true);
     try {
       const response = await mockTestService.updatePatternBlueprint(blueprintEditor.data.key, {
@@ -1284,6 +1320,14 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
                       {item.subject}: {item.questions}
                     </span>
                   ))}
+                  {(() => {
+                    const autoSummary = getAutomaticPatternSummary({ ...blueprint, automaticPattern: getAutomaticPatternRows(blueprint, blueprint.key) });
+                    return (
+                      <span className="inline-flex px-1.5 py-0.5 bg-blue-50 border border-blue-100 rounded text-[9px] font-medium text-blue-700">
+                        Auto: {autoSummary.mcqTotal} MCQ / {autoSummary.numericTotal} Numeric
+                      </span>
+                    );
+                  })()}
                 </div>
               </div>
             ))}
