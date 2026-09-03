@@ -1,7 +1,17 @@
 import { http } from "./http";
 export const affiliateMarketingService = {
-  dashboard: (params) => http.get("/admin/affiliate-marketing/dashboard", { params }), affiliates: () => http.get("/admin/affiliate-marketing/affiliates"),
-  create: (data) => http.post("/admin/affiliate-marketing/affiliates", data), update: (id, data) => http.patch(`/admin/affiliate-marketing/affiliates/${id}`, data),
+  dashboard: (params) => http.get("/admin/affiliate-marketing/dashboard", { params }),
+  affiliates: (params) => http.get("/admin/affiliate-marketing/affiliates", { params }),
+  affiliate: (id) => http.get(`/admin/affiliate-marketing/affiliates/${id}`),
+  create: (data) => http.post("/admin/affiliate-marketing/affiliates", data),
+  update: (id, data) => http.patch(`/admin/affiliate-marketing/affiliates/${id}`, data),
+  remove: (id, force = false) => http.delete(`/admin/affiliate-marketing/affiliates/${id}`, { params: { force } }),
+  resetPassword: (id, data) => http.post(`/admin/affiliate-marketing/affiliates/${id}/reset-password`, data),
   referrals: (params) => http.get("/admin/affiliate-marketing/referrals", { params }), purchases: (params) => http.get("/admin/affiliate-marketing/purchases", { params }),
+  updateCommission: (id, data) => http.patch(`/admin/affiliate-marketing/purchases/${id}/commission`, data),
+  sendNotification: (id, data) => http.post(`/admin/affiliate-marketing/affiliates/${id}/notifications`, data),
+  notifications: (params) => http.get("/admin/affiliate-marketing/notifications", { params }),
+  adminNotifications: (params) => http.get("/admin/affiliate-marketing/admin-notifications", { params }),
+  markAdminNotificationRead: (id) => http.patch(`/admin/affiliate-marketing/admin-notifications/${id}/read`),
   settings: () => http.get("/admin/affiliate-marketing/settings"), updateSettings: (data) => http.patch("/admin/affiliate-marketing/settings", data),
 };
