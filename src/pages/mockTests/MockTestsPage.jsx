@@ -541,7 +541,7 @@ export function MockTestsPage({ freeOnly = false, subjectOnly = false } = {}) {
       const [subjectsResponse, chaptersResponse, topicsResponse, markingSettingsResponse, patternBlueprintsResponse, scheduleResponse, logsResponse] = await Promise.all([
         subjectService.list({ limit: 200 }),
         chapterService.list({ limit: 500 }),
-        topicService.list({ limit: 1000 }),
+        topicService.list({ limit: 500 }),
         mockTestService.getMarkingSettings(),
         mockTestService.listPatternBlueprints(),
         mockTestService.getGenerationSchedule(),
