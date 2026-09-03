@@ -5,7 +5,7 @@ import { formatDate } from "../../utils/format";
 export function ModesPage() {
   return (
     <EntityManagerPage
-      title="Modes"
+      title="Mode"
       description="Manage exam modes used across the learning platform."
       service={modeService}
       sortable
