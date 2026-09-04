@@ -3,7 +3,7 @@ import { Bell, CheckCircle2, Copy, Eye, Pencil, Plus, Search, Send, Trash2 } fro
 import { affiliateMarketingService as api } from "../api/affiliateMarketingService";
 import { useToast } from "../context/ToastContext";
 
-const tabs = ["Dashboard", "Affiliates", "Journeys", "Purchases", "Notifications", "Milestones", "Settings"];
+const tabs = ["Dashboard", "Affiliates", "Journeys", "Purchases", "Payment Cycles", "Templates", "Notifications", "Settings"];
 const money = (value) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(Number(value || 0));
 const date = (value) => value ? new Date(value).toLocaleString() : "-";
 const pick = (response) => response.data?.data ?? response.data;
@@ -27,7 +27,7 @@ export function AffiliateMarketingPage() {
   async function load() {
     setLoading(true);
     try {
-      const [dashboard, affiliates, referrals, purchases, settings, notifications, adminNotifications] = await Promise.all([
+      const [dashboard, affiliates, referrals, purchases, settings, notifications, adminNotifications, cycles, templates] = await Promise.all([
         api.dashboard(activityFilters),
         api.affiliates(affiliateFilters),
         api.referrals(activityFilters),
@@ -35,8 +35,10 @@ export function AffiliateMarketingPage() {
         api.settings(),
         api.notifications(notificationFilters),
         api.adminNotifications({ page: 1, limit: 25 }),
+        api.paymentCycles(),
+        api.eventTemplates(),
       ]);
-      setData({ dashboard: pick(dashboard), affiliates: pick(affiliates), referrals: pick(referrals), purchases: pick(purchases), settings: pick(settings), notifications: pick(notifications), adminNotifications: pick(adminNotifications) });
+      setData({ dashboard: pick(dashboard), affiliates: pick(affiliates), referrals: pick(referrals), purchases: pick(purchases), settings: pick(settings), notifications: pick(notifications), adminNotifications: pick(adminNotifications), cycles: pick(cycles), templates: pick(templates) });
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -130,6 +132,10 @@ export function AffiliateMarketingPage() {
     }
   }
 
+  async function updateCycle(cycle, status) { try { await api.updatePaymentCycle(cycle.id, { status }); toast.success("Payment status updated and configured messages triggered"); await load(); } catch (error) { toast.error(error.message); } }
+  async function saveTemplate(event) { event.preventDefault(); const form = event.currentTarget; const values = Object.fromEntries(new FormData(form)); values.notificationEnabled = Boolean(form.notificationEnabled.checked); values.emailEnabled = Boolean(form.emailEnabled.checked); if (!modal.template.id) { values.event = modal.template.event; values.name = values.title || modal.template.name; } try { modal.template.id ? await api.updateEventTemplate(modal.template.id, values) : await api.createEventTemplate(values); toast.success("Template saved"); setModal(null); await load(); } catch (error) { toast.error(error.message); } }
+  async function previewTemplate(template) { try { const response = await api.previewEventTemplate(template.id); setModal({ mode: "preview", preview: pick(response), template }); } catch (error) { toast.error(error.message); } }
+
   const cards = data.dashboard || {};
   const referrals = data.referrals?.items || [];
   const purchases = data.purchases?.items || [];
@@ -161,12 +167,15 @@ export function AffiliateMarketingPage() {
       {tab === "Journeys" && <ActivityTab affiliates={affiliateItems} filters={filters.activity} page={data.referrals} rows={referrals} type="referrals" onFilter={(next) => setFilters((current) => ({ ...current, activity: next }))} />}
       {tab === "Purchases" && <PurchasesTab affiliates={affiliateItems} filters={filters.activity} page={data.purchases} rows={purchases} onCommission={updateCommission} onFilter={(next) => setFilters((current) => ({ ...current, activity: next }))} />}
       {tab === "Notifications" && <NotificationsTab affiliates={affiliateItems} filters={filters.notifications} page={data.notifications} rows={notifications} onFilter={(next) => setFilters((current) => ({ ...current, notifications: next }))} />}
-      {tab === "Milestones" && <MilestonesTab rows={milestones} onRead={markMilestoneRead} />}
+      {tab === "Payment Cycles" && <PaymentCyclesTab rows={data.cycles?.items || []} onStatus={updateCycle} />}
+      {tab === "Templates" && <TemplatesTab rows={data.templates || []} onCreate={() => setModal({ mode: "template", template: { event: `CUSTOM_EVENT_${Date.now()}`, name: "Custom affiliate event", recipient: "AFFILIATE", notificationEnabled: true, emailEnabled: true, variables: [] } })} onEdit={(template) => setModal({ mode: "template", template })} onPreview={previewTemplate} />}
       {tab === "Settings" && data.settings && <Settings settings={data.settings} onSave={async (values) => { await api.updateSettings(values); toast.success("Settings saved"); await load(); }} />}
 
       {(selected || selectedLoading) && <DetailsPanel data={selected} loading={selectedLoading} onClose={() => setSelected(null)} />}
-      {modal?.mode !== "notify" && modal && <AffiliateModal affiliate={modal.affiliate} mode={modal.mode} onClose={() => setModal(null)} onSubmit={saveAffiliate} />}
+      {["create", "edit"].includes(modal?.mode) && <AffiliateModal affiliate={modal.affiliate} mode={modal.mode} onClose={() => setModal(null)} onSubmit={saveAffiliate} />}
       {modal?.mode === "notify" && <NotificationModal affiliate={modal.affiliate} onClose={() => setModal(null)} onSubmit={sendNotification} />}
+      {modal?.mode === "template" && <TemplateModal template={modal.template} onClose={() => setModal(null)} onSubmit={saveTemplate} />}
+      {modal?.mode === "preview" && <Modal title={`Preview: ${modal.template.name}`} onClose={() => setModal(null)}><h3 className="text-lg font-black">{modal.preview.title}</h3><p className="mt-2">{modal.preview.message}</p><hr className="my-4"/><p className="font-bold">Subject: {modal.preview.subject}</p><div className="mt-3 rounded-xl border p-4" dangerouslySetInnerHTML={{ __html: modal.preview.htmlContent }} /></Modal>}
     </div>
   );
 }
@@ -204,6 +213,12 @@ function MilestonesTab({ rows, onRead }) {
   return <Table headers={["Status", "Affiliate", "Threshold", "Purchases", "Message", "Created", "Action"]} rows={rows.map((item) => [item.status, item.affiliateId?.affiliateName || item.metadata?.affiliateName, item.threshold, item.purchaseCount, item.message, date(item.createdAt), item.status === "UNREAD" ? <button onClick={() => onRead(item)} className="rounded-lg bg-emerald-600 px-3 py-1 text-xs font-bold text-white">Mark read</button> : <span className="font-bold text-emerald-600">Read</span>])} />;
 }
 
+function PaymentCyclesTab({ rows, onStatus }) { const statuses = ["PENDING", "ELIGIBLE_FOR_PAYMENT", "PAYMENT_PROCESSING", "PAYMENT_SENT", "PAYMENT_COMPLETED", "FAILED", "CANCELLED"]; return <Table headers={["Affiliate", "Cycle", "Progress", "Earnings", "Status", "Payment date", "Last updated"]} rows={rows.map((item) => [item.affiliateId?.affiliateName, `Cycle ${item.cycleNumber}`, `${item.successfulReferralCount} / ${item.targetCount}`, money(item.earnings), <select value={item.status} onChange={(event) => onStatus(item, event.target.value)} className="rounded-lg border p-2 text-xs font-bold">{statuses.map((status) => <option key={status}>{status}</option>)}</select>, date(item.paymentDate), date(item.updatedAt)])} />; }
+
+function TemplatesTab({ rows, onCreate, onEdit, onPreview }) { return <div className="space-y-4"><div className="flex items-center justify-between gap-3 rounded-2xl border bg-indigo-50 p-4 text-sm font-semibold text-indigo-900"><span>Affiliate event notifications and emails are controlled only here. Each channel can be enabled independently.</span><button onClick={onCreate} className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-white"><Plus size={15}/>Create template</button></div><Table headers={["Event", "Recipient", "In-app", "Email", "Subject", "Actions"]} rows={rows.map((item) => [item.name, item.recipient, item.notificationEnabled ? "Enabled" : "Disabled", item.emailEnabled ? "Enabled" : "Disabled", item.subject, <div className="flex gap-2"><IconAction title="Edit" icon={Pencil} onClick={() => onEdit(item)}/><IconAction title="Preview" icon={Eye} onClick={() => onPreview(item)}/></div>])}/></div>; }
+
+function TemplateModal({ template, onClose, onSubmit }) { return <Modal title={`Edit ${template.name}`} onClose={onClose}><form onSubmit={onSubmit} className="grid gap-3"><label className="text-sm font-bold">Recipient<Select name="recipient" value={template.recipient} options={["AFFILIATE", "ADMIN", "BOTH"]}/></label><div className="flex gap-6"><label className="font-bold"><input name="notificationEnabled" type="checkbox" defaultChecked={template.notificationEnabled} className="mr-2"/>Send in-app notification</label><label className="font-bold"><input name="emailEnabled" type="checkbox" defaultChecked={template.emailEnabled} className="mr-2"/>Send email</label></div><label className="text-sm font-bold">Notification title<input name="title" defaultValue={template.title} className="mt-1 w-full rounded-lg border p-2"/></label><label className="text-sm font-bold">Notification message<textarea name="message" defaultValue={template.message} rows={3} className="mt-1 w-full rounded-lg border p-2"/></label><label className="text-sm font-bold">Email subject<input name="subject" defaultValue={template.subject} className="mt-1 w-full rounded-lg border p-2"/></label><label className="text-sm font-bold">Email HTML<textarea name="htmlContent" defaultValue={template.htmlContent} rows={7} className="mt-1 w-full rounded-lg border p-2 font-mono text-xs"/></label><label className="text-sm font-bold">Email text<textarea name="textContent" defaultValue={template.textContent} rows={4} className="mt-1 w-full rounded-lg border p-2"/></label><p className="text-xs text-slate-500">Variables: {(template.variables || []).map((item) => `{{${item}}}`).join(", ")}</p><div className="flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-lg border px-4 py-2">Cancel</button><button className="rounded-lg bg-indigo-600 px-4 py-2 font-bold text-white">Save template</button></div></form></Modal>; }
+
 function SearchFilters({ affiliates = [], fields, filters, onFilter }) {
   function submit(event) { event.preventDefault(); onFilter({ ...clean(Object.fromEntries(new FormData(event.currentTarget))), page: 1, limit: filters.limit || 25 }); }
   return <form onSubmit={submit} className="grid gap-3 rounded-2xl border bg-white p-4 shadow-sm md:grid-cols-3 xl:grid-cols-6">{fields.includes("search") && <input name="search" defaultValue={filters.search || ""} placeholder="Search affiliate" className="rounded-lg border p-2 text-sm" />}{fields.includes("date") && <><input name="from" type="date" defaultValue={filters.from || ""} className="rounded-lg border p-2 text-sm" /><input name="to" type="date" defaultValue={filters.to || ""} className="rounded-lg border p-2 text-sm" /></>}{fields.includes("affiliate") && <select name="affiliateId" defaultValue={filters.affiliateId || ""} className="rounded-lg border p-2 text-sm"><option value="">All affiliates</option>{affiliates.map((item) => <option key={item.id} value={item.id}>{item.affiliateName}</option>)}</select>}{fields.includes("campaign") && <input name="campaign" defaultValue={filters.campaign || ""} placeholder="Campaign" className="rounded-lg border p-2 text-sm" />}{fields.includes("status") && <Select name="status" value={filters.status} options={["", "ACTIVE", "INACTIVE", "SUSPENDED"]} />}{fields.includes("platform") && <Select name="platform" value={filters.platform} options={["", "WEB", "ANDROID", "IOS"]} />}{fields.includes("userType") && <Select name="userType" value={filters.userType} options={["", "NEW_USER", "EXISTING_USER"]} />}{fields.includes("conversionStatus") && <Select name="conversionStatus" value={filters.conversionStatus} options={["", "SUCCESSFUL", "PENDING", "FAILED", "CANCELLED"]} />}{fields.includes("notificationStatus") && <Select name="status" value={filters.status} options={["", "READ", "UNREAD"]} />}<button className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-bold text-white"><Search size={16}/>Apply</button></form>;
@@ -220,7 +235,7 @@ function Settings({ settings, onSave }) {
 
 function AffiliateModal({ affiliate = {}, mode, onClose, onSubmit }) {
   const editing = mode === "edit";
-  const fields = [["firstName", "First name"], ["lastName", "Last name"], ["affiliateName", "Affiliate name"], ["email", "Email"], ["mobile", "Mobile"], ["username", "Username"], ["company", "Company"], ["profession", "Profession"], ["accountHolderName", "Account holder"], ["bankName", "Bank"], ["accountNumber", "Account number"], ["ifsc", "IFSC"], ["upiId", "UPI ID"], ["pan", "PAN"], ["gst", "GST"]];
+  const fields = [["firstName", "First name"], ["lastName", "Last name"], ["affiliateName", "Affiliate name"], ["email", "Email"], ["mobile", "Mobile"], ["username", "Username"], ["referralTarget", "Referral target per cycle"], ["commissionRatePercent", "Commission rate %"], ["company", "Company"], ["profession", "Profession"], ["accountHolderName", "Account holder"], ["bankName", "Bank"], ["accountNumber", "Account number"], ["ifsc", "IFSC"], ["upiId", "UPI ID"], ["pan", "PAN"], ["gst", "GST"]];
   return <Modal title={editing ? "Edit affiliate" : "Create affiliate"} onClose={onClose}><form onSubmit={onSubmit} className="grid gap-3 md:grid-cols-2">{fields.map(([name, label]) => <label key={name} className="text-sm font-bold">{label}<input name={name} defaultValue={name === "accountNumber" ? "" : affiliate[name] || ""} placeholder={name === "accountNumber" && editing ? "Enter only to update" : ""} required={!editing && ["affiliateName", "email", "username"].includes(name)} className="mt-1 w-full rounded-lg border p-2"/></label>)}{!editing && <label className="text-sm font-bold">Password<input name="password" type="password" required minLength={8} className="mt-1 w-full rounded-lg border p-2"/></label>}<label className="text-sm font-bold">Status<Select name="status" value={affiliate.status || "ACTIVE"} options={["ACTIVE", "INACTIVE", "SUSPENDED"]} /></label><div className="col-span-full flex justify-end gap-2"><button type="button" onClick={onClose} className="rounded-lg border px-4 py-2">Cancel</button><button className="rounded-lg bg-indigo-600 px-4 py-2 font-bold text-white">{editing ? "Save" : "Create"}</button></div></form></Modal>;
 }
 

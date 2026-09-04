@@ -13,5 +13,11 @@ export const affiliateMarketingService = {
   notifications: (params) => http.get("/admin/affiliate-marketing/notifications", { params }),
   adminNotifications: (params) => http.get("/admin/affiliate-marketing/admin-notifications", { params }),
   markAdminNotificationRead: (id) => http.patch(`/admin/affiliate-marketing/admin-notifications/${id}/read`),
+  paymentCycles: (params) => http.get("/admin/affiliate-marketing/payment-cycles", { params }),
+  updatePaymentCycle: (id, data) => http.patch(`/admin/affiliate-marketing/payment-cycles/${id}/status`, data),
+  eventTemplates: () => http.get("/admin/affiliate-marketing/event-templates"),
+  createEventTemplate: (data) => http.post("/admin/affiliate-marketing/event-templates", data),
+  updateEventTemplate: (id, data) => http.patch(`/admin/affiliate-marketing/event-templates/${id}`, data),
+  previewEventTemplate: (id, data = {}) => http.post(`/admin/affiliate-marketing/event-templates/${id}/preview`, data),
   settings: () => http.get("/admin/affiliate-marketing/settings"), updateSettings: (data) => http.patch("/admin/affiliate-marketing/settings", data),
 };
